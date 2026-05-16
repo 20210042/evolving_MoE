@@ -1,0 +1,4 @@
+dataset: "mbpp"
+train_size: 200
+epochs: 6
+batch_size: 20

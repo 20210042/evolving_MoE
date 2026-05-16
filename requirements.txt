@@ -1,0 +1,11 @@
+# Core Inference
+vllm>=0.11.0
+torch>=2.0.0
+transformers>=4.40.0
+accelerate>=1.0.0
+
+# Data Processing
+datasets>=2.14.0
+numpy>=1.26.0
+pandas>=2.0.0
+pyyaml>=6.0
