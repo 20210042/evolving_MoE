@@ -42,10 +42,13 @@ def main() -> None:
     all_data = get_dataset(args.dataset, split=args.split, local_dir=args.data_dir)
     logging.info("Loaded %s problems.", len(all_data))
 
-    test_ids_path = os.path.join(os.path.dirname(args.output_file) or ".", "evolution_test_ids.json")
-    if os.path.isfile(test_ids_path):
-        with open(test_ids_path, "r", encoding="utf-8") as f:
-            test_ids = set(json.load(f))
+    test_paths = [
+        Path("results") / "evolution_test_ids.json",
+        Path(args.output_file).resolve().parent / "evolution_test_ids.json",
+    ]
+    test_ids_path = next((p for p in test_paths if p.is_file()), None)
+    if test_ids_path is not None:
+        test_ids = set(json.loads(test_ids_path.read_text(encoding="utf-8")))
         test_data = [d for d in all_data if d["id"] in test_ids]
         logging.info("Filtered to %s problems via evolution_test_ids.json", len(test_data))
     else:
