@@ -82,11 +82,13 @@ def build_refine_prompt(
         )
 
     return [
-        {"role": "system", "content": baseline_prompts.CODING_GEN_SYSTEM},
+        {"role": "system", "content": baseline_prompts.CODING_REVISION_SYSTEM},
         {
             "role": "user",
-            "content": (
-                f"Refine the code for {instruction} based on: {feedback}\nCode:\n{current_code}"
+            "content": baseline_prompts.CODING_REVISION_USER.format(
+                instruction=instruction,
+                code=current_code,
+                feedback=feedback,
             ),
         },
     ]
@@ -115,5 +117,11 @@ def build_critic_prompt(
         )
     return [
         {"role": "system", "content": sys_prompt},
-        {"role": "user", "content": f"Review this code for {instruction}.\nCode:\n{current_code}\nFeedback:"},
+        {
+            "role": "user",
+            "content": baseline_prompts.CODING_CRITIC_USER.format(
+                instruction=instruction,
+                code=current_code,
+            ),
+        },
     ]

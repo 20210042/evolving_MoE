@@ -25,7 +25,6 @@ def scout_new_persona(
     )
 
     prompt = META_AGENT_PROMPT.substitute(
-        num_errors=len(hard_errors_text.split("\n\n---")),
         hard_errors=hard_errors_text[:4000],
         current_roster=roster_str,
     )

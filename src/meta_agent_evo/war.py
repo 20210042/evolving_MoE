@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import Callable, Dict, Set
+from typing import Dict, Set
 
 
 def compute_war_scores(
@@ -58,7 +58,7 @@ def pick_worst_agent(
             return (w, k)
         if tiebreak == "random":
             return (w, rng.random())
-        # legacy-like: fewer unique solves first (more redundant members); add noise
+        # size-based: fewer unique solves first (more redundant members); add noise
         return (w, squad_size, rng.random())
 
     return min(items, key=sort_key)

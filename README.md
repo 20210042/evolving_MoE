@@ -21,6 +21,9 @@ Default lookup: `./LiveCodeBench`, `../MultiAgent/LiveCodeBench`.
 ## Evolution (training)
 
 ```bash
+# MBPP train evolution (full roster training split):
+python scripts/run_evolution.py --config configs/mbpp_train.yaml --seed 42
+# Or MBPP test split with smaller train_size (configs/mbpp.yaml):
 python scripts/run_evolution.py --config configs/mbpp.yaml --seed 42
 ```
 
@@ -43,7 +46,7 @@ python scripts/run_inference.py \
   --output_file results/eval.jsonl
 ```
 
-Uses `results/evolution_test_ids.json` when present (same directory as `--output_file`’s parent, or cwd).
+Uses `test_ids.json` from evolution (`--results_dir`, or next to `--output_file`, or `results/mbpp/seed<seed>/`) when those IDs match the current dataset; otherwise it runs the full split (see script log if holdout IDs do not overlap).
 
 ## Analysis
 
@@ -54,7 +57,7 @@ python scripts/analyze_evolution.py results/mbpp_seed42/evolution_log.jsonl
 ## Layout
 
 - **`src/meta_agent_evo/`** — main package (`orchestrator`, `action_selector`, `evaluation`, `data`, `pipelines`).
-- **`legacy/`** — archived experiments (`ours.py`, `baselines.py`, Jina helpers, old `main.py`); not imported by default.
+- **Optional `legacy/`** — if present, `routing_inference` can load a Jina checkpoint helper from `legacy/jina_router.py`; the repo may ship without this directory.
 - **`configs/`** — YAML defaults and per-dataset overrides.
 
 ## Tests

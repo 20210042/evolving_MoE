@@ -10,6 +10,11 @@ import os
 import sys
 from pathlib import Path
 
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
@@ -24,13 +29,31 @@ from meta_agent_evo.utils.llm import LLMService
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run inference with evolved roster")
     parser.add_argument("--model", type=str, default="Qwen/Qwen3-Coder-30B-A3B-Instruct")
-    parser.add_argument("--dataset", type=str, default="livecodebench")
+    parser.add_argument("--dataset", type=str, default="mbpp")
     parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--data_dir", type=str, default="/home/jaehoonjeong/data/MultiAgent/Data")
     parser.add_argument("--roster_path", type=str, required=True)
     parser.add_argument("--output_file", type=str, default="results/inference_output.jsonl")
-    parser.add_argument("--jina_router_checkpoint", type=str, default=None)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--max_refine_iters", type=int, default=None)
+    parser.add_argument("--config", type=str, default=None, help="Optional YAML override")
     args = parser.parse_args()
+
+    base_cfg_path = ROOT / "configs" / "base.yaml"
+    cfg = {}
+    if yaml is not None and base_cfg_path.is_file():
+        with open(base_cfg_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f) or {}
+    
+    if args.config and yaml is not None:
+        extra_path = Path(args.config)
+        if extra_path.is_file():
+            with open(extra_path, "r", encoding="utf-8") as f:
+                over = yaml.safe_load(f) or {}
+                cfg.update({k: v for k, v in over.items() if v is not None})
+    
+    # Resolve max_refine_iters (CLI -> config -> default 2)
+    max_refine_iters = args.max_refine_iters if args.max_refine_iters is not None else int(cfg.get("max_refine_iters", 2))
 
     logging.basicConfig(
         level=logging.INFO,
@@ -42,17 +65,36 @@ def main() -> None:
     all_data = get_dataset(args.dataset, split=args.split, local_dir=args.data_dir)
     logging.info("Loaded %s problems.", len(all_data))
 
+    # test_ids.json: evolution이 저장한 홀드아웃 ID 목록 (mbpp 동일 seed로 필터)
     test_paths = [
-        Path("results") / "evolution_test_ids.json",
-        Path(args.output_file).resolve().parent / "evolution_test_ids.json",
+        Path(args.output_file).resolve().parent / "test_ids.json",
+        Path("results") / f"mbpp/seed{args.seed}" / "test_ids.json",
+        Path("results") / "test_ids.json",
     ]
     test_ids_path = next((p for p in test_paths if p.is_file()), None)
     if test_ids_path is not None:
-        test_ids = set(json.loads(test_ids_path.read_text(encoding="utf-8")))
-        test_data = [d for d in all_data if d["id"] in test_ids]
-        logging.info("Filtered to %s problems via evolution_test_ids.json", len(test_data))
+        raw = json.loads(test_ids_path.read_text(encoding="utf-8"))
+        test_ids = {str(x) for x in raw}
+        filtered = [d for d in all_data if str(d["id"]) in test_ids]
+        if filtered:
+            test_data = filtered
+            logging.info("Filtered to %s problems via %s", len(test_data), test_ids_path)
+        elif test_ids:
+            logging.warning(
+                "test_ids.json (%s) lists %s ids but none match %s split ids — "
+                "wrong dataset or stale holdout file; using full split (%s problems).",
+                test_ids_path,
+                len(test_ids),
+                args.dataset,
+                len(all_data),
+            )
+            test_data = all_data
+        else:
+            test_data = all_data
+            logging.info("test_ids.json is empty; using all %s problems.", len(test_data))
     else:
         test_data = all_data
+        logging.info("No test_ids.json found; using all %s problems.", len(test_data))
 
     llm = LLMService(model_name=args.model, mode="vllm", tp_size=1)
     agent = Agent(llm, role="Inference_Agent")
@@ -60,7 +102,8 @@ def main() -> None:
         agent,
         scouting_report_path=args.roster_path,
         domain="coding",
-        jina_router_checkpoint=args.jina_router_checkpoint,
+        routing_memory_path=str(Path(args.output_file).resolve().parent / "routing_memory.json"),
+        max_refine_iters=max_refine_iters,
     )
 
     os.makedirs(os.path.dirname(args.output_file) or ".", exist_ok=True)

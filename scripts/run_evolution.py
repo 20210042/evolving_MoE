@@ -43,7 +43,12 @@ def load_merged_config(base: Path, extra: Path | None) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run GM Evolution (evolving roster)")
-    parser.add_argument("--config", type=str, default=None, help="Optional YAML override (e.g. configs/mbpp.yaml)")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Optional YAML override merged into configs/base.yaml (e.g. configs/mbpp_train.yaml)",
+    )
     parser.add_argument("--model", type=str, default=None)
     parser.add_argument("--dataset", type=str, default=None)
     parser.add_argument("--split", type=str, default=None)
@@ -92,17 +97,18 @@ def main() -> None:
     test_data = shuffled[train_size:]
 
     os.makedirs(args.results_dir, exist_ok=True)
-    test_ids_path = os.path.join(args.results_dir, "evolution_test_ids.json")
+    test_ids_path = os.path.join(args.results_dir, "test_ids.json")
     with open(test_ids_path, "w", encoding="utf-8") as f:
         json.dump([item["id"] for item in test_data], f, indent=4)
     logging.info("Held out %s test ids → %s", len(test_data), test_ids_path)
 
     gate = cfg.get("action_gate") or {}
+    swap_max_gain_raw = gate.get("swap_max_gain", None)
     action_cfg = ActionGateConfig(
         alpha_stability=float(gate.get("alpha_stability", 1.0)),
-        lambda_size=float(gate.get("lambda_size", 0.02)),
-        epsilon_floor=float(gate.get("epsilon_floor", 0.02)),
-        delta_swap=float(gate.get("delta_swap", 0.01)),
+        lambda_size=float(gate.get("lambda_size", 0.01)),
+        epsilon_floor=float(gate.get("epsilon_floor", 0.05)),
+        swap_max_gain=float(swap_max_gain_raw) if swap_max_gain_raw is not None else None,
         use_wilson_ci=bool(gate.get("use_wilson_ci", True)),
         wilson_confidence=float(gate.get("wilson_confidence", 0.95)),
     )
@@ -119,7 +125,7 @@ def main() -> None:
         agent,
         roster_path,
         action_cfg=action_cfg,
-        max_refine_iters=int(cfg.get("max_refine_iters", 4)),
+        max_refine_iters=int(cfg.get("max_refine_iters", 2)),
         lcb_timeout=int(cfg.get("lcb_timeout", 10)),
         lcb_release_version=str(cfg.get("lcb_release_version", "release_v5")),
         code_exec_timeout=float(cfg.get("code_exec_timeout", 3.0)),

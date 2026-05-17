@@ -56,8 +56,6 @@ def ensure_roster(path: str) -> List[Dict[str, Any]]:
 
 
 def assign_candidate_id(roster: List[Dict[str, Any]]) -> str:
-    import os
-
     return f"c_{len(roster) + int(os.urandom(2).hex(), 16)}"
 
 

@@ -8,17 +8,17 @@ batch_size: 20
 train_size: 100
 epochs: 6
 vllm_tp_size: 1
-max_refine_iters: 4
+max_refine_iters: 2
 
 # WAR / eviction
 war_tiebreak: "random"  # random | alphabetical — avoid systematic bias
 
-# Action gate (§3 plan)
+# Action gate
 action_gate:
   alpha_stability: 1.0
-  lambda_size: 0.02
-  epsilon_floor: 0.02
-  delta_swap: 0.01
+  lambda_size: 0.01
+  epsilon_floor: 0.05
+  swap_max_gain: 0.29
   probe_stability_k: 8
   use_wilson_ci: true
   wilson_confidence: 0.95

@@ -18,19 +18,6 @@ from meta_agent_evo.prompts.meta import MANAGER_PROMPT
 from meta_agent_evo.utils.helpers import check_stop_condition, extract_code_block
 
 
-def _load_jina_router_class():
-    legacy_path = repo_root() / "legacy" / "jina_router.py"
-    if not legacy_path.is_file():
-        return None
-    spec = importlib.util.spec_from_file_location("mae_legacy_jina_router", legacy_path)
-    if spec is None or spec.loader is None:
-        return None
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules["mae_legacy_jina_router"] = mod
-    spec.loader.exec_module(mod)
-    return getattr(mod, "JinaPersonaRouter", None)
-
-
 class GMRoutingPipeline(BasePipeline):
     """Zero-shot manager routes to one critic; backbone refines (temp=0)."""
 
@@ -39,12 +26,12 @@ class GMRoutingPipeline(BasePipeline):
         agent: Agent,
         scouting_report_path: str,
         domain: str = "coding",
-        jina_router_checkpoint: Optional[str] = None,
+        routing_memory_path: str = "results/routing_memory.json",
+        max_refine_iters: int = 2,
     ):
         super().__init__(agent, domain)
+        self.max_refine_iters = max_refine_iters
         self.scouting_report_path = scouting_report_path
-        self.jina_router_checkpoint = jina_router_checkpoint
-        self._jina_router = None
 
         try:
             with open(self.scouting_report_path, "r", encoding="utf-8") as f:
@@ -54,31 +41,17 @@ class GMRoutingPipeline(BasePipeline):
             self.roster = []
 
         self.routing_memory: list = []
-        mem = Path("results") / "routing_memory.json"
+        mem = Path(routing_memory_path)
         if mem.is_file():
             try:
                 self.routing_memory = json.loads(mem.read_text(encoding="utf-8"))
             except Exception:
                 pass
 
-        if self.jina_router_checkpoint:
-            JR = _load_jina_router_class()
-            if JR is not None:
-                try:
-                    self._jina_router = JR(self.jina_router_checkpoint)
-                    logging.info("JinaPersonaRouter loaded from %s", self.jina_router_checkpoint)
-                except Exception as e:
-                    logging.error("Failed to load JinaPersonaRouter: %s", e)
+
 
     def _route_and_generate(self, prompt: str, dataset: str) -> tuple[str, str]:
         model_name = self.agent.llm.model_name
-        if self._jina_router is not None:
-            selected_id = self._jina_router.route(prompt, self.roster)
-            baseline_msg = build_baseline_prompt(
-                prompt, dataset=dataset, model_name=model_name, starter_code=None
-            )
-            baseline_res = self.agent.chat(baseline_msg, temperature=0.0)
-            return selected_id, (extract_code_block(baseline_res) or baseline_res)
 
         roster_str = json.dumps(
             [
@@ -154,7 +127,7 @@ class GMRoutingPipeline(BasePipeline):
         current_code = baseline_code
         model_name = self.agent.llm.model_name
 
-        for i in range(4):
+        for i in range(self.max_refine_iters):
             crit_msg = build_critic_prompt(
                 prompt, current_code, critic_sys, dataset=ds, model_name=model_name
             )

@@ -13,7 +13,6 @@ class LLMService:
         self,
         model_name: str,
         mode: str = "vllm",
-        quantization: Optional[str] = None,
         tp_size: int = 1,
         max_model_len: int = 32768,
     ):

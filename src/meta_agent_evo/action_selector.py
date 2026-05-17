@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
-from typing import Dict, List, Literal, Set
+from dataclasses import dataclass, field
+from typing import Dict, List, Literal, Optional, Set
 
 Action = Literal["noop", "add", "swap"]
 
@@ -12,9 +12,9 @@ Action = Literal["noop", "add", "swap"]
 @dataclass
 class ActionGateConfig:
     alpha_stability: float = 1.0
-    lambda_size: float = 0.02
-    epsilon_floor: float = 0.02
-    delta_swap: float = 0.01
+    lambda_size: float = 0.01
+    epsilon_floor: float = 0.05
+    swap_max_gain: Optional[float] = None  # if set: u_swap <= this → swap, else → add
     use_wilson_ci: bool = True
     wilson_confidence: float = 0.95
 
@@ -97,16 +97,13 @@ def select_action(
     gh_swap = sr_swap(probe_hard) - sr_baseline(probe_hard)
     gs_swap = sr_swap(probe_stability) - sr_baseline(probe_stability)
 
-    size_r = len(r_ids)
-    u_add = gh_add + cfg.alpha_stability * min(0.0, gs_add) - cfg.lambda_size * 1.0
-    u_swap = gh_swap + cfg.alpha_stability * min(0.0, gs_swap) - 0.0  # same cardinality as R
+    u_add = gh_add + cfg.alpha_stability * min(0.0, gs_add) - cfg.lambda_size
+    u_swap = gh_swap + cfg.alpha_stability * min(0.0, gs_swap)
 
     mcl = sr_baseline(probe_hard + probe_stability) - sr_baseline_minus(probe_hard + probe_stability)
+    mcg_swap_extra = sr_swap(probe_hard) - sr_add(probe_hard)
 
-    mcg_add = sr_add(probe_hard) - sr_baseline(probe_hard)
-    mcg_swap_extra = sr_swap(probe_hard) - sr_add(probe_hard)  # swap vs add on hard
-
-    # Wilson on *additional* passes from new on hard probe (unpaired simplification)
+    # Wilson CI on additional hard passes
     extra_hard = [q for q in probe_hard if (not _covered_by_roster(q, r_ids, squad_results)) and q in new_pass_ids]
     k_new = len(extra_hard)
     n_h = len(probe_hard)
@@ -127,20 +124,20 @@ def select_action(
 
     max_u = max(u_add, u_swap)
     if max_u <= cfg.epsilon_floor:
-        return ActionDecision("noop", utility, mcg_add, mcg_swap_extra, mcl)
+        return ActionDecision("noop", utility, gh_add, mcg_swap_extra, mcl)
 
-    # Cheap swap if worst has essentially no marginal contribution
-    if mcl <= cfg.delta_swap and mcg_swap_extra >= -cfg.delta_swap:
-        if u_swap >= u_add - cfg.epsilon_floor:
-            return ActionDecision("swap", utility, mcg_add, mcg_swap_extra, mcl)
-
-    if u_swap > u_add + cfg.epsilon_floor and ci_ok_swap:
-        return ActionDecision("swap", utility, mcg_add, mcg_swap_extra, mcl)
+    # Pure argmax: swap wins unless swap_max_gain threshold routes to add
+    if u_swap >= u_add:
+        if cfg.swap_max_gain is not None and u_swap > cfg.swap_max_gain and ci_ok_add:
+            # High-gain candidate: add rather than swap
+            return ActionDecision("add", utility, gh_add, mcg_swap_extra, mcl)
+        if ci_ok_swap:
+            return ActionDecision("swap", utility, gh_add, mcg_swap_extra, mcl)
 
     if u_add > cfg.epsilon_floor and ci_ok_add:
-        return ActionDecision("add", utility, mcg_add, mcg_swap_extra, mcl)
+        return ActionDecision("add", utility, gh_add, mcg_swap_extra, mcl)
 
     if u_swap > cfg.epsilon_floor and ci_ok_swap:
-        return ActionDecision("swap", utility, mcg_add, mcg_swap_extra, mcl)
+        return ActionDecision("swap", utility, gh_add, mcg_swap_extra, mcl)
 
-    return ActionDecision("noop", utility, mcg_add, mcg_swap_extra, mcl)
+    return ActionDecision("noop", utility, gh_add, mcg_swap_extra, mcl)
