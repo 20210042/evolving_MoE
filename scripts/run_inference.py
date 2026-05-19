@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inference with an evolved roster."""
+"""Inference entry point — supports evolved roster, raw, and self-refine baselines."""
 
 from __future__ import annotations
 
@@ -27,17 +27,32 @@ from meta_agent_evo.utils.llm import LLMService
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run inference with evolved roster")
+    parser = argparse.ArgumentParser(description="Run inference: evolved roster / raw / self-refine")
     parser.add_argument("--model", type=str, default="Qwen/Qwen3-Coder-30B-A3B-Instruct")
     parser.add_argument("--dataset", type=str, default="mbpp")
     parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--data_dir", type=str, default="/home/jaehoonjeong/data/MultiAgent/Data")
-    parser.add_argument("--roster_path", type=str, required=True)
+    parser.add_argument(
+        "--pipeline",
+        type=str,
+        default="evolved",
+        choices=["evolved", "raw", "self-refine"],
+        help="evolved=GMRoutingPipeline (roster required), raw=1-pass, self-refine=2-turn",
+    )
+    parser.add_argument(
+        "--roster_path",
+        type=str,
+        default=None,
+        help="Path to roster JSON — required for 'evolved' pipeline",
+    )
     parser.add_argument("--output_file", type=str, default="results/inference_output.jsonl")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max_refine_iters", type=int, default=None)
     parser.add_argument("--config", type=str, default=None, help="Optional YAML override")
     args = parser.parse_args()
+
+    if args.pipeline == "evolved" and args.roster_path is None:
+        parser.error("--roster_path is required when --pipeline=evolved")
 
     base_cfg_path = ROOT / "configs" / "base.yaml"
     cfg = {}
@@ -98,13 +113,24 @@ def main() -> None:
 
     llm = LLMService(model_name=args.model, mode="vllm", tp_size=1)
     agent = Agent(llm, role="Inference_Agent")
-    pipeline = GMRoutingPipeline(
-        agent,
-        scouting_report_path=args.roster_path,
-        domain="coding",
-        routing_memory_path=str(Path(args.output_file).resolve().parent / "routing_memory.json"),
-        max_refine_iters=max_refine_iters,
-    )
+
+    if args.pipeline == "raw":
+        from meta_agent_evo.pipelines.baselines import RawPipeline
+        pipeline = RawPipeline(agent, domain="coding")
+        logging.info("Pipeline: Raw (1-pass, no persona)")
+    elif args.pipeline == "self-refine":
+        from meta_agent_evo.pipelines.baselines import SelfRefinePipeline
+        pipeline = SelfRefinePipeline(agent, domain="coding", max_refine_iters=max_refine_iters)
+        logging.info("Pipeline: Self-Refine (%d iters, no persona)", max_refine_iters)
+    else:  # evolved
+        pipeline = GMRoutingPipeline(
+            agent,
+            scouting_report_path=args.roster_path,
+            domain="coding",
+            routing_memory_path=str(Path(args.output_file).resolve().parent / "routing_memory.json"),
+            max_refine_iters=max_refine_iters,
+        )
+        logging.info("Pipeline: Evolved GMRoutingPipeline (roster=%s)", args.roster_path)
 
     os.makedirs(os.path.dirname(args.output_file) or ".", exist_ok=True)
     with open(args.output_file, "w", encoding="utf-8") as f:
