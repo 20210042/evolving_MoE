@@ -22,11 +22,11 @@ except ImportError:
     yaml = None
 
 from action_selector import ActionGateConfig
-from agents.base import Agent
+from llm import LLMService
 from data.loader import get_dataset
 from orchestrator import GMEvolutionOrchestrator
 from roster import save_roster
-from utils.llm import LLMService
+from llm import LLMService
 
 
 def load_merged_config(base: Path, extra: Path | None) -> dict:
@@ -124,7 +124,7 @@ def main() -> None:
         mode="vllm",
         tp_size=int(cfg.get("vllm_tp_size", 1)),
     )
-    agent = Agent(llm, role="GM_Orchestrator")
+    # llm used directly
 
     resume_info = None
     if args.resume:
@@ -158,7 +158,7 @@ def main() -> None:
             logging.info("Resume requested but no log file found at %s. Starting fresh.", log_file)
 
     orchestrator = GMEvolutionOrchestrator(
-        agent,
+        llm,
         roster_path,
         action_cfg=action_cfg,
         max_refine_iters=int(cfg.get("max_refine_iters", 2)),

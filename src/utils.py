@@ -1,4 +1,11 @@
-import re
+import re, logging
+
+from transformers import set_seed
+import torch
+
+
+
+logger = logging.getLogger(__name__)
 
 
 def extract_code_block(text: str) -> str:
@@ -51,18 +58,33 @@ def check_stop_condition(feedback: str) -> bool:
             pass
 
     strong_signals = [
-        "perfect",
-        "no issues",
-        "no bugs",
-        "excellent",
-        "flawless",
-        "no errors",
-        "completely correct",
-        "works correctly",
+        "perfect", "no issues", "no bugs", "excellent",
+        "flawless", "no errors", "completely correct", "works correctly",
     ]
 
     if "incorrect" in feedback_lower or "not correct" in feedback_lower or "bug" in feedback_lower:
         return False
 
-    matched = sum(1 for sig in strong_signals if sig in feedback_lower)
-    return matched >= 2
+    return sum(1 for sig in strong_signals if sig in feedback_lower) >= 2
+
+
+def set_all_seeds(seed: int):
+    """
+    CPU와 CUDA 모든 시드를 고정한다.
+
+    HuggingFace set_seed()에 더하여,
+    torch.backends.cudnn의 deterministic 설정까지 적용.
+
+    Args:
+        seed: 고정할 시드 값.
+    """
+    set_seed(seed)                        # HuggingFace 기본 시드 고정
+    torch.manual_seed(seed)               # PyTorch CPU 시드
+    torch.cuda.manual_seed_all(seed)      # 모든 GPU CUDA 시드
+    if torch.cuda.is_available():
+        torch.backends.cudnn.deterministic = True  # 결정론적 CUDA 연산
+        torch.backends.cudnn.benchmark = False     # 자동 최적화 알고리즘 비활성화
+    logger.info(f"모든 시드 고정: {seed} (CPU + CUDA deterministic)")
+
+
+

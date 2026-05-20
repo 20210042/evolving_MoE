@@ -9,21 +9,22 @@ import random
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from action_selector import ActionDecision, ActionGateConfig, select_action
-from agents.base import Agent
+from llm import LLMService
 from evaluation.scorer import pass_at_threshold, score_one
 from prompts import baseline_prompts
 from prompts.coding import build_baseline_prompt, build_critic_prompt, build_refine_prompt
 from roster import assign_candidate_id, ensure_roster, normalize_persona_fields, save_roster
 from scout import scout_new_persona
 from step_logger import StepLogContext, StepLogger
-from utils.helpers import check_stop_condition, extract_code_block
+from utils import extract_code_block
+from utils import check_stop_condition
 from war import compute_war_scores, pick_worst_agent
 
 
 class GMEvolutionOrchestrator:
     def __init__(
         self,
-        agent: Agent,
+        llm: LLMService,
         roster_path: str,
         *,
         action_cfg: Optional[ActionGateConfig] = None,
@@ -38,7 +39,7 @@ class GMEvolutionOrchestrator:
         dataset_name: str = "livecodebench",
         seed: int = 42,
     ):
-        self.agent = agent
+        self.llm = llm
         self.roster_path = roster_path
         self.roster = ensure_roster(roster_path)
         self.action_cfg = action_cfg or ActionGateConfig()
@@ -78,7 +79,7 @@ class GMEvolutionOrchestrator:
         hard_errors_texts: Dict[str, str] = {}
         baselines: Dict[str, str] = {}
 
-        model_name = self.agent.llm.model_name
+        model_name = self.llm.model_name
 
         for item in batch_data:
             problem_id = item["id"]
@@ -92,7 +93,7 @@ class GMEvolutionOrchestrator:
                 model_name=model_name,
                 starter_code=starter,
             )
-            baseline_raw = self.agent.chat(baseline_msg, temperature=0.0)
+            baseline_raw = self.llm.chat(baseline_msg, temperature=0.0)
             baseline_code = extract_code_block(baseline_raw) or baseline_raw
             baselines[problem_id] = baseline_code
 
@@ -112,7 +113,7 @@ class GMEvolutionOrchestrator:
                         dataset=ds,
                         model_name=model_name,
                     )
-                    feedback = self.agent.chat(critic_msg)
+                    feedback = self.llm.chat(critic_msg)
                     if check_stop_condition(feedback):
                         break
 
@@ -123,7 +124,7 @@ class GMEvolutionOrchestrator:
                         dataset=ds,
                         model_name=model_name,
                     )
-                    ref_raw = self.agent.chat(refine_msg, temperature=0.0)
+                    ref_raw = self.llm.chat(refine_msg, temperature=0.0)
                     current_code = extract_code_block(ref_raw) or ref_raw
 
                 sc = self._score(item, current_code)
@@ -172,7 +173,7 @@ class GMEvolutionOrchestrator:
                 {"role": "system", "content": new_sys},
                 {"role": "user", "content": critic_user},
             ]
-            feedback = self.agent.chat(critic_msg)
+            feedback = self.llm.chat(critic_msg)
             if check_stop_condition(feedback):
                 break
 
@@ -188,7 +189,7 @@ class GMEvolutionOrchestrator:
                 {"role": "system", "content": baseline_prompts.CODING_GEN_SYSTEM},
                 {"role": "user", "content": refine_user},
             ]
-            ref_raw = self.agent.chat(ref_msg, temperature=0.0)
+            ref_raw = self.llm.chat(ref_msg, temperature=0.0)
             current_code = extract_code_block(ref_raw) or ref_raw
 
         return current_code
@@ -260,7 +261,7 @@ class GMEvolutionOrchestrator:
         self._update_routing_memory(batch_data, squad_results)
 
         hard_errors_combined = "\n\n---\n\n".join(hard_errors_texts.values())
-        new_persona = scout_new_persona(self.agent, self.roster, hard_errors_combined)
+        new_persona = scout_new_persona(self.llm, self.roster, hard_errors_combined)
         if not new_persona or "system_prompt" not in new_persona:
             logging.warning("Failed to scout new persona. Skipping.")
             return

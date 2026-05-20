@@ -10,7 +10,7 @@ import tempfile
 from io import StringIO
 from pathlib import Path
 
-from utils.helpers import extract_code_block
+from utils import extract_code_block
 
 _LCB_BENCHMARK_CACHE: dict = {}
 

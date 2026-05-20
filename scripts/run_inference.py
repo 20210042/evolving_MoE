@@ -20,10 +20,10 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from agents.base import Agent
+from llm import LLMService
 from data.loader import get_dataset
 from pipelines.routing_inference import GMRoutingPipeline
-from utils.llm import LLMService
+from llm import LLMService
 
 
 def main() -> None:
@@ -112,19 +112,19 @@ def main() -> None:
         logging.info("No test_ids.json found; using all %s problems.", len(test_data))
 
     llm = LLMService(model_name=args.model, mode="vllm", tp_size=1)
-    agent = Agent(llm, role="Inference_Agent")
+    # llm used directly
 
     if args.pipeline == "raw":
         from pipelines.baselines import RawPipeline
-        pipeline = RawPipeline(agent, domain="coding")
+        pipeline = RawPipeline(llm, domain="coding")
         logging.info("Pipeline: Raw (1-pass, no persona)")
     elif args.pipeline == "self-refine":
         from pipelines.baselines import SelfRefinePipeline
-        pipeline = SelfRefinePipeline(agent, domain="coding", max_refine_iters=max_refine_iters)
+        pipeline = SelfRefinePipeline(llm, domain="coding", max_refine_iters=max_refine_iters)
         logging.info("Pipeline: Self-Refine (%d iters, no persona)", max_refine_iters)
     else:  # evolved
         pipeline = GMRoutingPipeline(
-            agent,
+            llm,
             scouting_report_path=args.roster_path,
             domain="coding",
             routing_memory_path=str(Path(args.output_file).resolve().parent / "routing_memory.json"),

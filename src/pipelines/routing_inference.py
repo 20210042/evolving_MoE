@@ -9,12 +9,13 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from agents.base import Agent
+from llm import LLMService
 from pipelines.base_pipeline import BasePipeline
 from prompts import baseline_prompts
 from prompts.coding import build_baseline_prompt, build_critic_prompt, build_refine_prompt
 from prompts.meta import MANAGER_PROMPT
-from utils.helpers import check_stop_condition, extract_code_block
+from utils import extract_code_block
+from utils import check_stop_condition
 
 
 class GMRoutingPipeline(BasePipeline):
@@ -22,7 +23,7 @@ class GMRoutingPipeline(BasePipeline):
 
     def __init__(
         self,
-        agent: Agent,
+        llm: LLMService,
         scouting_report_path: str,
         domain: str = "coding",
         routing_memory_path: str = "results/routing_memory.json",
@@ -50,7 +51,7 @@ class GMRoutingPipeline(BasePipeline):
 
 
     def _route_and_generate(self, prompt: str, dataset: str) -> tuple[str, str]:
-        model_name = self.agent.llm.model_name
+        model_name = self.llm.model_name
 
         roster_str = json.dumps(
             [
@@ -80,12 +81,12 @@ class GMRoutingPipeline(BasePipeline):
             {"role": "system", "content": "You are a strict JSON API. Only output valid JSON."},
             {"role": "user", "content": manager_prompt},
         ]
-        router_res = self.agent.chat(manager_msg)
+        router_res = self.llm.chat(manager_msg)
 
         baseline_msg = build_baseline_prompt(
             prompt, dataset=dataset, model_name=model_name, starter_code=None
         )
-        baseline_res = self.agent.chat(baseline_msg, temperature=0.0)
+        baseline_res = self.llm.chat(baseline_msg, temperature=0.0)
 
         selected_id = self.roster[0]["id"] if self.roster else "default"
         try:
@@ -124,13 +125,13 @@ class GMRoutingPipeline(BasePipeline):
 
         critic_sys = selected_player.get("system_prompt", "You are a specialized code critic.")
         current_code = baseline_code
-        model_name = self.agent.llm.model_name
+        model_name = self.llm.model_name
 
         for i in range(self.max_refine_iters):
             crit_msg = build_critic_prompt(
                 prompt, current_code, critic_sys, dataset=ds, model_name=model_name
             )
-            feedback = self.agent.chat(crit_msg)
+            feedback = self.llm.chat(crit_msg)
             history.append({"iteration": i + 1, "stage": "critique", "feedback": feedback})
 
             if check_stop_condition(feedback):
@@ -156,7 +157,7 @@ class GMRoutingPipeline(BasePipeline):
                     prompt, feedback, current_code, dataset=ds, model_name=model_name
                 )
 
-            final_code_raw = self.agent.chat(ref_msg, temperature=0.0)
+            final_code_raw = self.llm.chat(ref_msg, temperature=0.0)
             current_code = extract_code_block(final_code_raw) or final_code_raw
             history.append({"iteration": i + 1, "stage": "revision", "code": current_code})
 

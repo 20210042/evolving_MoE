@@ -7,12 +7,12 @@ import logging
 import re
 from typing import Any, Dict, List
 
-from agents.base import Agent
+from llm import LLMService
 from prompts.meta import META_AGENT_PROMPT
 
 
 def scout_new_persona(
-    agent: Agent,
+    agent: LLMService,
     roster: List[Dict[str, Any]],
     hard_errors_text: str,
 ) -> Dict[str, Any]:

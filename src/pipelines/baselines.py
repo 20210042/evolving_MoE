@@ -11,14 +11,15 @@ from __future__ import annotations
 
 import logging
 
-from agents.base import Agent
+from llm import LLMService
 from pipelines.base_pipeline import BasePipeline
 from prompts.coding import (
     build_baseline_prompt,
     build_critic_prompt,
     build_refine_prompt,
 )
-from utils.helpers import check_stop_condition, extract_code_block
+from utils import extract_code_block
+from utils import check_stop_condition
 
 
 class RawPipeline(BasePipeline):
@@ -36,10 +37,10 @@ class RawPipeline(BasePipeline):
             instruction = f"{instruction}\n\nStarter Code:\n```python\n{starter_code}\n```"
 
         ds = (input_item.get("dataset") or "mbpp").lower()
-        model_name = self.agent.llm.model_name
+        model_name = self.llm.llm.model_name
 
         msgs = build_baseline_prompt(instruction, dataset=ds, model_name=model_name)
-        raw_output = self.agent.chat(msgs, temperature=0.0)
+        raw_output = self.llm.chat(msgs, temperature=0.0)
         code = extract_code_block(raw_output) or raw_output
 
         return {
@@ -57,7 +58,7 @@ class SelfRefinePipeline(BasePipeline):
     formatted identically.
     """
 
-    def __init__(self, agent: Agent, domain: str = "coding", max_refine_iters: int = 2):
+    def __init__(self, llm: LLMService, domain: str = "coding", max_refine_iters: int = 2):
         super().__init__(agent, domain)
         self.max_refine_iters = max_refine_iters
 
@@ -73,11 +74,11 @@ class SelfRefinePipeline(BasePipeline):
             instruction = f"{instruction}\n\nStarter Code:\n```python\n{starter_code}\n```"
 
         ds = (input_item.get("dataset") or "mbpp").lower()
-        model_name = self.agent.llm.model_name
+        model_name = self.llm.llm.model_name
 
         # ── 1. Initial generation (same as RawPipeline) ─────────────────────
         gen_msgs = build_baseline_prompt(instruction, dataset=ds, model_name=model_name)
-        raw_init = self.agent.chat(gen_msgs, temperature=0.0)
+        raw_init = self.llm.chat(gen_msgs, temperature=0.0)
         current_code = extract_code_block(raw_init) or raw_init
         history = [{"step": "initial", "output": current_code}]
 
@@ -95,7 +96,7 @@ class SelfRefinePipeline(BasePipeline):
                 dataset=ds,
                 model_name=model_name,
             )
-            feedback = self.agent.chat(crit_msgs)
+            feedback = self.llm.chat(crit_msgs)
             history.append({"step": f"critic_{i}", "feedback": feedback})
 
             if check_stop_condition(feedback):
@@ -110,7 +111,7 @@ class SelfRefinePipeline(BasePipeline):
                 dataset=ds,
                 model_name=model_name,
             )
-            refined_raw = self.agent.chat(ref_msgs, temperature=0.0)
+            refined_raw = self.llm.chat(ref_msgs, temperature=0.0)
             current_code = extract_code_block(refined_raw) or refined_raw
             history.append({"step": f"refine_{i}", "output": current_code})
 

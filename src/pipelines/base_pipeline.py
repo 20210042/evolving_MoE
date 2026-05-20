@@ -1,9 +1,9 @@
-from agents.base import Agent
+from llm import LLMService
 
 
 class BasePipeline:
-    def __init__(self, agent: Agent, domain: str = "coding"):
-        self.agent = agent
+    def __init__(self, llm: LLMService, domain: str = "coding"):
+        self.llm = llm
         self.domain = domain.lower()
 
     def run(self, input_item: dict):
