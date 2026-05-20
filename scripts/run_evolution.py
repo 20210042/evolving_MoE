@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import random
+import shutil
 import sys
 from pathlib import Path
 
@@ -26,7 +27,7 @@ from meta_agent_evo.agents.base import Agent
 from meta_agent_evo.data.loader import get_dataset
 from meta_agent_evo.orchestrator import GMEvolutionOrchestrator
 from meta_agent_evo.roster import save_roster
-from meta_agent_evo.utils.llm import LLMService
+from meta_agent_evo.utils.llm import llm_service_from_yaml_config
 
 
 def load_merged_config(base: Path, extra: Path | None) -> dict:
@@ -111,7 +112,7 @@ def main() -> None:
     swap_max_gain_raw = gate.get("swap_max_gain", None)
     action_cfg = ActionGateConfig(
         alpha_stability=float(gate.get("alpha_stability", 1.0)),
-        lambda_size=float(gate.get("lambda_size", 0.01)),
+        lambda_size=float(gate.get("lambda_size", 0.05)),
         epsilon_floor=float(gate.get("epsilon_floor", 0.05)),
         swap_max_gain=float(swap_max_gain_raw) if swap_max_gain_raw is not None else None,
         use_wilson_ci=bool(gate.get("use_wilson_ci", True)),
@@ -119,12 +120,10 @@ def main() -> None:
     )
 
     logging.info("Initializing LLM: %s", model)
-    llm = LLMService(
-        model_name=model,
-        mode="vllm",
-        tp_size=int(cfg.get("vllm_tp_size", 1)),
-    )
+    llm = llm_service_from_yaml_config(model, cfg)
     agent = Agent(llm, role="GM_Orchestrator")
+
+    roster_init_path = pick("roster_init_path", None) or str(ROOT / "configs" / "roster_init.json")
 
     resume_info = None
     if args.resume:
@@ -142,7 +141,6 @@ def main() -> None:
                     roster_snapshot_path = os.path.join(args.results_dir, run_id, f"roster_step_{resume_step}.json")
                     if os.path.exists(roster_snapshot_path):
                         logging.info("Resuming from step %d (Epoch %d, Batch %d)", resume_step, resume_epoch, resume_batch_idx)
-                        import shutil
                         os.makedirs(os.path.dirname(os.path.abspath(roster_path)), exist_ok=True)
                         shutil.copyfile(roster_snapshot_path, roster_path)
                         resume_info = {
@@ -156,6 +154,17 @@ def main() -> None:
                     logging.error("Failed to parse log file for resume: %s", e)
         else:
             logging.info("Resume requested but no log file found at %s. Starting fresh.", log_file)
+
+    if not args.resume and roster_path:
+        init_src = Path(roster_init_path)
+        if not init_src.is_file():
+            init_src = ROOT / roster_init_path
+        if init_src.is_file():
+            os.makedirs(os.path.dirname(os.path.abspath(roster_path)) or ".", exist_ok=True)
+            shutil.copyfile(init_src, roster_path)
+            logging.info("Seeded roster from %s → %s", init_src, roster_path)
+        else:
+            logging.warning("roster_init not found at %s; using ensure_roster default", init_src)
 
     orchestrator = GMEvolutionOrchestrator(
         agent,

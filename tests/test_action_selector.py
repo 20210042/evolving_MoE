@@ -40,3 +40,31 @@ def test_noop_when_no_gain():
         cfg=cfg,
     )
     assert d.action == "noop"
+
+
+def test_swap_preferred_when_equal_gain():
+    """Without swap_max_gain, swap wins when u_swap >= u_add."""
+    squad = {
+        "a": {"q1"},
+        "b": {"q2"},
+        "w": set(),
+    }
+    probe_hard = ["q1", "q2", "qx"]
+    probe_stab = ["q1"]
+    new_pass = {"qx"}
+    cfg = ActionGateConfig(
+        epsilon_floor=0.01,
+        lambda_size=0.05,
+        swap_max_gain=None,
+        use_wilson_ci=False,
+    )
+    d = select_action(
+        roster_ids=["a", "b", "w"],
+        worst_id="w",
+        squad_results=squad,
+        probe_hard=probe_hard,
+        probe_stability=probe_stab,
+        new_pass_ids=new_pass,
+        cfg=cfg,
+    )
+    assert d.action == "swap"

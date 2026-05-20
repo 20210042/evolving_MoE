@@ -11,18 +11,27 @@ from meta_agent_evo.agents.base import Agent
 from meta_agent_evo.prompts.meta import META_AGENT_PROMPT
 
 
+def _format_roster_table(roster: List[Dict[str, Any]]) -> str:
+    lines = [
+        "| id | name | strengths |",
+        "|----|------|-----------|",
+    ]
+    for p in roster:
+        pid = p.get("id", "")
+        name = p.get("name", p.get("persona_name", ""))
+        strengths = (p.get("strengths") or "").replace("|", "/")
+        lines.append(f"| {pid} | {name} | {strengths} |")
+    lines.append("")
+    lines.append("Do NOT duplicate domains already covered above.")
+    return "\n".join(lines)
+
+
 def scout_new_persona(
     agent: Agent,
     roster: List[Dict[str, Any]],
     hard_errors_text: str,
 ) -> Dict[str, Any]:
-    roster_str = json.dumps(
-        [
-            {"id": p.get("id"), "name": p.get("name", p.get("persona_name")), "strengths": p.get("strengths")}
-            for p in roster
-        ],
-        indent=2,
-    )
+    roster_str = _format_roster_table(roster)
 
     prompt = META_AGENT_PROMPT.substitute(
         hard_errors=hard_errors_text[:4000],

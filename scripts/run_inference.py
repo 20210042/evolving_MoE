@@ -23,15 +23,15 @@ if str(SRC) not in sys.path:
 from meta_agent_evo.agents.base import Agent
 from meta_agent_evo.data.loader import get_dataset
 from meta_agent_evo.pipelines.routing_inference import GMRoutingPipeline
-from meta_agent_evo.utils.llm import LLMService
+from meta_agent_evo.utils.llm import llm_service_from_yaml_config
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run inference: evolved roster / raw / self-refine")
-    parser.add_argument("--model", type=str, default="Qwen/Qwen3-Coder-30B-A3B-Instruct")
+    parser.add_argument("--model", type=str, default=None, help="Overrides configs/base.yaml model id")
     parser.add_argument("--dataset", type=str, default="mbpp")
     parser.add_argument("--split", type=str, default="test")
-    parser.add_argument("--data_dir", type=str, default="/home/jaehoonjeong/data/MultiAgent/Data")
+    parser.add_argument("--data_dir", type=str, default=None)
     parser.add_argument(
         "--pipeline",
         type=str,
@@ -59,16 +59,23 @@ def main() -> None:
     if yaml is not None and base_cfg_path.is_file():
         with open(base_cfg_path, "r", encoding="utf-8") as f:
             cfg = yaml.safe_load(f) or {}
-    
+
     if args.config and yaml is not None:
         extra_path = Path(args.config)
         if extra_path.is_file():
             with open(extra_path, "r", encoding="utf-8") as f:
                 over = yaml.safe_load(f) or {}
                 cfg.update({k: v for k, v in over.items() if v is not None})
-    
-    # Resolve max_refine_iters (CLI -> config -> default 2)
-    max_refine_iters = args.max_refine_iters if args.max_refine_iters is not None else int(cfg.get("max_refine_iters", 2))
+
+    max_refine_iters = (
+        args.max_refine_iters if args.max_refine_iters is not None else int(cfg.get("max_refine_iters", 2))
+    )
+
+    model_name = args.model or cfg.get("model")
+    if not model_name:
+        parser.error("Specify --model or define ``model`` in configs/base.yaml.")
+
+    data_dir = args.data_dir or cfg.get("data_dir") or "/home/jaehoonjeong/data/MultiAgent/Data"
 
     logging.basicConfig(
         level=logging.INFO,
@@ -77,10 +84,10 @@ def main() -> None:
     )
 
     logging.info("Loading dataset: %s", args.dataset)
-    all_data = get_dataset(args.dataset, split=args.split, local_dir=args.data_dir)
+    all_data = get_dataset(args.dataset, split=args.split, local_dir=data_dir)
     logging.info("Loaded %s problems.", len(all_data))
 
-    # test_ids.json: evolution이 저장한 홀드아웃 ID 목록 (mbpp 동일 seed로 필터)
+    # test_ids.json: evolution 홀드아웃 목록 필터링
     test_paths = [
         Path(args.output_file).resolve().parent / "test_ids.json",
         Path("results") / f"mbpp/seed{args.seed}" / "test_ids.json",
@@ -111,18 +118,20 @@ def main() -> None:
         test_data = all_data
         logging.info("No test_ids.json found; using all %s problems.", len(test_data))
 
-    llm = LLMService(model_name=args.model, mode="vllm", tp_size=1)
+    llm = llm_service_from_yaml_config(str(model_name), cfg)
     agent = Agent(llm, role="Inference_Agent")
 
     if args.pipeline == "raw":
         from meta_agent_evo.pipelines.baselines import RawPipeline
+
         pipeline = RawPipeline(agent, domain="coding")
         logging.info("Pipeline: Raw (1-pass, no persona)")
     elif args.pipeline == "self-refine":
         from meta_agent_evo.pipelines.baselines import SelfRefinePipeline
+
         pipeline = SelfRefinePipeline(agent, domain="coding", max_refine_iters=max_refine_iters)
         logging.info("Pipeline: Self-Refine (%d iters, no persona)", max_refine_iters)
-    else:  # evolved
+    else:
         pipeline = GMRoutingPipeline(
             agent,
             scouting_report_path=args.roster_path,
@@ -133,9 +142,10 @@ def main() -> None:
         logging.info("Pipeline: Evolved GMRoutingPipeline (roster=%s)", args.roster_path)
 
     os.makedirs(os.path.dirname(args.output_file) or ".", exist_ok=True)
+
     with open(args.output_file, "w", encoding="utf-8") as f:
-        for idx, item in enumerate(test_data):
-            logging.info("Processing %s/%s: %s", idx + 1, len(test_data), item["id"])
+        for idx, item in enumerate(test_data, start=1):
+            logging.info("Processing %s/%s: %s", idx, len(test_data), item["id"])
             result = pipeline.run(item)
             result["dataset"] = args.dataset
             f.write(json.dumps(result, ensure_ascii=False) + "\n")

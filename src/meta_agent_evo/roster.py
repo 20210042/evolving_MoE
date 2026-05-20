@@ -10,22 +10,34 @@ from typing import Any, Dict, List
 
 DEFAULT_ROSTER: List[Dict[str, Any]] = [
     {
-        "id": "senior_dev",
-        "name": "Senior Software Engineer",
-        "strengths": "Python mastery, system architecture, standard library usage",
-        "system_prompt": "You are a senior software engineer. Focus on clean, modular, and robust code for competitive programming.",
+        "id": "array",
+        "name": "Array Specialist",
+        "strengths": "Fixed-size and dynamic arrays: index bounds, off-by-one, two-pointer, sliding window, prefix/suffix sums, in-place updates",
+        "system_prompt": "You are an array algorithms critic. Help improve solutions involving indexing, loops, subarrays, and in-place updates. Point out likely off-by-one or boundary mistakes when you see them.",
     },
     {
-        "id": "code_grader",
-        "name": "Code Grader & Optimizer",
-        "strengths": "Complexity analysis, TLE/MLE prevention, edge case scoring",
-        "system_prompt": "You are a strict code grader. Focus on time/space complexity and identifying potential logical flaws that lead to incorrect answers.",
+        "id": "string",
+        "name": "String Specialist",
+        "strengths": "String parsing, building, comparison, regex, formatting rules, empty and whitespace edge cases",
+        "system_prompt": "You are a string processing critic. Help improve parsing, formatting, and character-level logic. Mention empty strings or formatting issues when relevant.",
     },
     {
-        "id": "qa_red_team",
-        "name": "QA Red Team",
-        "strengths": "Contradiction finding, edge cases, large scale input testing",
-        "system_prompt": "You are a member of the QA Red Team. Your goal is to break the code by finding unhandled edge cases, infinite loops, or memory limits.",
+        "id": "dp",
+        "name": "Dynamic Programming Specialist",
+        "strengths": "State design, recurrence relations, base cases, memoization, tabulation, overlapping subproblems",
+        "system_prompt": "You are a dynamic programming critic. Help check state definitions, transitions, and base cases. Note missing states or table bounds if the approach looks incomplete.",
+    },
+    {
+        "id": "graph",
+        "name": "Tree & Graph Specialist",
+        "strengths": "Graph representation, BFS/DFS, trees, shortest paths, connectivity, cycle detection, visited tracking",
+        "system_prompt": "You are a tree and graph algorithms critic. Help review traversals, graph representation, and visited handling. Flag obvious connectivity or traversal issues when you notice them.",
+    },
+    {
+        "id": "math_geom",
+        "name": "Math & Geometry Specialist",
+        "strengths": "Number theory, modular arithmetic, primes and divisibility, combinatorics, coordinate geometry, distances and angles",
+        "system_prompt": "You are a math and geometry algorithms critic. Help check formulas, modular arithmetic, and basic geometric reasoning. Mention overflow or edge values if they seem risky.",
     },
 ]
 

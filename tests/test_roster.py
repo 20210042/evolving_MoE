@@ -6,8 +6,8 @@ from meta_agent_evo.roster import assign_candidate_id, ensure_roster
 def test_default_roster(tmp_path):
     p = tmp_path / "r.json"
     r = ensure_roster(str(p))
-    assert len(r) == 3
-    assert r[0]["id"] == "senior_dev"
+    assert len(r) == 5
+    assert r[0]["id"] == "array"
 
 
 def test_assign_id_unique():

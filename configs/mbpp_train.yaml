@@ -1,5 +1,5 @@
 dataset: "mbpp"
 split: "train"
 train_size: 374
-epochs: 6
-batch_size: 20
+epochs: 3
+batch_size: 50

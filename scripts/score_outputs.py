@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Score inference outputs (JSONL) and report pass@1."""
 
-from __future__ import annotations
-
-import argparse
+from typing import Optional
 import json
 import logging
 import sys
@@ -14,7 +12,21 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+try:
+    import yaml
+except ImportError:
+    yaml = None
+
 from meta_agent_evo.evaluation.scorer import score_one
+
+
+def _data_dir_from_config() -> Optional[str]:
+    base = ROOT / "configs" / "base.yaml"
+    if yaml is None or not base.is_file():
+        return None
+    with open(base, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f) or {}
+    return cfg.get("data_dir")
 
 
 def main() -> None:
@@ -22,9 +34,16 @@ def main() -> None:
     parser.add_argument("--input", type=str, required=True, help="Path to inference_output.jsonl")
     parser.add_argument("--dataset", type=str, default=None, help="Dataset name (mbpp|humaneval|livecodebench)")
     parser.add_argument("--split", type=str, default="test")
-    parser.add_argument("--data_dir", type=str, default=None, help="Optional: reload items from data (for test_list)")
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default=None,
+        help="Override configs/base.yaml data_dir (for MBPP test_list reload)",
+    )
     parser.add_argument("--timeout", type=float, default=3.0)
     args = parser.parse_args()
+
+    data_dir = args.data_dir or _data_dir_from_config()
 
     logging.basicConfig(
         level=logging.INFO,
@@ -39,12 +58,12 @@ def main() -> None:
 
     # Optional: load reference items for test_list (needed for MBPP asserts)
     ref_items: dict = {}
-    if args.data_dir:
+    if data_dir:
         try:
             from meta_agent_evo.data.loader import get_dataset
 
             dataset_name = args.dataset or "mbpp"
-            items = get_dataset(dataset_name, split=args.split, local_dir=args.data_dir)
+            items = get_dataset(dataset_name, split=args.split, local_dir=data_dir)
             ref_items = {str(it["id"]): it for it in items}
             logging.info("Loaded %d reference items from %s.", len(ref_items), dataset_name)
         except Exception as exc:

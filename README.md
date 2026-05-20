@@ -1,64 +1,76 @@
 # Meta-Agent Evolution & Inference
 
-Train an **evolving critic roster** on coding benchmarks (LiveCodeBench, MBPP, HumanEval), then run **manager routing + refinement** for evaluation.
+Train an **evolving critic roster** on coding benchmarks (MBPP, HumanEval, LiveCodeBench), then run **manager routing + refinement** for evaluation.
 
 ## Setup
 
 ```bash
 cd MetaAgentEvolution_Release
-pip install -e ".[dev]"   # or: pip install -r requirements.txt
+pip install -e ".[dev]"
 export PYTHONPATH="$PWD/src"
 ```
 
-**LiveCodeBench** official scorer expects the `lcb_runner` package. Install the benchmark repo next to this project or set:
+**LiveCodeBench** scorer needs `lcb_runner` (install the benchmark repo or set `LIVECODEBENCH_PATH`).
+
+## Config
+
+Everything defaults from **`configs/base.yaml`** (+ **`configs/mbpp_train.yaml`** for MBPP evolution via `--config`).
+
+Model, vLLM, sampling, `data_dir` — edit **`configs/base.yaml`** (+ dataset YAML for evolution).
+
+## Hugging Face (Llama 3.1 gated)
+
+1. Hub에서 `meta-llama/Meta-Llama-3.1-8B-Instruct` 라이선스 accept  
+2. **한 번** `huggingface-cli login` (compute 노드에서도 같은 `$HOME`이면 끝)
+
+추가 `export HF_TOKEN=...` **필요 없음**. 로그인으로 저장된 토큰을 vLLM/transformers가 읽습니다.
+
+## MBPP 실험 (SLURM)
+
+`SEED`만 바꾸고 싶으면 제출 전에 export (기본값 `20210044` → `scripts/sbatch/common.sh`).
 
 ```bash
-export LIVECODEBENCH_PATH=/path/to/LiveCodeBench
+cd MetaAgentEvolution_Release
+
+# 0) 선택: 스모크
+sbatch smoke_test.sh
+
+# 1) Evolution
+SEED=20210044 sbatch scripts/sbatch/run_mbpp_evolution.sh
+
+# 2) Epoch eval (진화 job id 넣기)
+EVOLVE_JOB=12345
+SEED=20210044 sbatch --dependency=afterok:${EVOLVE_JOB} scripts/sbatch/run_mbpp_eval_epochs.sh
+
+# 3) Baselines
+SEED=20210044 sbatch scripts/sbatch/run_mbpp_baselines.sh
+
+# Resume
+SEED=20210044 RESUME=true sbatch scripts/sbatch/run_mbpp_evolution.sh
 ```
 
-Default lookup: `./LiveCodeBench`, `../MultiAgent/LiveCodeBench`.
+| Script | Purpose |
+|--------|---------|
+| `run_mbpp_evolution.sh` | Roster evolution → `roster_step_*.json` |
+| `run_mbpp_eval_epochs.sh` | Inference + score per epoch |
+| `run_mbpp_baselines.sh` | init_persona / raw / self-refine |
 
-## Evolution (training)
+Epoch checkpoint: `roster_step_{steps_per_epoch × epoch}.json` (374 train, batch 50 → 8 steps/epoch).
+
+## Local debug
 
 ```bash
-# MBPP train evolution (full roster training split):
 python scripts/run_evolution.py --config configs/mbpp_train.yaml --seed 42
-# Or MBPP test split with smaller train_size (configs/mbpp.yaml):
-python scripts/run_evolution.py --config configs/mbpp.yaml --seed 42
+python scripts/run_inference.py --dataset mbpp --roster_path results/.../roster_step_8.json --output_file out.jsonl
+python scripts/score_outputs.py --input out.jsonl --dataset mbpp
 ```
 
-- Merges [`configs/base.yaml`](configs/base.yaml) with the dataset YAML.
-- Logs each step: `results/<run_id>/evolution_log.jsonl` and `roster_step_<n>.json`.
-- **Action gate**: *noop* (keep roster), *add* (append specialist), or *swap* (replace WAR-selected member) using probe-based marginal coverage.
-
-Multi-seed / multi-dataset:
+## Qwen 캐시 정리 (전환 후, Qwen job 없을 때)
 
 ```bash
-python scripts/run_multi_seed.py --datasets livecodebench mbpp humaneval --seeds 17 42 1234
+du -sh "$HOME/.cache/huggingface/hub/models--Qwen"*
+rm -rf "$HOME/.cache/huggingface/hub/models--Qwen--Qwen3-Coder-30B-A3B-Instruct"
 ```
-
-## Inference
-
-```bash
-python scripts/run_inference.py \
-  --dataset mbpp \
-  --roster_path results/gm_roster_v8.json \
-  --output_file results/eval.jsonl
-```
-
-Uses `test_ids.json` from evolution (`--results_dir`, or next to `--output_file`, or `results/mbpp/seed<seed>/`) when those IDs match the current dataset; otherwise it runs the full split (see script log if holdout IDs do not overlap).
-
-## Analysis
-
-```bash
-python scripts/analyze_evolution.py results/mbpp_seed42/evolution_log.jsonl
-```
-
-## Layout
-
-- **`src/meta_agent_evo/`** — main package (`orchestrator`, `action_selector`, `evaluation`, `data`, `pipelines`).
-- **Optional `legacy/`** — if present, `routing_inference` can load a Jina checkpoint helper from `legacy/jina_router.py`; the repo may ship without this directory.
-- **`configs/`** — YAML defaults and per-dataset overrides.
 
 ## Tests
 

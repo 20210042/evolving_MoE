@@ -1,13 +1,31 @@
 # Base evolution hyperparameters (override via CLI or per-dataset YAML)
 
-model: "Qwen/Qwen3-Coder-30B-A3B-Instruct"
+model: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+
+llm:
+  max_model_len: 16384
+  max_tokens: 4096
+  sampling:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    repetition_penalty: 1.05
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 64
+  gpu_memory_utilization: 0.90
+  enforce_eager: false
+
 data_dir: "/home/jaehoonjeong/data/MultiAgent/Data"
 split: "test"
 roster_path: "results/gm_roster_v8.json"
-batch_size: 20
+roster_init_path: "configs/roster_init.json"
+batch_size: 50
 train_size: 100
 epochs: 6
-vllm_tp_size: 1
 max_refine_iters: 2
 
 # WAR / eviction
@@ -16,9 +34,8 @@ war_tiebreak: "random"  # random | alphabetical — avoid systematic bias
 # Action gate
 action_gate:
   alpha_stability: 1.0
-  lambda_size: 0.01
+  lambda_size: 0.05
   epsilon_floor: 0.05
-  swap_max_gain: 0.29
   probe_stability_k: 8
   use_wilson_ci: true
   wilson_confidence: 0.95

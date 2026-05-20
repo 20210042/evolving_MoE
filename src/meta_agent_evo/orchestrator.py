@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from meta_agent_evo.action_selector import ActionDecision, ActionGateConfig, select_action
 from meta_agent_evo.agents.base import Agent
 from meta_agent_evo.evaluation.scorer import pass_at_threshold, score_one
-from meta_agent_evo.prompts import baseline_prompts
 from meta_agent_evo.prompts.coding import build_baseline_prompt, build_critic_prompt, build_refine_prompt
 from meta_agent_evo.roster import assign_candidate_id, ensure_roster, normalize_persona_fields, save_roster
 from meta_agent_evo.scout import scout_new_persona
@@ -78,54 +77,86 @@ class GMEvolutionOrchestrator:
         hard_errors_texts: Dict[str, str] = {}
         baselines: Dict[str, str] = {}
 
-        model_name = self.agent.llm.model_name
+        llm_svc = self.agent.llm
+        model_name = llm_svc.model_name
+
+        baseline_msgs = [
+            build_baseline_prompt(
+                item.get("instruction", ""),
+                dataset=item.get("dataset") or self.dataset_name,
+                model_name=model_name,
+                starter_code=item.get("starter_code"),
+            )
+            for item in batch_data
+        ]
+        baseline_raws = self.agent.chat_batch(baseline_msgs, temperature=0.0)
+        for item, baseline_raw in zip(batch_data, baseline_raws):
+            pid = item["id"]
+            baselines[pid] = extract_code_block(baseline_raw) or baseline_raw
+
+        pairs: List[Tuple[str, str]] = [
+            (item["id"], player["id"]) for item in batch_data for player in self.roster
+        ]
+        codes: Dict[Tuple[str, str], str] = {(pid, cid): baselines[pid] for pid, cid in pairs}
+        active_mask: Dict[Tuple[str, str], bool] = {(pid, cid): True for pid, cid in pairs}
+        pid_to_instruction = {item["id"]: item.get("instruction", "") for item in batch_data}
+        pid_to_ds = {item["id"]: (item.get("dataset") or self.dataset_name) for item in batch_data}
+
+        sys_by_cid = {player["id"]: player.get("system_prompt", "You are an expert coder.") for player in self.roster}
+
+        for _ in range(self.max_refine_iters):
+            active_pairs = [pair for pair in pairs if active_mask[pair]]
+            if not active_pairs:
+                break
+
+            critic_msgs = [
+                build_critic_prompt(
+                    pid_to_instruction[pid],
+                    codes[(pid, cid)],
+                    sys_by_cid[cid],
+                    dataset=pid_to_ds[pid],
+                    model_name=model_name,
+                )
+                for pid, cid in active_pairs
+            ]
+
+            critic_out = self.agent.chat_batch(critic_msgs)
+
+            refinement_tasks: List[Tuple[Tuple[str, str], str]] = []
+            for idx, pair in enumerate(active_pairs):
+                feedback = critic_out[idx]
+                if check_stop_condition(feedback):
+                    active_mask[pair] = False
+                    continue
+                refinement_tasks.append((pair, feedback))
+
+            if refinement_tasks:
+                refine_msgs = [
+                    build_refine_prompt(
+                        pid_to_instruction[pair[0]],
+                        fb,
+                        codes[pair],
+                        dataset=pid_to_ds[pair[0]],
+                        model_name=model_name,
+                    )
+                    for pair, fb in refinement_tasks
+                ]
+                refined_out = self.agent.chat_batch(refine_msgs, temperature=0.0)
+
+                for (pair, _fb), ref_raw in zip(refinement_tasks, refined_out):
+                    codes[pair] = extract_code_block(ref_raw) or ref_raw
 
         for item in batch_data:
             problem_id = item["id"]
             instruction = item.get("instruction", "")
-            ds = item.get("dataset") or self.dataset_name
-            starter = item.get("starter_code")
-
-            baseline_msg = build_baseline_prompt(
-                instruction,
-                dataset=ds,
-                model_name=model_name,
-                starter_code=starter,
-            )
-            baseline_raw = self.agent.chat(baseline_msg, temperature=0.0)
-            baseline_code = extract_code_block(baseline_raw) or baseline_raw
-            baselines[problem_id] = baseline_code
 
             any_solved = False
             failed_attempts: List[str] = []
 
             for player in self.roster:
                 cid = player["id"]
-                sys_prompt = player.get("system_prompt", "You are an expert coder.")
-                current_code = baseline_code
-
-                for _ in range(self.max_refine_iters):
-                    critic_msg = build_critic_prompt(
-                        instruction,
-                        current_code,
-                        sys_prompt,
-                        dataset=ds,
-                        model_name=model_name,
-                    )
-                    feedback = self.agent.chat(critic_msg)
-                    if check_stop_condition(feedback):
-                        break
-
-                    refine_msg = build_refine_prompt(
-                        instruction,
-                        feedback,
-                        current_code,
-                        dataset=ds,
-                        model_name=model_name,
-                    )
-                    ref_raw = self.agent.chat(refine_msg, temperature=0.0)
-                    current_code = extract_code_block(ref_raw) or ref_raw
-
+                pair = (problem_id, cid)
+                current_code = codes.get(pair, baselines[problem_id])
                 sc = self._score(item, current_code)
                 if pass_at_threshold(sc):
                     squad_results[cid].add(problem_id)
@@ -137,7 +168,8 @@ class GMEvolutionOrchestrator:
                 hard_errors_texts[problem_id] = (
                     f"### Problem ID: {problem_id}\n"
                     f"Instruction: {instruction[:1000]}\n"
-                    f"Failed Code Sample:\n{failed_attempts[0] if failed_attempts else baseline_code}\n"
+                    f"Failed Code Sample:\n"
+                    f"{failed_attempts[0] if failed_attempts else baselines.get(problem_id, '')}\n"
                 )
 
         return squad_results, hard_errors_texts, baselines
@@ -155,6 +187,9 @@ class GMEvolutionOrchestrator:
         )
         instruction = item.get("instruction", "")
         current_code = baseline_code
+        llm_svc = self.agent.llm
+        model_name = llm_svc.model_name
+        ds_probe = item.get("dataset") or self.dataset_name
 
         for _ in range(self.max_refine_iters):
             critic_user = (
@@ -176,18 +211,13 @@ class GMEvolutionOrchestrator:
             if check_stop_condition(feedback):
                 break
 
-            refine_user = (
-                f"Refine the code based on the feedback.\n\n"
-                f"Problem:\n{instruction}\n\n"
-                f"Previous Code:\n{current_code}\n\n"
-                f"Feedback:\n{feedback}\n\n"
-                "Return the improved code in the following format:\n"
-                "```python\n[CODE]\n```"
+            ref_msg = build_refine_prompt(
+                instruction,
+                feedback,
+                current_code,
+                dataset=ds_probe,
+                model_name=model_name,
             )
-            ref_msg = [
-                {"role": "system", "content": baseline_prompts.CODING_GEN_SYSTEM},
-                {"role": "user", "content": refine_user},
-            ]
             ref_raw = self.agent.chat(ref_msg, temperature=0.0)
             current_code = extract_code_block(ref_raw) or ref_raw
 
