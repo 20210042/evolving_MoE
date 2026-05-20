@@ -13,8 +13,8 @@
 set -euo pipefail
 
 REPO="${REPO:-/home/jaehoonjeong/data/MetaAgentEvolution_Release}"
-# shellcheck source=scripts/sbatch/common.sh
-source "${REPO}/scripts/sbatch/common.sh"
+# shellcheck source=scripts/sbatch/common_mbpp.sh
+source "${REPO}/scripts/sbatch/common_mbpp.sh"
 setup_job_env
 print_experiment_config
 
