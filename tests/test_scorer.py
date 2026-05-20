@@ -1,4 +1,4 @@
-from meta_agent_evo.evaluation.scorer import score_one
+from evaluation.scorer import score_one
 
 
 def test_score_mbpp_zero_on_garbage():

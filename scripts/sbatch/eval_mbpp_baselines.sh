@@ -4,8 +4,8 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=32G
 #SBATCH --time=48:00:00
-#SBATCH --output=/home/jaehoonjeong/data/MetaAgentEvolution_Release/logs/%x.%j.out
-#SBATCH --error=/home/jaehoonjeong/data/MetaAgentEvolution_Release/logs/%x.%j.err
+#SBATCH --output=logs/%x.%j.out
+#SBATCH --error=logs/%x.%j.err
 
 # ─────────────────────────────────────────────────────────────────
 #  MBPP Baseline Experiments
@@ -21,14 +21,17 @@
 
 set -euo pipefail
 
-REPO=/home/jaehoonjeong/data/MetaAgentEvolution_Release
+REPO="${REPO:-$(cd "$(dirname "$0")/../.." && pwd)}"
 cd "$REPO"
+mkdir -p logs
 
-source /data5/jaehoonjeong/miniconda3/etc/profile.d/conda.sh
-conda activate pro6000
+CONDA_SH="${CONDA_SH:-$HOME/miniconda3/etc/profile.d/conda.sh}"
+# shellcheck source=/dev/null
+source "$CONDA_SH"
+conda activate "${CONDA_ENV:-MoE}"
 
 export PYTHONPATH="$REPO/src"
-DATA_ROOT="${DATA_DIR:-/home/jaehoonjeong/data/MultiAgent/Data}"
+DATA_ROOT="${DATA_DIR:-$REPO/data}"
 SEED="${SEED:-20210042}"
 MODEL="${MODEL:-Qwen/Qwen3-Coder-30B-A3B-Instruct}"
 MAX_REFINE="${MAX_REFINE_ITERS:-2}"

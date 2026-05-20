@@ -9,13 +9,12 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from meta_agent_evo.agents.base import Agent
-from meta_agent_evo.paths import repo_root
-from meta_agent_evo.pipelines.base_pipeline import BasePipeline
-from meta_agent_evo.prompts import baseline_prompts
-from meta_agent_evo.prompts.coding import build_baseline_prompt, build_critic_prompt, build_refine_prompt
-from meta_agent_evo.prompts.meta import MANAGER_PROMPT
-from meta_agent_evo.utils.helpers import check_stop_condition, extract_code_block
+from agents.base import Agent
+from pipelines.base_pipeline import BasePipeline
+from prompts import baseline_prompts
+from prompts.coding import build_baseline_prompt, build_critic_prompt, build_refine_prompt
+from prompts.meta import MANAGER_PROMPT
+from utils.helpers import check_stop_condition, extract_code_block
 
 
 class GMRoutingPipeline(BasePipeline):

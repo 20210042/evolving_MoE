@@ -10,17 +10,18 @@ import tempfile
 from io import StringIO
 from pathlib import Path
 
-from meta_agent_evo.paths import livecodebench_paths
-from meta_agent_evo.utils.helpers import extract_code_block
+from utils.helpers import extract_code_block
 
 _LCB_BENCHMARK_CACHE: dict = {}
 
 
 def _ensure_lcb_on_path() -> None:
-    for p in livecodebench_paths():
-        sp = str(p)
-        if sp not in sys.path:
-            sys.path.insert(0, sp)
+    root = Path(__file__).resolve().parent.parent.parent
+    candidates = [Path(os.environ["LIVECODEBENCH_PATH"])] if os.environ.get("LIVECODEBENCH_PATH") else []
+    candidates.append(root / "LiveCodeBench")
+    for p in candidates:
+        if p.is_dir() and str(p) not in sys.path:
+            sys.path.insert(0, str(p))
 
 
 def score_lcb_data(

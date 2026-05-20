@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(conda run:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import sys,json,re; data=json.load(sys.stdin); cmd=data.get('tool_input',{}).get('command',''); heavy=re.search(r'python[^ ]* +(scripts/run_|scripts/score_|scripts/build_big)', cmd); print(json.dumps({'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny', 'permissionDecisionReason': 'Heavy compute job detected. Use sbatch or srun to submit this job instead of running directly in the terminal.'}})) if heavy else None\"",
+            "statusMessage": "Checking if job should be submitted via sbatch/srun..."
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "PATH": "/data6/jongbinwon/.conda/envs/MoE/bin:/data6/jongbinwon/miniconda3/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "CONDA_DEFAULT_ENV": "MoE",
+    "CONDA_PREFIX": "/data6/jongbinwon/.conda/envs/MoE",
+    "VIRTUAL_ENV": "/data6/jongbinwon/.conda/envs/MoE"
+  }
+}

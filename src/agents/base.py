@@ -1,4 +1,4 @@
-from meta_agent_evo.utils.llm import LLMService
+from utils.llm import LLMService
 
 
 class Agent:

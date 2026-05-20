@@ -20,10 +20,10 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from meta_agent_evo.agents.base import Agent
-from meta_agent_evo.data.loader import get_dataset
-from meta_agent_evo.pipelines.routing_inference import GMRoutingPipeline
-from meta_agent_evo.utils.llm import LLMService
+from agents.base import Agent
+from data.loader import get_dataset
+from pipelines.routing_inference import GMRoutingPipeline
+from utils.llm import LLMService
 
 
 def main() -> None:
@@ -31,7 +31,7 @@ def main() -> None:
     parser.add_argument("--model", type=str, default="Qwen/Qwen3-Coder-30B-A3B-Instruct")
     parser.add_argument("--dataset", type=str, default="mbpp")
     parser.add_argument("--split", type=str, default="test")
-    parser.add_argument("--data_dir", type=str, default="/home/jaehoonjeong/data/MultiAgent/Data")
+    parser.add_argument("--data_dir", type=str, default=str(ROOT / "data"))
     parser.add_argument(
         "--pipeline",
         type=str,
@@ -115,11 +115,11 @@ def main() -> None:
     agent = Agent(llm, role="Inference_Agent")
 
     if args.pipeline == "raw":
-        from meta_agent_evo.pipelines.baselines import RawPipeline
+        from pipelines.baselines import RawPipeline
         pipeline = RawPipeline(agent, domain="coding")
         logging.info("Pipeline: Raw (1-pass, no persona)")
     elif args.pipeline == "self-refine":
-        from meta_agent_evo.pipelines.baselines import SelfRefinePipeline
+        from pipelines.baselines import SelfRefinePipeline
         pipeline = SelfRefinePipeline(agent, domain="coding", max_refine_iters=max_refine_iters)
         logging.info("Pipeline: Self-Refine (%d iters, no persona)", max_refine_iters)
     else:  # evolved

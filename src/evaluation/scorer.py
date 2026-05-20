@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from meta_agent_evo.evaluation.code_exec import evaluate_code_score, extract_helper_code
-from meta_agent_evo.evaluation.lcb_score import score_lcb_item
+from evaluation.code_exec import evaluate_code_score, extract_helper_code
+from evaluation.lcb_score import score_lcb_item
 
 
 def score_one(
