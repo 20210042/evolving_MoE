@@ -1,0 +1,4 @@
+dataset: "livecodebench"
+train_size: 380
+epochs: 3
+batch_size: 50

@@ -90,7 +90,8 @@ def main() -> None:
     # test_ids.json: evolution 홀드아웃 목록 필터링
     test_paths = [
         Path(args.output_file).resolve().parent / "test_ids.json",
-        Path("results") / f"mbpp/seed{args.seed}" / "test_ids.json",
+        Path("results") / f"{args.dataset}/seed{args.seed}" / "test_ids.json",
+        Path("results") / f"mbpp/seed{args.seed}" / "test_ids.json",  # legacy
         Path("results") / "test_ids.json",
     ]
     test_ids_path = next((p for p in test_paths if p.is_file()), None)
