@@ -27,12 +27,12 @@ def _format_roster_table(roster: List[Dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def _extract_forbidden_keywords(roster: List[Dict[str, Any]], top_k: int = 5) -> List[str]:
-    """Option B: Extract high-frequency domain keywords from current roster strengths.
+def _extract_forbidden_keywords(roster: List[Dict[str, Any]], max_kws_per_agent: int = 3) -> List[str]:
+    """Option B: Extract the most representative domain keywords per agent to ensure orthogonality.
 
-    Returns the top-k content words (len >= 4) so the scouting prompt can
-    explicitly forbid them, preventing the LLM from re-proposing the same
-    domain under a slightly different name.
+    For each agent in the roster, extracts the top `max_kws_per_agent` content words.
+    This prevents domain overlap immediately from the first addition without creating
+    an excessively long forbidden word list that restricts LLM's creativity.
     """
     _STOPWORDS = {
         "and", "the", "for", "with", "that", "this", "from", "are", "have",
@@ -44,21 +44,22 @@ def _extract_forbidden_keywords(roster: List[Dict[str, Any]], top_k: int = 5) ->
         "performance", "implementation", "optimization", "operations",
         "datasets", "solutions", "techniques", "problems", "issues",
         "complex", "handling", "reduction", "algorithms", "specialist",
+        "critic", "help", "formatting", "place", "expert", "specializes",
     }
-    word_counts: Counter = Counter()
+    forbidden_kws = set()
     for p in roster:
         text = " ".join([
             p.get("persona_name", ""),
             p.get("name", ""),
             p.get("strengths", ""),
-            p.get("system_prompt", ""),
         ]).lower()
         words = re.findall(r"[a-z]{4,}", text)
-        for w in words:
-            if w not in _STOPWORDS:
-                word_counts[w] += 1
+        content_words = [w for w in words if w not in _STOPWORDS]
+        counts = Counter(content_words)
+        top_words = [w for w, _ in counts.most_common(max_kws_per_agent)]
+        forbidden_kws.update(top_words)
 
-    return [w for w, _ in word_counts.most_common(top_k)]
+    return sorted(list(forbidden_kws))
 
 
 def scout_new_persona(
