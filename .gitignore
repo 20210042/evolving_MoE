@@ -27,3 +27,7 @@ results/
 
 # Temp scoring
 *_scored.jsonl
+
+# models & data
+checkpoints/
+wandb/
