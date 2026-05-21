@@ -40,6 +40,10 @@ class GMEvolutionOrchestrator:
         self.agent = agent
         self.roster_path = roster_path
         self.roster = ensure_roster(roster_path)
+        for p in self.roster:
+            p.setdefault("total_war", 0)
+            p.setdefault("active_steps", 0)
+            p.setdefault("average_war", 0.0)
         self.action_cfg = action_cfg or ActionGateConfig()
         self.max_refine_iters = max_refine_iters
         self.lcb_timeout = lcb_timeout
@@ -259,7 +263,19 @@ class GMEvolutionOrchestrator:
         )
         logging.info("WAR Scores: %s", war_scores)
 
-        worst_agent = pick_worst_agent(war_scores, squad_results, tiebreak=self.war_tiebreak, rng=rng)
+        # Update cumulative WAR metrics for all agents in the current roster
+        for p in self.roster:
+            p_id = p["id"]
+            if p_id in war_scores:
+                current_score = war_scores[p_id]
+                p["total_war"] = p.get("total_war", 0) + current_score
+                p["active_steps"] = p.get("active_steps", 0) + 1
+                p["average_war"] = p["total_war"] / p["active_steps"]
+
+        # Save cumulative metrics updates
+        save_roster(self.roster_path, self.roster)
+
+        worst_agent = pick_worst_agent(war_scores, self.roster, tiebreak=self.war_tiebreak, rng=rng)
         logging.info("Worst Agent for Eviction: %s", worst_agent)
         logging.info("Total Hard Errors: %s", len(hard_errors_texts))
 

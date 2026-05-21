@@ -76,4 +76,7 @@ def normalize_persona_fields(persona: Dict[str, Any], new_id: str) -> Dict[str, 
     persona["id"] = new_id
     if "name" not in persona and "persona_name" in persona:
         persona["name"] = persona["persona_name"]
+    persona.setdefault("total_war", 0)
+    persona.setdefault("active_steps", 0)
+    persona.setdefault("average_war", 0.0)
     return persona
