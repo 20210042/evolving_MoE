@@ -62,14 +62,19 @@ def _extract_forbidden_keywords(roster: List[Dict[str, Any]], max_kws_per_agent:
     return sorted(list(forbidden_kws))
 
 
+def _calculate_overlap(set1: set[str], set2: set[str]) -> float:
+    if not set1 or not set2:
+        return 0.0
+    return len(set1 & set2) / min(len(set1), len(set2))
+
+
 def scout_new_persona(
     agent: Agent,
     roster: List[Dict[str, Any]],
     hard_errors_text: str,
+    max_retries: int = 3,
 ) -> Dict[str, Any]:
     roster_str = _format_roster_table(roster)
-
-    # Option B: inject dynamic forbidden keyword list into the prompt
     forbidden_keywords = _extract_forbidden_keywords(roster)
     forbidden_note = ""
     if forbidden_keywords:
@@ -86,15 +91,72 @@ def scout_new_persona(
         current_roster=roster_str + forbidden_note,
     )
 
+    _STOPWORDS = {
+        "and", "the", "for", "with", "that", "this", "from", "are", "have",
+        "such", "each", "when", "also", "both", "than", "they", "their",
+        "code", "data", "into", "case", "cases", "based", "using", "large",
+        "small", "given", "type", "types", "list", "lists", "value", "values",
+        "input", "output", "ensure", "correct", "including", "correct",
+        "potential", "improve", "identify", "analysis", "handling",
+        "performance", "implementation", "optimization", "operations",
+        "datasets", "solutions", "techniques", "problems", "issues",
+        "complex", "handling", "reduction", "algorithms", "specialist",
+        "critic", "help", "formatting", "place", "expert", "specializes",
+    }
+
+    def get_word_set(persona: Dict[str, Any]) -> set[str]:
+        text = " ".join([
+            persona.get("persona_name", ""),
+            persona.get("name", persona.get("persona_name", "")),
+            persona.get("strengths", ""),
+        ]).lower()
+        words = re.findall(r"[a-z]{4,}", text)
+        return {w for w in words if w not in _STOPWORDS}
+
+    # Pre-calculate word sets for existing roster
+    roster_word_sets = [(p, get_word_set(p)) for p in roster]
+
     msg = [
         {"role": "system", "content": "You are a strict JSON API. Only output valid JSON."},
         {"role": "user", "content": prompt},
     ]
-    response = agent.chat(msg, temperature=0.7)
-    try:
-        m = re.search(r"\{.*\}", response, re.DOTALL)
-        if m:
-            return json.loads(m.group(0))
-    except Exception as e:
-        logging.error("Failed to parse new persona JSON: %s", e)
+
+    for attempt in range(1, max_retries + 1):
+        response = agent.chat(msg, temperature=0.7)
+        try:
+            m = re.search(r"\{.*\}", response, re.DOTALL)
+            if not m:
+                continue
+            persona = json.loads(m.group(0))
+
+            # Validate domain overlap using Overlap Coefficient
+            new_set = get_word_set(persona)
+            overlap_detected = False
+            overlap_details = []
+
+            for old_p, old_set in roster_word_sets:
+                o_ratio = _calculate_overlap(new_set, old_set)
+                if o_ratio >= 0.35:  # Overlap Threshold 35%
+                    overlap_detected = True
+                    old_name = old_p.get("name", old_p.get("persona_name", ""))
+                    overlap_details.append(f"'{old_name}' (Overlap: {o_ratio:.2%})")
+
+            if not overlap_detected:
+                return persona
+
+            logging.warning(
+                f"[Attempt {attempt}] Proposed domain overlaps with: {overlap_details}. Retrying..."
+            )
+
+            # Append assistant response and feedback prompt for auto-correction
+            msg.append({"role": "assistant", "content": response})
+            feedback_str = (
+                f"Your proposal overlaps significantly with existing domains: {', '.join(overlap_details)}. "
+                f"Please propose a completely orthogonal domain. Do NOT duplicate their expertise."
+            )
+            msg.append({"role": "user", "content": feedback_str})
+
+        except Exception as e:
+            logging.error("Failed to parse or validate new persona JSON: %s", e)
+
     return {}
