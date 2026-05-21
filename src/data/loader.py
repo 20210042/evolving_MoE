@@ -122,7 +122,7 @@ def load_bigmath(split: str = "test", category: str=None) -> List[Dict[str, Any]
     data: List[Dict[str, Any]] = []
     for i, item in enumerate(dataset):
         
-        if category and item["category"] != category: continue
+        if category and category not in item["category"]: continue
         
         data.append(
             {
