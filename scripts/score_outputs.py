@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Score inference outputs (JSONL) and report pass@1."""
 
+import argparse
 from typing import Optional
 import json
 import logging
