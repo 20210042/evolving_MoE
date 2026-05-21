@@ -1,0 +1,22 @@
+source_priority:
+  - LiveCodeBench
+  - TACO
+  - CodeContests
+  - APPS
+
+exact:
+  use_statement_hash: true
+  use_source_url: true
+  use_examples: false
+
+near_duplicate:
+  enabled: true
+  method: token_ngram_jaccard
+  ngram_size: 5
+  threshold: 0.85
+
+canonical_selection:
+  prefer_more_test_cases: true
+  prefer_reference_solution: true
+  prefer_native_tags: true
+  prefer_source_url: true

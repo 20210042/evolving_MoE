@@ -1,0 +1,21 @@
+default_language: python
+
+supported_languages:
+  - python
+
+default_timeout_seconds: 5
+default_memory_limit_mb: 512
+max_output_bytes: 200000
+
+comparison:
+  default_type: exact_or_token_match
+  strip_trailing_whitespace: true
+  normalize_final_newline: true
+  case_sensitive: true
+  numeric_tolerance:
+    abs_tol: 1.0e-6
+    rel_tol: 1.0e-6
+
+unsupported:
+  keep_records: true
+  mark_requires_manual_review: true

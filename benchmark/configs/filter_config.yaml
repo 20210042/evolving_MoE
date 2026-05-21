@@ -1,0 +1,14 @@
+allowed_task_families:
+  - algorithmic_code_generation
+  - self_repair
+
+excluded_task_families:
+  - pure_code_execution
+  - test_output_prediction
+  - non_algorithmic_code_task
+
+require_problem_statement: true
+require_test_cases: true
+require_supported_eval_mode: true
+
+min_statement_chars: 30

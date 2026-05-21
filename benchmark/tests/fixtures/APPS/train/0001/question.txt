@@ -1,0 +1,14 @@
+Add two integers.
+
+-----Input-----
+Two integers a and b.
+
+-----Output-----
+Their sum.
+
+-----Examples-----
+Input
+1 2
+
+Output
+3

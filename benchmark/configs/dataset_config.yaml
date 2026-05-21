@@ -1,0 +1,22 @@
+raw_root: /home/minjikim/data/raw
+datasets:
+  - apps
+  - codecontests
+  - taco
+  - livecodebench
+
+dataset_paths:
+  apps:
+    - APPS
+    - apps
+  codecontests:
+    - dm-code_contests
+    - codecontests
+    - CodeContests
+  taco:
+    - baai_taco
+    - taco
+    - TACO
+  livecodebench:
+    - livecodebench
+    - LiveCodeBench

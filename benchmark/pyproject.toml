@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "algorithmic-coding-critic-data"
+version = "0.1.0"
+description = "Data integration pipeline for algorithmic coding critic benchmarks."
+requires-python = ">=3.10"
+dependencies = [
+  "pydantic>=2.0",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+benchmark-formats = [
+  "datasets",
+  "pyarrow",
+  "riegeli",
+  "tensorflow-datasets",
+]
+test = [
+  "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
