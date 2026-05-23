@@ -52,7 +52,7 @@ run_and_score() {
         --split test
 }
 
-echo "=== [1/6] MBPP | Init persona (5 domain critics + GMRoutingPipeline) ==="
+echo "=== [1/6] MBPP | Init persona (LUCA + GMRoutingPipeline) ==="
 run_and_score evolved mbpp "${OUT_BASE}/init_persona_mbpp.jsonl" "${INIT_ROSTER}"
 
 echo "=== [2/6] MBPP | Raw (1-pass) ==="

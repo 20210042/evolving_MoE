@@ -109,14 +109,8 @@ def main() -> None:
     logging.info("Held out %s test ids → %s", len(test_data), test_ids_path)
 
     gate = cfg.get("action_gate") or {}
-    swap_max_gain_raw = gate.get("swap_max_gain", None)
     action_cfg = ActionGateConfig(
-        alpha_stability=float(gate.get("alpha_stability", 1.0)),
         lambda_size=float(gate.get("lambda_size", 0.05)),
-        epsilon_floor=float(gate.get("epsilon_floor", 0.05)),
-        swap_max_gain=float(swap_max_gain_raw) if swap_max_gain_raw is not None else None,
-        use_wilson_ci=bool(gate.get("use_wilson_ci", True)),
-        wilson_confidence=float(gate.get("wilson_confidence", 0.95)),
     )
 
     logging.info("Initializing LLM: %s", model)
@@ -175,7 +169,6 @@ def main() -> None:
         lcb_release_version=str(cfg.get("lcb_release_version", "release_v5")),
         code_exec_timeout=float(cfg.get("code_exec_timeout", 3.0)),
         war_tiebreak=str(cfg.get("war_tiebreak", "random")),
-        probe_stability_k=int(gate.get("probe_stability_k", 8)),
         results_dir=args.results_dir,
         run_id=run_id,
         dataset_name=dataset,

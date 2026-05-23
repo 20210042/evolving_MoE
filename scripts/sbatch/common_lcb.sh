@@ -6,7 +6,7 @@
 : "${CONDA_ENV:=pro6000}"
 : "${SEED:=20210044}"
 : "${TRAIN_SIZE:=380}"
-: "${BATCH_SIZE:=50}"
+: "${BATCH_SIZE:=25}"
 : "${MAX_EPOCHS:=3}"
 : "${MAX_REFINE_ITERS:=2}"
 

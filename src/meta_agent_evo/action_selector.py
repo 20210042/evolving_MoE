@@ -1,22 +1,17 @@
-"""3-action roster gate: keep (A1), add (A2), swap (A3)."""
+"""Phase 1 (Add) & Phase 2 (Delete) independent Action Gate with Non-linear Penalty."""
 
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Literal, Optional, Set
 
-Action = Literal["noop", "add", "swap"]
+Action = Literal["noop", "add", "swap", "delete"]
 
 
 @dataclass
 class ActionGateConfig:
-    alpha_stability: float = 1.0
-    lambda_size: float = 0.01
-    epsilon_floor: float = 0.05
-    swap_max_gain: Optional[float] = None  # if set: u_swap <= this → swap, else → add
-    use_wilson_ci: bool = True
-    wilson_confidence: float = 0.95
+    lambda_size: float = 0.005  # Base coefficient for exponential penalty
 
 
 @dataclass
@@ -24,44 +19,7 @@ class ActionDecision:
     action: Action
     utility: Dict[str, float]
     marginal_hard_gain_add: float
-    marginal_hard_gain_swap_extra: float
     mcl_worst: float
-
-
-def wilson_lower_bound(k: int, n: int, confidence: float = 0.95) -> float:
-    if n <= 0:
-        return 0.0
-    if confidence >= 0.99:
-        z = 2.576
-    else:
-        z = 1.96
-    p = k / n
-    denom = 1 + z**2 / n
-    center = (p + z**2 / (2 * n)) / denom
-    margin = z * math.sqrt((p * (1 - p) / n + z**2 / (4 * n**2))) / denom
-    return max(0.0, center - margin)
-
-
-def _covered_by_roster(
-    q: str,
-    roster_ids: List[str],
-    squad_results: Dict[str, Set[str]],
-) -> bool:
-    return any(q in squad_results.get(r, set()) for r in roster_ids)
-
-
-def solve_rate_union(
-    roster_ids: List[str],
-    squad_results: Dict[str, Set[str]],
-    probe: List[str],
-    extra_pass: Set[str],
-) -> float:
-    if not probe:
-        return 0.0
-    n = 0
-    for q in probe:
-        n += int(_covered_by_roster(q, roster_ids, squad_results) or (q in extra_pass))
-    return n / len(probe)
 
 
 def select_action(
@@ -69,75 +27,70 @@ def select_action(
     roster_ids: List[str],
     worst_id: str,
     squad_results: Dict[str, Set[str]],
-    probe_hard: List[str],
-    probe_stability: List[str],
+    hard_errors: List[str],
     new_pass_ids: Set[str],
+    batch_size: int,
     cfg: ActionGateConfig,
 ) -> ActionDecision:
     """
-    ``new_pass_ids``: question ids in the probe union where the **candidate** persona reached pass@1.
+    Independent Phase 1 (Add or Stay) and Phase 2 (Delete or Stay) Roster Decisions.
+    
+    Uses an exponential size penalty P(N) = 0.5 * (exp(N * lambda_size) - 1):
+    - Marginal cost to add (N -> N+1): 0.5 * exp(N * lambda_size) * (exp(lambda_size) - 1.0)
+    - Marginal savings to delete (N -> N-1): 0.5 * exp((N-1) * lambda_size) * (exp(lambda_size) - 1.0)
     """
     r_ids = list(roster_ids)
-    r_minus = [x for x in r_ids if x != worst_id]
+    N = len(r_ids)
+    
+    # 1. Non-linear marginal penalty/savings coefficients (Exponential)
+    factor = 0.5 * (math.exp(cfg.lambda_size) - 1.0)
+    lambda_add = math.exp(N * cfg.lambda_size) * factor
+    lambda_del = math.exp((N - 1) * cfg.lambda_size) * factor
 
-    def sr_add(p: List[str]) -> float:
-        return solve_rate_union(r_ids, squad_results, p, new_pass_ids)
+    # 2. Phase 1 (Add) Utility
+    # Marginal hard gain is scaled against the entire batch_size (overall solve rate delta)
+    gh_add = 0.0
+    if batch_size > 0:
+        solved_hard = set(hard_errors) & new_pass_ids
+        gh_add = len(solved_hard) / batch_size
+        
+    u_add = gh_add - lambda_add
+    phase1_add = u_add > 0.0
 
-    def sr_swap(p: List[str]) -> float:
-        return solve_rate_union(r_minus, squad_results, p, new_pass_ids)
+    # 3. Phase 2 (Delete) Utility
+    # mcl is the fraction of total batch problems uniquely solved by the worst agent
+    worst_solves = squad_results.get(worst_id, set())
+    other_solves = set()
+    for rid, solves in squad_results.items():
+        if rid != worst_id:
+            other_solves.update(solves)
+            
+    unique_worst_solves = worst_solves - other_solves
+    mcl = len(unique_worst_solves) / batch_size if batch_size > 0 else 0.0
+    
+    u_delete = lambda_del - mcl
+    phase2_delete = False
+    if N > 1 and u_delete > 0.0:
+        phase2_delete = True
 
-    def sr_baseline(p: List[str]) -> float:
-        return solve_rate_union(r_ids, squad_results, p, set())
+    # 4. Combine Decisions
+    if phase1_add and phase2_delete:
+        final_action = "swap"
+    elif phase1_add and not phase2_delete:
+        final_action = "add"
+    elif not phase1_add and phase2_delete:
+        final_action = "delete"
+    else:
+        final_action = "noop"
 
-    def sr_baseline_minus(p: List[str]) -> float:
-        return solve_rate_union(r_minus, squad_results, p, set())
+    utility = {
+        "u_add": u_add,
+        "u_delete": u_delete
+    }
 
-    gh_add = sr_add(probe_hard) - sr_baseline(probe_hard)
-    gs_add = sr_add(probe_stability) - sr_baseline(probe_stability)
-    gh_swap = sr_swap(probe_hard) - sr_baseline(probe_hard)
-    gs_swap = sr_swap(probe_stability) - sr_baseline(probe_stability)
-
-    u_add = gh_add + cfg.alpha_stability * min(0.0, gs_add) - cfg.lambda_size
-    u_swap = gh_swap + cfg.alpha_stability * min(0.0, gs_swap)
-
-    mcl = sr_baseline(probe_hard + probe_stability) - sr_baseline_minus(probe_hard + probe_stability)
-    mcg_swap_extra = sr_swap(probe_hard) - sr_add(probe_hard)
-
-    # Wilson CI on additional hard passes
-    extra_hard = [q for q in probe_hard if (not _covered_by_roster(q, r_ids, squad_results)) and q in new_pass_ids]
-    k_new = len(extra_hard)
-    n_h = len(probe_hard)
-
-    ci_ok_add = True
-    ci_ok_swap = True
-    if cfg.use_wilson_ci and n_h > 0:
-        ci_ok_add = wilson_lower_bound(k_new, n_h, cfg.wilson_confidence) > 1e-6 or k_new == 0
-        extra_hard_swap = [
-            q
-            for q in probe_hard
-            if (not _covered_by_roster(q, r_minus, squad_results)) and q in new_pass_ids
-        ]
-        k_sw = len(extra_hard_swap)
-        ci_ok_swap = wilson_lower_bound(k_sw, n_h, cfg.wilson_confidence) > 1e-6 or k_sw == 0
-
-    utility = {"A1": 0.0, "A2": u_add, "A3": u_swap}
-
-    max_u = max(u_add, u_swap)
-    if max_u <= cfg.epsilon_floor:
-        return ActionDecision("noop", utility, gh_add, mcg_swap_extra, mcl)
-
-    # Pure argmax: swap wins unless swap_max_gain threshold routes to add
-    if u_swap >= u_add:
-        if cfg.swap_max_gain is not None and u_swap > cfg.swap_max_gain and ci_ok_add:
-            # High-gain candidate: add rather than swap
-            return ActionDecision("add", utility, gh_add, mcg_swap_extra, mcl)
-        if ci_ok_swap:
-            return ActionDecision("swap", utility, gh_add, mcg_swap_extra, mcl)
-
-    if u_add > cfg.epsilon_floor and ci_ok_add:
-        return ActionDecision("add", utility, gh_add, mcg_swap_extra, mcl)
-
-    if u_swap > cfg.epsilon_floor and ci_ok_swap:
-        return ActionDecision("swap", utility, gh_add, mcg_swap_extra, mcl)
-
-    return ActionDecision("noop", utility, gh_add, mcg_swap_extra, mcl)
+    return ActionDecision(
+        action=final_action,
+        utility=utility,
+        marginal_hard_gain_add=gh_add,
+        mcl_worst=mcl
+    )

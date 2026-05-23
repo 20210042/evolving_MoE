@@ -33,13 +33,7 @@ war_tiebreak: "random"  # random | alphabetical — avoid systematic bias
 
 # Action gate
 action_gate:
-  alpha_stability: 1.0
   lambda_size: 0.05
-  epsilon_floor: 0.03
-  swap_max_gain: 0.3
-  probe_stability_k: 8
-  use_wilson_ci: true
-  wilson_confidence: 0.95
 
 # Scoring
 lcb_timeout: 10

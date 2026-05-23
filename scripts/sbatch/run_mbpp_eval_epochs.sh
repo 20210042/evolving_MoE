@@ -3,11 +3,11 @@
 #SBATCH --gres=gpu:PRO6000:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --time=12:00:00
+#SBATCH --time=48:00:00
 #SBATCH --output=/home/jaehoonjeong/data/MetaAgentEvolution_Release/logs/%x.%j.out
 #SBATCH --error=/home/jaehoonjeong/data/MetaAgentEvolution_Release/logs/%x.%j.err
 
-# Step 2/3 — Inference + scoring at end of each evolution epoch
+# Step 2/3 — Inference + scoring at end of each evolution epoch (starts with LUCA)
 # Uses roster_step_{steps_per_epoch * epoch}.json (not batch_size for inference itself)
 
 set -euo pipefail

@@ -3,11 +3,11 @@
 #SBATCH --gres=gpu:PRO6000:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --time=12:00:00
+#SBATCH --time=48:00:00
 #SBATCH --output=/home/jaehoonjeong/data/MetaAgentEvolution_Release/logs/%x.%j.out
 #SBATCH --error=/home/jaehoonjeong/data/MetaAgentEvolution_Release/logs/%x.%j.err
 
-# Step 2/2 — LCB inference + scoring at end of each evolution epoch
+# Step 2/2 — LCB inference + scoring at end of each evolution epoch (starts with LUCA)
 # Evaluates on the 500 held-out LCB problems (test_ids.json)
 
 set -euo pipefail

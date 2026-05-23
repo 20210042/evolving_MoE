@@ -31,7 +31,6 @@ class GMEvolutionOrchestrator:
         lcb_release_version: str = "release_v5",
         code_exec_timeout: float = 3.0,
         war_tiebreak: str = "random",
-        probe_stability_k: int = 8,
         results_dir: str = "results",
         run_id: str = "default",
         dataset_name: str = "livecodebench",
@@ -44,13 +43,13 @@ class GMEvolutionOrchestrator:
             p.setdefault("total_war", 0)
             p.setdefault("active_steps", 0)
             p.setdefault("average_war", 0.0)
+            p.setdefault("routing_history", [])
         self.action_cfg = action_cfg or ActionGateConfig()
         self.max_refine_iters = max_refine_iters
         self.lcb_timeout = lcb_timeout
         self.lcb_release_version = lcb_release_version
         self.code_exec_timeout = code_exec_timeout
         self.war_tiebreak = war_tiebreak
-        self.probe_stability_k = probe_stability_k
         self.step_logger = StepLogger(results_dir)
         self.run_id = run_id
         self.dataset_name = dataset_name
@@ -228,27 +227,20 @@ class GMEvolutionOrchestrator:
         return current_code
 
     def _update_routing_memory(self, batch_data: List[Dict], squad_results: Dict[str, Set[str]]) -> None:
-        routing_memory: List[Dict[str, Any]] = []
-        mem_path = os.path.join(self.step_logger.results_dir, "routing_memory.json")
-        if os.path.exists(mem_path):
-            try:
-                with open(mem_path, "r", encoding="utf-8") as f:
-                    routing_memory = json.load(f)
-            except Exception:
-                pass
-
         for item in batch_data:
             pid = item["id"]
             solvers = [a for a, s in squad_results.items() if pid in s]
             if len(solvers) == 1:
-                routing_memory.append(
-                    {"instruction": item.get("instruction", "")[:500], "best_critic_id": solvers[0]}
-                )
-
-        routing_memory = routing_memory[-50:]
-        os.makedirs(self.step_logger.results_dir, exist_ok=True)
-        with open(mem_path, "w", encoding="utf-8") as f:
-            json.dump(routing_memory, f, indent=4)
+                solver_id = solvers[0]
+                for p in self.roster:
+                    if p["id"] == solver_id:
+                        p.setdefault("routing_history", [])
+                        entry = {"instruction": item.get("instruction", "")[:500]}
+                        if entry not in p["routing_history"]:
+                            p["routing_history"].append(entry)
+                        p["routing_history"] = p["routing_history"][-10:]
+                        break
+        save_roster(self.roster_path, self.roster)
 
     def run_epoch(self, batch_data: List[Dict[str, Any]]) -> None:
         logging.info("Starting Epoch with %s problems.", len(batch_data))
@@ -281,8 +273,7 @@ class GMEvolutionOrchestrator:
 
         noop_decision = ActionDecision(
             "noop",
-            {"A1": 0.0, "A2": 0.0, "A3": 0.0},
-            0.0,
+            {"u_add": 0.0, "u_delete": 0.0},
             0.0,
             0.0,
         )
@@ -296,7 +287,6 @@ class GMEvolutionOrchestrator:
                 hard_errors_texts,
                 noop_decision,
                 None,
-                [],
                 [],
                 set(),
                 ub_rate,
@@ -315,20 +305,10 @@ class GMEvolutionOrchestrator:
 
         roster_ids = [p["id"] for p in self.roster]
         probe_hard = list(hard_errors_texts.keys())
-
-        covered_in_batch = [
-            item["id"]
-            for item in batch_data
-            if any(item["id"] in squad_results[r] for r in roster_ids)
-        ]
-        k = min(self.probe_stability_k, len(covered_in_batch))
-        probe_stab = rng.sample(covered_in_batch, k) if k > 0 else []
-
-        union_probe = list(dict.fromkeys(probe_hard + probe_stab))
         by_id = {b["id"]: b for b in batch_data}
         new_pass_ids: Set[str] = set()
 
-        for q in union_probe:
+        for q in probe_hard:
             item = by_id[q]
             code = self._run_candidate_on_item(item, baselines[q], new_persona)
             if pass_at_threshold(self._score(item, code)):
@@ -338,9 +318,9 @@ class GMEvolutionOrchestrator:
             roster_ids=roster_ids,
             worst_id=worst_agent,
             squad_results={k: set(v) for k, v in squad_results.items()},
-            probe_hard=probe_hard,
-            probe_stability=probe_stab,
+            hard_errors=probe_hard,
             new_pass_ids=new_pass_ids,
+            batch_size=len(batch_data),
             cfg=self.action_cfg,
         )
 
@@ -350,7 +330,7 @@ class GMEvolutionOrchestrator:
             decision.utility,
             decision.mcl_worst,
             len(new_pass_ids),
-            len(union_probe),
+            len(probe_hard),
         )
 
         if decision.action == "noop":
@@ -358,13 +338,33 @@ class GMEvolutionOrchestrator:
         elif decision.action == "add":
             new_id = assign_candidate_id(self.roster)
             persona = normalize_persona_fields(new_persona, new_id)
+
+            # Pre-populate routing history from newly solved hard errors
+            new_history = []
+            for q in new_pass_ids:
+                if q in by_id:
+                    new_history.append({"instruction": by_id[q].get("instruction", "")[:500]})
+            persona["routing_history"] = new_history[-10:]
+
             self.roster.append(persona)
             save_roster(self.roster_path, self.roster)
             logging.info("Commit ADD: new persona %s", new_id)
-        else:
+        elif decision.action == "delete":
+            self.roster = [r for r in self.roster if r["id"] != worst_agent]
+            save_roster(self.roster_path, self.roster)
+            logging.info("Commit DELETE: removed worst agent %s", worst_agent)
+        elif decision.action == "swap":
             self.roster = [r for r in self.roster if r["id"] != worst_agent]
             new_id = assign_candidate_id(self.roster)
             persona = normalize_persona_fields(new_persona, new_id)
+
+            # Pre-populate routing history from newly solved hard errors
+            new_history = []
+            for q in new_pass_ids:
+                if q in by_id:
+                    new_history.append({"instruction": by_id[q].get("instruction", "")[:500]})
+            persona["routing_history"] = new_history[-10:]
+
             self.roster.append(persona)
             save_roster(self.roster_path, self.roster)
             logging.info("Commit SWAP: replaced %s with %s", worst_agent, new_id)
@@ -377,7 +377,6 @@ class GMEvolutionOrchestrator:
             decision,
             new_persona,
             probe_hard,
-            probe_stab,
             new_pass_ids,
             ub_rate,
         )
@@ -391,7 +390,6 @@ class GMEvolutionOrchestrator:
         decision: ActionDecision,
         new_persona: Optional[Dict[str, Any]],
         probe_hard: List[str],
-        probe_stab: List[str],
         new_pass_ids: Set[str],
         upper_bound_rate: float,
     ) -> None:
@@ -408,11 +406,11 @@ class GMEvolutionOrchestrator:
             "war": war_scores,
             "worst_eject_candidate": worst_agent,
             "hard_error_n": len(hard_errors_texts),
-            "probe": {"hard_n": len(probe_hard), "stab_n": len(probe_stab)},
+            "probe": {"hard_n": len(probe_hard), "stab_n": 0},
             "new_pass_on_union": sorted(new_pass_ids),
             "utility": decision.utility,
             "marginal_hard_gain_add": decision.marginal_hard_gain_add,
-            "marginal_hard_gain_swap_extra": decision.marginal_hard_gain_swap_extra,
+            "marginal_hard_gain_swap_extra": 0.0,
             "mcl_worst_est": decision.mcl_worst,
             "decision": decision.action,
             "roster_after": [p.get("id") for p in self.roster],

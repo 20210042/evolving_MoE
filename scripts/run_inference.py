@@ -142,15 +142,38 @@ def main() -> None:
         )
         logging.info("Pipeline: Evolved GMRoutingPipeline (roster=%s)", args.roster_path)
 
-    os.makedirs(os.path.dirname(args.output_file) or ".", exist_ok=True)
+    processed_ids = set()
+    if os.path.exists(args.output_file):
+        try:
+            with open(args.output_file, "r", encoding="utf-8") as rf:
+                for line in rf:
+                    line = line.strip()
+                    if line:
+                        try:
+                            data = json.loads(line)
+                            if "id" in data:
+                                processed_ids.add(str(data["id"]))
+                        except Exception:
+                            pass
+        except Exception as exc:
+            logging.warning("Error reading existing output file for resume: %s", exc)
 
-    with open(args.output_file, "w", encoding="utf-8") as f:
-        for idx, item in enumerate(test_data, start=1):
-            logging.info("Processing %s/%s: %s", idx, len(test_data), item["id"])
-            result = pipeline.run(item)
-            result["dataset"] = args.dataset
-            f.write(json.dumps(result, ensure_ascii=False) + "\n")
-            f.flush()
+    to_process = [d for d in test_data if str(d["id"]) not in processed_ids]
+    if len(to_process) < len(test_data):
+        logging.info("Resuming inference. Already processed: %d/%d items.", len(processed_ids), len(test_data))
+
+    if not to_process:
+        logging.info("All items already processed. Skipping inference.")
+    else:
+        mode = "a" if processed_ids else "w"
+        os.makedirs(os.path.dirname(args.output_file) or ".", exist_ok=True)
+        with open(args.output_file, mode, encoding="utf-8") as f:
+            for idx, item in enumerate(to_process, start=1):
+                logging.info("Processing %s/%s: %s", idx, len(to_process), item["id"])
+                result = pipeline.run(item)
+                result["dataset"] = args.dataset
+                f.write(json.dumps(result, ensure_ascii=False) + "\n")
+                f.flush()
 
     logging.info("Inference complete → %s", args.output_file)
 

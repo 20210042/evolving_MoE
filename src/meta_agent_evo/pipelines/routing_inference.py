@@ -69,9 +69,36 @@ class GMRoutingPipeline(BasePipeline):
         )
 
         few_shot_str = ""
-        if self.routing_memory:
+        examples: list = []
+        roster_size = len(self.roster)
+
+        # Gather at least one successful sample per agent from their metadata
+        agent_history_pools = {}
+        for p in self.roster:
+            hist = p.get("routing_history", [])
+            if hist:
+                agent_history_pools[p["id"]] = list(hist)
+                chosen = random.choice(agent_history_pools[p["id"]])
+                examples.append({"best_critic_id": p["id"], "instruction": chosen["instruction"]})
+                agent_history_pools[p["id"]].remove(chosen)
+
+        # If we have fewer examples than roster_size, pull extra ones from agents that have multiple history records
+        if len(examples) < roster_size:
+            extra_needed = roster_size - len(examples)
+            available_agent_ids = [aid for aid, pool in agent_history_pools.items() if pool]
+            while extra_needed > 0 and available_agent_ids:
+                aid = random.choice(available_agent_ids)
+                chosen = random.choice(agent_history_pools[aid])
+                examples.append({"best_critic_id": aid, "instruction": chosen["instruction"]})
+                agent_history_pools[aid].remove(chosen)
+                if not agent_history_pools[aid]:
+                    available_agent_ids.remove(aid)
+                extra_needed -= 1
+
+        if examples:
+            random.shuffle(examples)
             few_shot_str = "\n\n### Past Successful Routing Examples:\n"
-            for i, mem in enumerate(random.sample(self.routing_memory, min(5, len(self.routing_memory)))):
+            for i, mem in enumerate(examples):
                 few_shot_str += (
                     f"Example {i+1}:\nProblem: {mem['instruction']}"
                     f"\nOptimal Critic ID: {mem['best_critic_id']}\n\n"
