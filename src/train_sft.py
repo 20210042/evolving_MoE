@@ -50,9 +50,9 @@ class DataArguments:
         default="bigmath",
         metadata={"help": "평가 데이터셋 이름."},
     )
-    category: Optional[str] = field(
+    categories: Optional[List[str]] = field(
         default=None,
-        metadata={"help": "특정 카테고리(e.g. calculus, algebra)로 필터링. None이면 전체."},
+        metadata={"help": "카테고리 필터 (e.g. --categories calculus algebra). None이면 전체."},
     )
     data_ratio: float = field(
         default=1.0,
@@ -94,9 +94,10 @@ def build_hf_dataset(
     split: str,
     data_ratio: float = 1.0,
     seed: Optional[int] = None,
-    category: Optional[str] = None,
+    categories: Optional[str] = None,
 ) -> Dataset:
-    items = get_dataset(name, split=split, category=category, data_ratio=data_ratio, seed=seed)
+    
+    items = get_dataset(name, split=split, categories=categories, data_ratio=data_ratio, seed=seed)
 
     return Dataset.from_list([
         {
@@ -148,7 +149,7 @@ def main():
         split="train",
         data_ratio=data_args.data_ratio,
         seed=sft_config.seed,
-        category=data_args.category,
+        categories=data_args.categories,
     )
     logger.info(f"학습 데이터셋: {len(train_dataset)}개 예제")
     
@@ -158,7 +159,7 @@ def main():
         data_args.eval_dataset,
         split="validation",
         seed=sft_config.seed,
-        category=data_args.category,
+        categories=data_args.categories,
     )
     logger.info(f"평가 데이터셋: {len(eval_dataset)}개 예제")
     

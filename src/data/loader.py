@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 import random
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from datasets import load_dataset
 
@@ -115,14 +115,16 @@ def load_math(split: str = "test") -> List[Dict[str, Any]]:
     return data
 
 
-def load_bigmath(split: str = "test", category: str=None) -> List[Dict[str, Any]]:
-    
+def load_bigmath(split: str = "test", categories=None) -> List[Dict[str, Any]]:
+
     dataset = load_dataset("Jongbin-kr/BIG-MATH_filtered", split=split)
-    
+
+    categories = [categories] if isinstance(categories, str) else categories
+
     data: List[Dict[str, Any]] = []
     for i, item in enumerate(dataset):
-        
-        if category and category not in item["category"]: continue
+
+        if categories and item["categories"] not in categories: continue
         
         data.append(
             {
@@ -130,7 +132,7 @@ def load_bigmath(split: str = "test", category: str=None) -> List[Dict[str, Any]
                "instruction": item["problem"],
                "ground_truth": item["answer"],
                "domain": "math",
-               "category": item["category"],
+               "categories": item["categories"],
                
                ## 아래는 원본 BIG MATH 데이터셋에서 넘어온 메타데이터들인데 필요할지 모르겟삼
                "source": item["source"],
@@ -213,7 +215,7 @@ def get_dataset(
     name: str,
     split: str = "test",
     local_dir: Optional[str] = None,
-    category: Optional[str] = None,
+    categories: Optional[Union[str, List[str]]] = None,
     data_ratio: float = 1.0,
     seed: Optional[int] = 42,
 ) -> List[Dict[str, Any]]:
@@ -246,7 +248,7 @@ def get_dataset(
         elif n == "math":
             data = load_math(split)
         elif n == "bigmath":
-            data = load_bigmath(split, category=category)
+            data = load_bigmath(split, categories=categories)
         elif n == "ds1000":
             data = load_ds1000(split)
         elif n == "livecodebench":
