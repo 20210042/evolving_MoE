@@ -1,11 +1,23 @@
 # Core Inference
-vllm>=0.11.0
-torch==2.10.0
+# vLLM 0.10.0+cu118: last version with stable CUDA 12.x (12.4 driver) support.
+# cu126+ requires driver >=560, cu129/cu130 require driver >=570/580.
+# vllm==0.10.0
+# torch>=2.4.0  # pulled in by vllm cu118 wheel; pin loosely to avoid re-download
+
+# Training
 transformers>=4.40.0
 accelerate>=1.0.0
+peft>=0.10.0
+trl>=0.8.0
 
 # Data Processing
 datasets>=2.14.0
 numpy>=1.26.0
 pandas>=2.0.0
 pyyaml>=6.0
+
+# Evaluation
+math-verify>=0.5.0
+
+# Logging
+wandb>=0.16.0

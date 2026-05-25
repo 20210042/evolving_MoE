@@ -184,3 +184,50 @@ def math_verify_accuracy(prediction: str, reference: str) -> float:
     if not ref or not pred: return 0.0
 
     return 1.0 if _mv_verify(pred, ref) else 0.0
+
+
+# ============================================================================
+# 모델 출력에서 최종 답 추출
+# ============================================================================
+
+def extract_answer(text: str) -> str:
+    """모델 출력에서 최종 답을 추출한다.
+
+    1순위: 텍스트 내 마지막 "Final Answer: ..." 라인의 내용.
+    2순위: 텍스트 내 마지막 \\boxed{...} 의 내용 (중첩 괄호 지원).
+    3순위: 원본 텍스트 전체를 그대로 반환.
+
+    Args:
+        text: 모델이 생성한 응답 전체.
+
+    Returns:
+        추출된 답 문자열.
+    """
+    # 1) "Final Answer: X"
+    fa_matches = re.findall(r"Final Answer:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
+    if fa_matches:
+        return fa_matches[-1].strip()
+
+    # 2) \boxed{} — 중첩 괄호 지원 (e.g. \boxed{\frac{1}{2}})
+    boxed: list[str] = []
+    i = 0
+    while i < len(text):
+        idx = text.find(r"\boxed{", i)
+        if idx == -1:
+            break
+        start = idx + len(r"\boxed{")
+        depth, j = 1, start
+        while j < len(text) and depth > 0:
+            if text[j] == "{":
+                depth += 1
+            elif text[j] == "}":
+                depth -= 1
+            j += 1
+        if depth == 0:
+            boxed.append(text[start : j - 1])
+        i = idx + 1
+    if boxed:
+        return boxed[-1].strip()
+
+    # 3) raw text
+    return text.strip()
