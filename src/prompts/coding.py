@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Dict, List, Union
 
-from meta_agent_evo.prompts import baseline_prompts
-from meta_agent_evo.prompts import qwen3_lcb
+from prompts import baseline_prompts
+from prompts import qwen3_lcb
 
 Message = Union[str, List[Dict[str, str]]]
 

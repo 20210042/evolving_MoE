@@ -79,24 +79,21 @@ Return the improved code in the following format:
 ```
 """
 
-# --- MATH PROMPTS (GSM8K Style) ---
+# --- MATH PROMPTS ---
 
 MATH_GEN_SYSTEM = "You are a helpful math assistant."
 MATH_GEN_USER = """Solve the following math problem. Show your work step-by-step.
+Write your final answer after "Final Answer:".
+Use LaTeX format for fractions and expressions (e.g. \\frac{{a}}{{b}}, \\sqrt{{n}}).
 
 ### Example
-Question: Jason had 20 lollipops. He gave Denny some lollipops. Now Jason has 12 lollipops. How many lollipops did Jason give to Denny?
-Answer format:
-Final Answer: 8
-```
+Question: If cos θ = 3/5 and θ is in the first quadrant, find sin θ.
+Final Answer: \\frac{{4}}{{5}}
 
 ### Task
 Question:
 {instruction}
-
-Answer format:
-Final Answer: [ANSWER]
-"""
+Final Answer: """
 
 # Critic: Zero-Shot, Textual Feedback Only
 MATH_CRITIC_SYSTEM = "You are a helpful assistant."

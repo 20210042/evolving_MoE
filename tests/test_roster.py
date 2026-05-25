@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from meta_agent_evo.roster import assign_candidate_id, ensure_roster
+from roster import assign_candidate_id, ensure_roster
 
 
 def test_default_roster(tmp_path):

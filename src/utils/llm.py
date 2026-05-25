@@ -2,9 +2,11 @@ from typing import List, Optional
 
 try:
     from vllm import LLM, SamplingParams
+    from vllm.lora.request import LoRARequest
 except ImportError:
     LLM = None
-from transformers import AutoTokenizer, pipeline
+    LoRARequest = None
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 import torch
 
 
@@ -15,34 +17,61 @@ class LLMService:
         mode: str = "vllm",
         tp_size: int = 1,
         max_model_len: int = 32768,
+        lora_path: Optional[str] = None,
     ):
         self.model_name = model_name
         self.mode = mode
         self.model = None
         self.tokenizer = None
-
+        self.lora_request = None
+        
+        ## vllm mode
         if self.mode == "vllm":
-            if LLM is None:
-                raise ImportError("vllm is not installed.")
+            if LLM is None: raise ImportError("vllm is not installed.")
+            
             self.model = LLM(
                 model=self.model_name,
                 trust_remote_code=True,
                 tensor_parallel_size=tp_size,
                 max_model_len=max_model_len,
+                enable_lora=lora_path is not None,
             )
+            
             self.tokenizer = self.model.get_tokenizer()
+            
+            if lora_path:
+                self.lora_request = LoRARequest("adapter", 1, lora_path)
+                
+        ## hf mode
         elif self.mode == "hf":
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.model = pipeline(
-                "text-generation",
-                model=self.model_name,
-                tokenizer=self.tokenizer,
+            
+            base_model = AutoModelForCausalLM.from_pretrained(
+                self.model_name,
                 device_map="auto",
                 torch_dtype=torch.float16,
+                trust_remote_code=True,
             )
+            
+            if lora_path:
+                from peft import PeftModel
+                base_model = PeftModel.from_pretrained(base_model, lora_path)
+                base_model = base_model.merge_and_unload()
+            
+            
+            self.model = pipeline(
+                "text-generation",
+                model=base_model,
+                tokenizer=self.tokenizer,
+            )
+            
+            
         else:
             raise ValueError(f"Unknown mode: {mode}")
-
+    
+    
+    
+    
     def chat(
         self,
         messages: List[dict],
@@ -76,7 +105,9 @@ class LLMService:
             top_k=top_k,
             repetition_penalty=repetition_penalty,
         )[0]
-
+    
+    
+    
     def generate(
         self,
         prompts: List[str],
@@ -96,7 +127,7 @@ class LLMService:
                 repetition_penalty=repetition_penalty,
                 stop=stop,
             )
-            outputs = self.model.generate(prompts, sampling_params)
+            outputs = self.model.generate(prompts, sampling_params, lora_request=self.lora_request)
             return [output.outputs[0].text for output in outputs]
 
         if self.mode == "hf":
