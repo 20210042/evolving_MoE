@@ -82,14 +82,7 @@ class ExtraArguments:
         default="all-linear",
         metadata={"help": "LoRA 적용 대상 모듈. 'all-linear' 또는 'q_proj,v_proj' 형식."},
     )
-    early_stopping_patience: Optional[int] = field(
-        default=None,
-        metadata={"help": "Early Stopping 인내심 (eval step 수). None이면 비활성화."},
-    )
-    early_stopping_threshold: float = field(
-        default=0.0,
-        metadata={"help": "Early Stopping 최소 개선 임계값."},
-    )
+
     wandb_project: str = field(
         default="evolving-moe-sft",
         metadata={"help": "WandB 프로젝트 이름."},
