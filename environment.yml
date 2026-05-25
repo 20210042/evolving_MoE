@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.9
+  - python=3.10
   - pip
   - pip:
       # inference
@@ -23,3 +23,5 @@ dependencies:
       - wandb==0.23.0
       # dev
       - pytest==8.4.2
+      # evaluate
+      - math-verify==0.9.0
