@@ -7,8 +7,8 @@ import logging
 import re
 from typing import Any, Dict, List
 
-from meta_agent_evo.agents.base import Agent
-from meta_agent_evo.prompts.meta import META_AGENT_PROMPT
+from agents.base import Agent
+from prompts.meta import META_AGENT_PROMPT
 
 
 def scout_new_persona(

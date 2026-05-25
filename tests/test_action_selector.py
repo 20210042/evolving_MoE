@@ -1,6 +1,6 @@
 """Unit tests for 3-action gate."""
 
-from meta_agent_evo.action_selector import ActionGateConfig, select_action
+from action_selector import ActionGateConfig, select_action
 
 
 def test_swap_when_worst_redundant():

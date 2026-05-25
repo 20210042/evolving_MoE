@@ -10,8 +10,8 @@ import tempfile
 from io import StringIO
 from pathlib import Path
 
-from meta_agent_evo.paths import livecodebench_paths
-from meta_agent_evo.utils.helpers import extract_code_block
+from paths import livecodebench_paths
+from utils.helpers import extract_code_block
 
 _LCB_BENCHMARK_CACHE: dict = {}
 

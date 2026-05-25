@@ -6,7 +6,7 @@ import contextlib
 import multiprocessing
 from io import StringIO
 
-from meta_agent_evo.utils.helpers import extract_code_block
+from utils.helpers import extract_code_block
 
 
 def clean_extracted_code(text: str) -> str:

@@ -1,7 +1,7 @@
 """Baseline pipelines: Raw (1-pass) and Self-Refine (N-turn, persona-free).
 
 Ported from MultiAgent/src/pipelines/baselines.py but prompt construction
-delegates to `meta_agent_evo.prompts.coding` (build_baseline_prompt,
+delegates to `prompts.coding` (build_baseline_prompt,
 build_critic_prompt, build_refine_prompt) — the exact same path used by the
 evolved GMRoutingPipeline in routing_inference.py.  This ensures identical
 Qwen3 prompt formatting across all conditions.
@@ -11,14 +11,14 @@ from __future__ import annotations
 
 import logging
 
-from meta_agent_evo.agents.base import Agent
-from meta_agent_evo.pipelines.base_pipeline import BasePipeline
-from meta_agent_evo.prompts.coding import (
+from agents.base import Agent
+from pipelines.base_pipeline import BasePipeline
+from prompts.coding import (
     build_baseline_prompt,
     build_critic_prompt,
     build_refine_prompt,
 )
-from meta_agent_evo.utils.helpers import check_stop_condition, extract_code_block
+from utils.helpers import check_stop_condition, extract_code_block
 
 
 class RawPipeline(BasePipeline):
@@ -83,7 +83,7 @@ class SelfRefinePipeline(BasePipeline):
 
         # ── 2. Refinement loop ───────────────────────────────────────────────
         # Use a neutral critic system prompt (no persona).
-        from meta_agent_evo.prompts import baseline_prompts
+        from prompts import baseline_prompts
         neutral_critic_sys = baseline_prompts.CODING_CRITIC_SYSTEM
 
         for i in range(self.max_refine_iters):

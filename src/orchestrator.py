@@ -8,16 +8,16 @@ import os
 import random
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from meta_agent_evo.action_selector import ActionDecision, ActionGateConfig, select_action
-from meta_agent_evo.agents.base import Agent
-from meta_agent_evo.evaluation.scorer import pass_at_threshold, score_one
-from meta_agent_evo.prompts import baseline_prompts
-from meta_agent_evo.prompts.coding import build_baseline_prompt, build_critic_prompt, build_refine_prompt
-from meta_agent_evo.roster import assign_candidate_id, ensure_roster, normalize_persona_fields, save_roster
-from meta_agent_evo.scout import scout_new_persona
-from meta_agent_evo.step_logger import StepLogContext, StepLogger
-from meta_agent_evo.utils.helpers import check_stop_condition, extract_code_block
-from meta_agent_evo.war import compute_war_scores, pick_worst_agent
+from action_selector import ActionDecision, ActionGateConfig, select_action
+from agents.base import Agent
+from evaluation.scorer import pass_at_threshold, score_one
+from prompts import baseline_prompts
+from prompts.coding import build_baseline_prompt, build_critic_prompt, build_refine_prompt
+from roster import assign_candidate_id, ensure_roster, normalize_persona_fields, save_roster
+from scout import scout_new_persona
+from step_logger import StepLogContext, StepLogger
+from utils.helpers import check_stop_condition, extract_code_block
+from war import compute_war_scores, pick_worst_agent
 
 
 class GMEvolutionOrchestrator:

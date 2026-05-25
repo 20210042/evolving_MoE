@@ -21,12 +21,12 @@ try:
 except ImportError:
     yaml = None
 
-from meta_agent_evo.action_selector import ActionGateConfig
-from meta_agent_evo.agents.base import Agent
-from meta_agent_evo.data.loader import get_dataset
-from meta_agent_evo.orchestrator import GMEvolutionOrchestrator
-from meta_agent_evo.roster import save_roster
-from meta_agent_evo.utils.llm import LLMService
+from action_selector import ActionGateConfig
+from agents.base import Agent
+from data.loader import get_dataset
+from orchestrator import GMEvolutionOrchestrator
+from roster import save_roster
+from utils.llm import LLMService
 
 
 def load_merged_config(base: Path, extra: Path | None) -> dict:
