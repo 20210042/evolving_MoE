@@ -14,6 +14,8 @@ build/
 # Runs / artifacts
 logs/
 results/
+wandb/
+checkpoints/
 *.jsonl
 !configs/**/*.yaml
 
@@ -27,3 +29,7 @@ results/
 
 # Temp scoring
 *_scored.jsonl
+
+# Training checkpoints & logs
+checkpoints/
+wandb/
