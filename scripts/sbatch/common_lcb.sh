@@ -3,11 +3,11 @@
 
 : "${REPO:=/home/jaehoonjeong/data/MetaAgentEvolution_Release}"
 : "${CONDA_SH:=/data5/jaehoonjeong/miniconda3/etc/profile.d/conda.sh}"
-: "${CONDA_ENV:=pro6000}"
+: "${CONDA_ENV:=evolving_moe}"
 : "${SEED:=20210044}"
 : "${TRAIN_SIZE:=380}"
-: "${BATCH_SIZE:=25}"
-: "${MAX_EPOCHS:=3}"
+: "${BATCH_SIZE:=50}"
+: "${MAX_EPOCHS:=5}"
 : "${MAX_REFINE_ITERS:=2}"
 
 RESULTS_DIR="results/lcb/seed${SEED}"
@@ -21,6 +21,8 @@ setup_job_env() {
     source "${CONDA_SH}"
     conda activate "${CONDA_ENV}"
     export PYTHONPATH="${REPO}/src"
+    export VLLM_USE_FLASHINFER_SAMPLER=0
+    export VLLM_DISABLE_FLASHINFER=1
     mkdir -p "${REPO}/logs"
 }
 

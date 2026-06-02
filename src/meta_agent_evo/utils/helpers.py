@@ -1,4 +1,42 @@
+import json
 import re
+
+
+def strip_thinking_channels(text: str) -> str:
+    """Remove Gemma 4 thought channel blocks before parsing JSON or code."""
+    if not text:
+        return ""
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    text = re.sub(r"<\|channel>thought\n.*?<channel\|>", "", text, flags=re.DOTALL)
+    return text.strip()
+
+
+def extract_json_object(text: str) -> dict | None:
+    """Extract the last balanced JSON object from model output (thinking-safe)."""
+    text = strip_thinking_channels(text or "")
+    if not text:
+        return None
+    start = text.rfind("{")
+    if start < 0:
+        return None
+    depth = 0
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(text[start : i + 1])
+                except json.JSONDecodeError:
+                    pass
+    m = re.search(r"\{.*\}", text, re.DOTALL)
+    if m:
+        try:
+            return json.loads(m.group(0))
+        except json.JSONDecodeError:
+            return None
+    return None
 
 
 def extract_code_block(text: str) -> str:
@@ -8,6 +46,9 @@ def extract_code_block(text: str) -> str:
     """
     if not text:
         return ""
+
+    # Strip Gemma4 thinking blocks before code extraction
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
 
     code = text
     if "[BEGIN]" in code and "[DONE]" in code:

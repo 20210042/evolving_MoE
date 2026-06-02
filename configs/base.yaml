@@ -1,14 +1,14 @@
 # Base evolution hyperparameters (override via CLI or per-dataset YAML)
 
-model: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+model: "google/gemma-4-31B-it"
 
 llm:
   max_model_len: 16384
-  max_tokens: 4096
+  max_tokens: 8192
   sampling:
-    temperature: 0.7
-    top_p: 0.8
-    top_k: 20
+    temperature: 1.0
+    top_p: 0.95
+    top_k: 64
     repetition_penalty: 1.05
 
 vllm:
@@ -26,14 +26,18 @@ roster_init_path: "configs/roster_init.json"
 batch_size: 50
 train_size: 100
 epochs: 6
+# Self-refine baseline only; one-step evolution/inference do not use critic-refine loops
 max_refine_iters: 2
+infer_batch_size: 64
 
 # WAR / eviction
 war_tiebreak: "random"  # random | alphabetical — avoid systematic bias
+max_lives: 3
 
 # Action gate
 action_gate:
   lambda_size: 0.05
+  scale: 0.25
 
 # Scoring
 lcb_timeout: 10

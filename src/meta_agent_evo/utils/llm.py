@@ -80,10 +80,17 @@ class LLMService:
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
-    def _to_prompt(self, messages: Sequence[MutableMapping[str, str]]) -> str:
+    def _to_prompt(
+        self,
+        messages: Sequence[MutableMapping[str, str]],
+        enable_thinking: bool | None = None,
+    ) -> str:
         if self.tokenizer is None:
             raise RuntimeError("Tokenizer not initialized.")
         msgs = [dict(m) for m in messages]
+        template_kwargs: Dict[str, Any] = {}
+        if enable_thinking is not None:
+            template_kwargs["enable_thinking"] = enable_thinking
         if msgs and msgs[-1].get("role") == "assistant":
             return str(
                 self.tokenizer.apply_chat_template(
@@ -91,6 +98,7 @@ class LLMService:
                     tokenize=False,
                     add_generation_prompt=False,
                     continue_final_message=True,
+                    **template_kwargs,
                 )
             )
         return str(
@@ -98,6 +106,7 @@ class LLMService:
                 msgs,
                 tokenize=False,
                 add_generation_prompt=True,
+                **template_kwargs,
             )
         )
 
@@ -110,6 +119,7 @@ class LLMService:
         top_k: int | None = None,
         repetition_penalty: float | None = None,
         stop: Optional[List[str]] = None,
+        enable_thinking: bool | None = None,
     ) -> str:
         return self.chat_batch(
             [messages],
@@ -119,6 +129,7 @@ class LLMService:
             top_k=top_k,
             repetition_penalty=repetition_penalty,
             stop=stop,
+            enable_thinking=enable_thinking,
         )[0]
 
     def chat_batch(
@@ -130,9 +141,10 @@ class LLMService:
         top_k: int | None = None,
         repetition_penalty: float | None = None,
         stop: Optional[List[str]] = None,
+        enable_thinking: bool | None = None,
     ) -> List[str]:
         prompts = [
-            m if isinstance(m, str) else self._to_prompt(m)
+            m if isinstance(m, str) else self._to_prompt(m, enable_thinking=enable_thinking)
             for m in messages_batch
         ]
         return self.generate(

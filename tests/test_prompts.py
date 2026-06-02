@@ -15,6 +15,10 @@ def test_get_prompt_family_generic():
     assert coding.get_prompt_family("vendor/SomeModel") == "generic"
 
 
+def test_get_prompt_family_gemma():
+    assert coding.get_prompt_family("google/gemma-4-31B-it") == "llama31"
+
+
 def test_qwen_baseline_string():
     msg = coding.build_baseline_prompt("x", dataset="mbpp", model_name="Qwen3-x")
     assert isinstance(msg, str)
