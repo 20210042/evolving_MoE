@@ -47,13 +47,18 @@ def pick_worst_agent(
     *,
     tiebreak: str = "random",
     rng: random.Random | None = None,
-) -> str:
+) -> str | None:
     rng = rng or random.Random(0)
     active_ids = set(war_scores.keys())
-    candidates = [p for p in roster if p.get("id") in active_ids]
+    
+    # Candidates for eviction: only agents whose lives are <= 0
+    candidates = [
+        p for p in roster 
+        if p.get("id") in active_ids and p.get("lives", 3) <= 0
+    ]
 
     if not candidates:
-        candidates = roster
+        return None
 
     def sort_key(p: Dict[str, Any]):
         avg_war = p.get("average_war", 0.0)

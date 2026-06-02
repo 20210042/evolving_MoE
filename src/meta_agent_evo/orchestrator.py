@@ -6,17 +6,36 @@ import json
 import logging
 import os
 import random
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from meta_agent_evo.action_selector import ActionDecision, ActionGateConfig, select_action
 from meta_agent_evo.agents.base import Agent
 from meta_agent_evo.evaluation.scorer import pass_at_threshold, score_one
-from meta_agent_evo.prompts.coding import build_baseline_prompt, build_critic_prompt, build_refine_prompt
+from meta_agent_evo.prompts.coding import build_expert_prompt
 from meta_agent_evo.roster import assign_candidate_id, ensure_roster, normalize_persona_fields, save_roster
 from meta_agent_evo.scout import scout_new_persona
 from meta_agent_evo.step_logger import StepLogContext, StepLogger
-from meta_agent_evo.utils.helpers import check_stop_condition, extract_code_block
+from meta_agent_evo.utils.helpers import extract_code_block
 from meta_agent_evo.war import compute_war_scores, pick_worst_agent
+
+_SCORE_WORKERS = min(4, os.cpu_count() or 1)
+
+
+def _score_pair(
+    args: Tuple[Dict[str, Any], str, int, float, str, str],
+) -> Tuple[str, str, float]:
+    """Top-level scorer for ProcessPoolExecutor (picklable)."""
+    item, code, lcb_timeout, code_timeout, lcb_release_version, cid = args
+    pid = item["id"]
+    sc = score_one(
+        item,
+        code,
+        lcb_timeout=lcb_timeout,
+        code_timeout=code_timeout,
+        lcb_release_version=lcb_release_version,
+    )
+    return pid, cid, sc
 
 
 class GMEvolutionOrchestrator:
@@ -26,23 +45,27 @@ class GMEvolutionOrchestrator:
         roster_path: str,
         *,
         action_cfg: Optional[ActionGateConfig] = None,
-        max_refine_iters: int = 4,
+        max_refine_iters: int = 4,  # deprecated: kept for API compat; unused in one-step evolution
         lcb_timeout: int = 10,
         lcb_release_version: str = "release_v5",
         code_exec_timeout: float = 3.0,
         war_tiebreak: str = "random",
+        max_lives: int = 3,
         results_dir: str = "results",
         run_id: str = "default",
         dataset_name: str = "livecodebench",
         seed: int = 42,
+        score_workers: int = _SCORE_WORKERS,
     ):
         self.agent = agent
         self.roster_path = roster_path
         self.roster = ensure_roster(roster_path)
+        self.max_lives = max_lives
         for p in self.roster:
             p.setdefault("total_war", 0)
             p.setdefault("active_steps", 0)
             p.setdefault("average_war", 0.0)
+            p.setdefault("lives", self.max_lives)
             p.setdefault("routing_history", [])
         self.action_cfg = action_cfg or ActionGateConfig()
         self.max_refine_iters = max_refine_iters
@@ -50,6 +73,7 @@ class GMEvolutionOrchestrator:
         self.lcb_release_version = lcb_release_version
         self.code_exec_timeout = code_exec_timeout
         self.war_tiebreak = war_tiebreak
+        self.score_workers = score_workers
         self.step_logger = StepLogger(results_dir)
         self.run_id = run_id
         self.dataset_name = dataset_name
@@ -72,159 +96,127 @@ class GMEvolutionOrchestrator:
             lcb_release_version=self.lcb_release_version,
         )
 
+    def _score_pairs_parallel(
+        self,
+        batch_data: List[Dict[str, Any]],
+        codes: Dict[Tuple[str, str], str],
+    ) -> Dict[Tuple[str, str], float]:
+        """Score all (problem_id, critic_id) pairs in parallel."""
+        pairs = list(codes.keys())
+        if not pairs:
+            return {}
+
+        by_id = {b["id"]: b for b in batch_data}
+        score_args = [
+            (
+                by_id[pid],
+                codes[(pid, cid)],
+                self.lcb_timeout,
+                self.code_exec_timeout,
+                self.lcb_release_version,
+                cid,
+            )
+            for pid, cid in pairs
+            if pid in by_id
+        ]
+
+        results: Dict[Tuple[str, str], float] = {}
+        workers = max(1, min(self.score_workers, _SCORE_WORKERS))
+        if workers <= 1 or len(score_args) <= 1:
+            for args in score_args:
+                pid, cid, sc = _score_pair(args)
+                results[(pid, cid)] = sc
+            return results
+
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(_score_pair, a): (a[0]["id"], a[5]) for a in score_args}
+            for fut in as_completed(futures):
+                pid, cid, sc = fut.result()
+                results[(pid, cid)] = sc
+        return results
+
     def run_batch(
         self,
         batch_data: List[Dict[str, Any]],
-    ) -> Tuple[Dict[str, Set[str]], Dict[str, str], Dict[str, str]]:
+    ) -> Tuple[Dict[str, Set[str]], Dict[str, str]]:
+        """One-step raw generation per (problem × roster member); parallel scoring."""
         squad_results: Dict[str, Set[str]] = {p["id"]: set() for p in self.roster}
         hard_errors_texts: Dict[str, str] = {}
-        baselines: Dict[str, str] = {}
 
         llm_svc = self.agent.llm
         model_name = llm_svc.model_name
 
-        baseline_msgs = [
-            build_baseline_prompt(
-                item.get("instruction", ""),
-                dataset=item.get("dataset") or self.dataset_name,
-                model_name=model_name,
-                starter_code=item.get("starter_code"),
-            )
-            for item in batch_data
-        ]
-        baseline_raws = self.agent.chat_batch(baseline_msgs, temperature=0.0)
-        for item, baseline_raw in zip(batch_data, baseline_raws):
+        gen_msgs = []
+        pair_order: List[Tuple[str, str]] = []
+        for item in batch_data:
             pid = item["id"]
-            baselines[pid] = extract_code_block(baseline_raw) or baseline_raw
-
-        pairs: List[Tuple[str, str]] = [
-            (item["id"], player["id"]) for item in batch_data for player in self.roster
-        ]
-        codes: Dict[Tuple[str, str], str] = {(pid, cid): baselines[pid] for pid, cid in pairs}
-        active_mask: Dict[Tuple[str, str], bool] = {(pid, cid): True for pid, cid in pairs}
-        pid_to_instruction = {item["id"]: item.get("instruction", "") for item in batch_data}
-        pid_to_ds = {item["id"]: (item.get("dataset") or self.dataset_name) for item in batch_data}
-
-        sys_by_cid = {player["id"]: player.get("system_prompt", "You are an expert coder.") for player in self.roster}
-
-        for _ in range(self.max_refine_iters):
-            active_pairs = [pair for pair in pairs if active_mask[pair]]
-            if not active_pairs:
-                break
-
-            critic_msgs = [
-                build_critic_prompt(
-                    pid_to_instruction[pid],
-                    codes[(pid, cid)],
-                    sys_by_cid[cid],
-                    dataset=pid_to_ds[pid],
-                    model_name=model_name,
-                )
-                for pid, cid in active_pairs
-            ]
-
-            critic_out = self.agent.chat_batch(critic_msgs)
-
-            refinement_tasks: List[Tuple[Tuple[str, str], str]] = []
-            for idx, pair in enumerate(active_pairs):
-                feedback = critic_out[idx]
-                if check_stop_condition(feedback):
-                    active_mask[pair] = False
-                    continue
-                refinement_tasks.append((pair, feedback))
-
-            if refinement_tasks:
-                refine_msgs = [
-                    build_refine_prompt(
-                        pid_to_instruction[pair[0]],
-                        fb,
-                        codes[pair],
-                        dataset=pid_to_ds[pair[0]],
+            instruction = item.get("instruction", "")
+            ds = item.get("dataset") or self.dataset_name
+            starter = item.get("starter_code")
+            for player in self.roster:
+                cid = player["id"]
+                sys_prompt = player.get("system_prompt", "You are an expert coder.")
+                gen_msgs.append(
+                    build_expert_prompt(
+                        instruction,
+                        sys_prompt,
+                        dataset=ds,
                         model_name=model_name,
+                        starter_code=starter,
                     )
-                    for pair, fb in refinement_tasks
-                ]
-                refined_out = self.agent.chat_batch(refine_msgs, temperature=0.0)
+                )
+                pair_order.append((pid, cid))
 
-                for (pair, _fb), ref_raw in zip(refinement_tasks, refined_out):
-                    codes[pair] = extract_code_block(ref_raw) or ref_raw
+        gen_out = self.agent.chat_batch(gen_msgs, enable_thinking=True)
+        codes: Dict[Tuple[str, str], str] = {}
+        for pair, raw in zip(pair_order, gen_out):
+            codes[pair] = extract_code_block(raw) or raw
+
+        scores = self._score_pairs_parallel(batch_data, codes)
 
         for item in batch_data:
             problem_id = item["id"]
             instruction = item.get("instruction", "")
-
             any_solved = False
-            failed_attempts: List[str] = []
 
             for player in self.roster:
                 cid = player["id"]
                 pair = (problem_id, cid)
-                current_code = codes.get(pair, baselines[problem_id])
-                sc = self._score(item, current_code)
+                sc = scores.get(pair, 0.0)
                 if pass_at_threshold(sc):
                     squad_results[cid].add(problem_id)
                     any_solved = True
-                else:
-                    failed_attempts.append(f"Critic {cid} Failure:\n{current_code}")
 
             if not any_solved:
+                clean_desc = item.get("prompt_text") or instruction
+                tests_str = "\n".join(item.get("test_list", []))
                 hard_errors_texts[problem_id] = (
-                    f"### Problem ID: {problem_id}\n"
-                    f"Instruction: {instruction[:1000]}\n"
-                    f"Failed Code Sample:\n"
-                    f"{failed_attempts[0] if failed_attempts else baselines.get(problem_id, '')}\n"
+                    f"Problem: {clean_desc}\n"
+                    f"Tests:\n{tests_str}\n"
                 )
 
-        return squad_results, hard_errors_texts, baselines
+        return squad_results, hard_errors_texts
 
     def _run_candidate_on_item(
         self,
         item: Dict[str, Any],
-        baseline_code: str,
         new_persona: Dict[str, Any],
     ) -> str:
         new_sys = new_persona["system_prompt"]
-        custom = new_persona.get(
-            "custom_refine_prompt_template",
-            "Fix the bugs. Output ONLY valid Python code inside a single ```python ... ``` block.",
-        )
         instruction = item.get("instruction", "")
-        current_code = baseline_code
         llm_svc = self.agent.llm
         model_name = llm_svc.model_name
         ds_probe = item.get("dataset") or self.dataset_name
 
-        for _ in range(self.max_refine_iters):
-            critic_user = (
-                f"Review the following code.\n\n"
-                f"Problem:\n{instruction}\n\n"
-                f"Code:\n{current_code}\n\n"
-                f"Focus: {custom}\n\n"
-                "1. Identify any syntax errors or bugs.\n"
-                "2. Check if it solves the problem correctly.\n"
-                "3. Assess the efficiency.\n\n"
-                "Output your review in the following format:\n"
-                "Feedback: [Your detailed feedback]"
-            )
-            critic_msg = [
-                {"role": "system", "content": new_sys},
-                {"role": "user", "content": critic_user},
-            ]
-            feedback = self.agent.chat(critic_msg)
-            if check_stop_condition(feedback):
-                break
-
-            ref_msg = build_refine_prompt(
-                instruction,
-                feedback,
-                current_code,
-                dataset=ds_probe,
-                model_name=model_name,
-            )
-            ref_raw = self.agent.chat(ref_msg, temperature=0.0)
-            current_code = extract_code_block(ref_raw) or ref_raw
-
-        return current_code
+        msg = build_expert_prompt(
+            instruction,
+            new_sys,
+            dataset=ds_probe,
+            model_name=model_name,
+            starter_code=item.get("starter_code"),
+        )
+        raw = self.agent.chat(msg, enable_thinking=True)
+        return extract_code_block(raw) or raw
 
     def _update_routing_memory(self, batch_data: List[Dict], squad_results: Dict[str, Set[str]]) -> None:
         for item in batch_data:
@@ -235,7 +227,11 @@ class GMEvolutionOrchestrator:
                 for p in self.roster:
                     if p["id"] == solver_id:
                         p.setdefault("routing_history", [])
-                        entry = {"instruction": item.get("instruction", "")[:500]}
+                        entry = {
+                            "instruction": (
+                                item.get("prompt_text") or item.get("instruction", "")
+                            )[:500]
+                        }
                         if entry not in p["routing_history"]:
                             p["routing_history"].append(entry)
                         p["routing_history"] = p["routing_history"][-10:]
@@ -246,7 +242,7 @@ class GMEvolutionOrchestrator:
         logging.info("Starting Epoch with %s problems.", len(batch_data))
         rng = random.Random(self.seed + self._step_for_log)
 
-        squad_results, hard_errors_texts, baselines = self.run_batch(batch_data)
+        squad_results, hard_errors_texts = self.run_batch(batch_data)
         war_scores, _ub_count, ub_rate = compute_war_scores(
             squad_results,
             len(batch_data),
@@ -255,7 +251,6 @@ class GMEvolutionOrchestrator:
         )
         logging.info("WAR Scores: %s", war_scores)
 
-        # Update cumulative WAR metrics for all agents in the current roster
         for p in self.roster:
             p_id = p["id"]
             if p_id in war_scores:
@@ -263,11 +258,19 @@ class GMEvolutionOrchestrator:
                 p["total_war"] = p.get("total_war", 0) + current_score
                 p["active_steps"] = p.get("active_steps", 0) + 1
                 p["average_war"] = p["total_war"] / p["active_steps"]
+                if current_score > 0:
+                    p["lives"] = self.max_lives
+                else:
+                    p["lives"] = max(0, p.get("lives", self.max_lives) - 1)
 
-        # Save cumulative metrics updates
         save_roster(self.roster_path, self.roster)
 
-        worst_agent = pick_worst_agent(war_scores, self.roster, tiebreak=self.war_tiebreak, rng=rng)
+        worst_agent = pick_worst_agent(
+            war_scores,
+            self.roster,
+            tiebreak=self.war_tiebreak,
+            rng=rng,
+        )
         logging.info("Worst Agent for Eviction: %s", worst_agent)
         logging.info("Total Hard Errors: %s", len(hard_errors_texts))
 
@@ -308,11 +311,24 @@ class GMEvolutionOrchestrator:
         by_id = {b["id"]: b for b in batch_data}
         new_pass_ids: Set[str] = set()
 
-        for q in probe_hard:
-            item = by_id[q]
-            code = self._run_candidate_on_item(item, baselines[q], new_persona)
-            if pass_at_threshold(self._score(item, code)):
-                new_pass_ids.add(q)
+        probe_items = [by_id[q] for q in probe_hard if q in by_id]
+        if probe_items:
+            probe_msgs = []
+            for item in probe_items:
+                probe_msgs.append(
+                    build_expert_prompt(
+                        item.get("instruction", ""),
+                        new_persona["system_prompt"],
+                        dataset=item.get("dataset") or self.dataset_name,
+                        model_name=self.agent.llm.model_name,
+                        starter_code=item.get("starter_code"),
+                    )
+                )
+            probe_out = self.agent.chat_batch(probe_msgs, enable_thinking=True)
+            for item, raw in zip(probe_items, probe_out):
+                code = extract_code_block(raw) or raw
+                if pass_at_threshold(self._score(item, code)):
+                    new_pass_ids.add(item["id"])
 
         decision = select_action(
             roster_ids=roster_ids,
@@ -338,12 +354,18 @@ class GMEvolutionOrchestrator:
         elif decision.action == "add":
             new_id = assign_candidate_id(self.roster)
             persona = normalize_persona_fields(new_persona, new_id)
+            persona["lives"] = self.max_lives
 
-            # Pre-populate routing history from newly solved hard errors
             new_history = []
             for q in new_pass_ids:
                 if q in by_id:
-                    new_history.append({"instruction": by_id[q].get("instruction", "")[:500]})
+                    new_history.append(
+                        {
+                            "instruction": (
+                                by_id[q].get("prompt_text") or by_id[q].get("instruction", "")
+                            )[:500]
+                        }
+                    )
             persona["routing_history"] = new_history[-10:]
 
             self.roster.append(persona)
@@ -357,12 +379,18 @@ class GMEvolutionOrchestrator:
             self.roster = [r for r in self.roster if r["id"] != worst_agent]
             new_id = assign_candidate_id(self.roster)
             persona = normalize_persona_fields(new_persona, new_id)
+            persona["lives"] = self.max_lives
 
-            # Pre-populate routing history from newly solved hard errors
             new_history = []
             for q in new_pass_ids:
                 if q in by_id:
-                    new_history.append({"instruction": by_id[q].get("instruction", "")[:500]})
+                    new_history.append(
+                        {
+                            "instruction": (
+                                by_id[q].get("prompt_text") or by_id[q].get("instruction", "")
+                            )[:500]
+                        }
+                    )
             persona["routing_history"] = new_history[-10:]
 
             self.roster.append(persona)

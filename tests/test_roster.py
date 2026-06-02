@@ -35,9 +35,9 @@ def test_pick_worst_agent_cumulative_metrics():
     # Candidate B: avg_war = 0.0, active_steps = 5  (Proven useless, should be evicted first)
     # Candidate C: avg_war = 0.5, active_steps = 2
     roster = [
-        {"id": "A", "average_war": 0.0, "active_steps": 1},
-        {"id": "B", "average_war": 0.0, "active_steps": 5},
-        {"id": "C", "average_war": 0.5, "active_steps": 2},
+        {"id": "A", "average_war": 0.0, "active_steps": 1, "lives": 0},
+        {"id": "B", "average_war": 0.0, "active_steps": 5, "lives": 0},
+        {"id": "C", "average_war": 0.5, "active_steps": 2, "lives": 3},
     ]
     
     war_scores = {"A": 0, "B": 0, "C": 1}
@@ -77,8 +77,7 @@ def test_orchestrator_cumulative_metrics(tmp_path):
     # 3. Mock run_batch to return custom outcomes
     squad_res = {"array": {"p1"}, "string": set()}
     hard_errs = {"p2": "sample error"}
-    baselines = {"p1": "code", "p2": "code"}
-    orchestrator.run_batch = MagicMock(return_value=(squad_res, hard_errs, baselines))
+    orchestrator.run_batch = MagicMock(return_value=(squad_res, hard_errs))
     
     # Mock scout_new_persona and select_action to do "noop" so roster size remains 2
     from meta_agent_evo.action_selector import ActionDecision

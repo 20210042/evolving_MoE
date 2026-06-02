@@ -111,6 +111,7 @@ def main() -> None:
     gate = cfg.get("action_gate") or {}
     action_cfg = ActionGateConfig(
         lambda_size=float(gate.get("lambda_size", 0.05)),
+        scale=float(gate.get("scale", 0.5)),
     )
 
     logging.info("Initializing LLM: %s", model)
@@ -169,6 +170,7 @@ def main() -> None:
         lcb_release_version=str(cfg.get("lcb_release_version", "release_v5")),
         code_exec_timeout=float(cfg.get("code_exec_timeout", 3.0)),
         war_tiebreak=str(cfg.get("war_tiebreak", "random")),
+        max_lives=int(cfg.get("max_lives", 3)),
         results_dir=args.results_dir,
         run_id=run_id,
         dataset_name=dataset,

@@ -12,6 +12,7 @@ Action = Literal["noop", "add", "swap", "delete"]
 @dataclass
 class ActionGateConfig:
     lambda_size: float = 0.005  # Base coefficient for exponential penalty
+    scale: float = 0.5          # Scale factor for exponential penalty
 
 
 @dataclass
@@ -25,7 +26,7 @@ class ActionDecision:
 def select_action(
     *,
     roster_ids: List[str],
-    worst_id: str,
+    worst_id: str | None,
     squad_results: Dict[str, Set[str]],
     hard_errors: List[str],
     new_pass_ids: Set[str],
@@ -43,7 +44,7 @@ def select_action(
     N = len(r_ids)
     
     # 1. Non-linear marginal penalty/savings coefficients (Exponential)
-    factor = 0.5 * (math.exp(cfg.lambda_size) - 1.0)
+    factor = cfg.scale * (math.exp(cfg.lambda_size) - 1.0)
     lambda_add = math.exp(N * cfg.lambda_size) * factor
     lambda_del = math.exp((N - 1) * cfg.lambda_size) * factor
 
@@ -59,19 +60,23 @@ def select_action(
 
     # 3. Phase 2 (Delete) Utility
     # mcl is the fraction of total batch problems uniquely solved by the worst agent
-    worst_solves = squad_results.get(worst_id, set())
-    other_solves = set()
-    for rid, solves in squad_results.items():
-        if rid != worst_id:
-            other_solves.update(solves)
-            
-    unique_worst_solves = worst_solves - other_solves
-    mcl = len(unique_worst_solves) / batch_size if batch_size > 0 else 0.0
-    
-    u_delete = lambda_del - mcl
     phase2_delete = False
-    if N > 1 and u_delete > 0.0:
-        phase2_delete = True
+    mcl = 0.0
+    u_delete = 0.0
+    
+    if worst_id and worst_id in r_ids:
+        worst_solves = squad_results.get(worst_id, set())
+        other_solves = set()
+        for rid, solves in squad_results.items():
+            if rid != worst_id:
+                other_solves.update(solves)
+                
+        unique_worst_solves = worst_solves - other_solves
+        mcl = len(unique_worst_solves) / batch_size if batch_size > 0 else 0.0
+        
+        u_delete = lambda_del - mcl
+        if N > 1 and u_delete > 0.0:
+            phase2_delete = True
 
     # 4. Combine Decisions
     if phase1_add and phase2_delete:

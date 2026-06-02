@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=mae_eval_epochs
 #SBATCH --gres=gpu:PRO6000:1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=2
 #SBATCH --mem=32G
 #SBATCH --time=48:00:00
 #SBATCH --output=/home/jaehoonjeong/data/MetaAgentEvolution_Release/logs/%x.%j.out

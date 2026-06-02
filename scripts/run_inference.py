@@ -47,7 +47,18 @@ def main() -> None:
     )
     parser.add_argument("--output_file", type=str, default="results/inference_output.jsonl")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--max_refine_iters", type=int, default=None)
+    parser.add_argument(
+        "--max_refine_iters",
+        type=int,
+        default=None,
+        help="Self-refine baseline only (evolved one-step ignores this)",
+    )
+    parser.add_argument(
+        "--infer_batch_size",
+        type=int,
+        default=None,
+        help="Chunk size for batched vLLM inference",
+    )
     parser.add_argument("--config", type=str, default=None, help="Optional YAML override")
     args = parser.parse_args()
 
@@ -69,6 +80,9 @@ def main() -> None:
 
     max_refine_iters = (
         args.max_refine_iters if args.max_refine_iters is not None else int(cfg.get("max_refine_iters", 2))
+    )
+    infer_batch_size = (
+        args.infer_batch_size if args.infer_batch_size is not None else int(cfg.get("infer_batch_size", 64))
     )
 
     model_name = args.model or cfg.get("model")
@@ -140,7 +154,11 @@ def main() -> None:
             routing_memory_path=str(Path(args.output_file).resolve().parent / "routing_memory.json"),
             max_refine_iters=max_refine_iters,
         )
-        logging.info("Pipeline: Evolved GMRoutingPipeline (roster=%s)", args.roster_path)
+        logging.info(
+            "Pipeline: Evolved GMRoutingPipeline one-step (roster=%s, infer_batch_size=%d)",
+            args.roster_path,
+            infer_batch_size,
+        )
 
     processed_ids = set()
     if os.path.exists(args.output_file):
@@ -167,13 +185,25 @@ def main() -> None:
     else:
         mode = "a" if processed_ids else "w"
         os.makedirs(os.path.dirname(args.output_file) or ".", exist_ok=True)
+        total = len(to_process)
+        done = 0
         with open(args.output_file, mode, encoding="utf-8") as f:
-            for idx, item in enumerate(to_process, start=1):
-                logging.info("Processing %s/%s: %s", idx, len(to_process), item["id"])
-                result = pipeline.run(item)
-                result["dataset"] = args.dataset
-                f.write(json.dumps(result, ensure_ascii=False) + "\n")
+            for start in range(0, total, infer_batch_size):
+                chunk = to_process[start : start + infer_batch_size]
+                logging.info(
+                    "Processing batch %d-%d / %d (%d items)",
+                    start + 1,
+                    start + len(chunk),
+                    total,
+                    len(chunk),
+                )
+                results = pipeline.run_batch(chunk)
+                for item, result in zip(chunk, results):
+                    result["dataset"] = args.dataset
+                    f.write(json.dumps(result, ensure_ascii=False) + "\n")
                 f.flush()
+                done += len(chunk)
+                logging.info("Wrote %d/%d results.", done, total)
 
     logging.info("Inference complete → %s", args.output_file)
 
