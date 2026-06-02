@@ -8,3 +8,7 @@ class BasePipeline:
 
     def run(self, input_item: dict):
         raise NotImplementedError
+
+    def run_batch(self, items: list) -> list:
+        """Default: sequential single-item runs. Override for batched vLLM."""
+        return [self.run(item) for item in items]

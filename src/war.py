@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import Dict, Set
+from typing import Any, Dict, List, Set
 
 
 def compute_war_scores(
@@ -43,22 +43,35 @@ def compute_war_scores(
 
 def pick_worst_agent(
     war_scores: Dict[str, int],
-    squad_results: Dict[str, Set[str]],
+    roster: List[Dict[str, Any]],
     *,
     tiebreak: str = "random",
     rng: random.Random | None = None,
-) -> str:
+) -> str | None:
     rng = rng or random.Random(0)
-    items = list(war_scores.keys())
+    active_ids = set(war_scores.keys())
+    
+    # Candidates for eviction: only agents whose lives are <= 0
+    candidates = [
+        p for p in roster 
+        if p.get("id") in active_ids and p.get("lives", 3) <= 0
+    ]
 
-    def sort_key(k: str):
-        w = war_scores[k]
-        squad_size = len(squad_results.get(k, ()))
+    if not candidates:
+        return None
+
+    def sort_key(p: Dict[str, Any]):
+        avg_war = p.get("average_war", 0.0)
+        active_steps = p.get("active_steps", 0)
+        pid = p.get("id", "")
+
         if tiebreak == "alphabetical":
-            return (w, k)
+            return (avg_war, -active_steps, pid)
         if tiebreak == "random":
-            return (w, rng.random())
+            return (avg_war, -active_steps, rng.random())
         # size-based: fewer unique solves first (more redundant members); add noise
-        return (w, squad_size, rng.random())
+        squad_size = len(p.get("strengths", ""))
+        return (avg_war, -active_steps, squad_size, rng.random())
 
-    return min(items, key=sort_key)
+    chosen_agent = min(candidates, key=sort_key)
+    return chosen_agent.get("id", "")
