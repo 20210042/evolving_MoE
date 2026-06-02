@@ -5,9 +5,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List
 
-from meta_agent_evo.agents.base import Agent
-from meta_agent_evo.prompts.meta import META_AGENT_PROMPT
-from meta_agent_evo.utils.helpers import extract_json_object
+from agents.base import Agent
+from prompts.meta import META_AGENT_PROMPT
+from utils.helpers import extract_json_object
 
 
 def _format_roster_table(roster: List[Dict[str, Any]]) -> str:

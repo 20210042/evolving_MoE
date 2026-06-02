@@ -1,4 +1,4 @@
-from meta_agent_evo.agents.base import Agent
+from agents.base import Agent
 
 
 class BasePipeline:

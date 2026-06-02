@@ -5,14 +5,14 @@ from __future__ import annotations
 import logging
 from typing import List
 
-from meta_agent_evo.agents.base import Agent
-from meta_agent_evo.pipelines.base_pipeline import BasePipeline
-from meta_agent_evo.prompts.coding import (
+from agents.base import Agent
+from pipelines.base_pipeline import BasePipeline
+from prompts.coding import (
     build_baseline_prompt,
     build_critic_prompt,
     build_refine_prompt,
 )
-from meta_agent_evo.utils.helpers import check_stop_condition, extract_code_block
+from utils.helpers import check_stop_condition, extract_code_block
 
 
 class RawPipeline(BasePipeline):
@@ -95,7 +95,7 @@ class SelfRefinePipeline(BasePipeline):
         if not items:
             return []
 
-        from meta_agent_evo.prompts import baseline_prompts
+        from prompts import baseline_prompts
 
         model_name = self.agent.llm.model_name
         neutral_critic_sys = baseline_prompts.CODING_CRITIC_SYSTEM

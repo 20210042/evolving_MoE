@@ -8,11 +8,11 @@ import random
 from pathlib import Path
 from typing import Any, Dict, List
 
-from meta_agent_evo.agents.base import Agent
-from meta_agent_evo.pipelines.base_pipeline import BasePipeline
-from meta_agent_evo.prompts.coding import build_expert_prompt
-from meta_agent_evo.prompts.meta import MANAGER_PROMPT
-from meta_agent_evo.utils.helpers import extract_code_block, extract_json_object
+from agents.base import Agent
+from pipelines.base_pipeline import BasePipeline
+from prompts.coding import build_expert_prompt
+from prompts.meta import MANAGER_PROMPT
+from utils.helpers import extract_code_block, extract_json_object
 
 
 class GMRoutingPipeline(BasePipeline):
