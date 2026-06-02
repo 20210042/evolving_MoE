@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import random
+import shutil
 import sys
 from pathlib import Path
 
@@ -26,7 +27,7 @@ from agents.base import Agent
 from data.loader import get_dataset
 from orchestrator import GMEvolutionOrchestrator
 from roster import save_roster
-from utils.llm import LLMService
+from utils.llm import LLMService, llm_service_from_yaml_config
 
 
 def load_merged_config(base: Path, extra: Path | None) -> dict:
@@ -108,23 +109,16 @@ def main() -> None:
     logging.info("Held out %s test ids → %s", len(test_data), test_ids_path)
 
     gate = cfg.get("action_gate") or {}
-    swap_max_gain_raw = gate.get("swap_max_gain", None)
     action_cfg = ActionGateConfig(
-        alpha_stability=float(gate.get("alpha_stability", 1.0)),
-        lambda_size=float(gate.get("lambda_size", 0.01)),
-        epsilon_floor=float(gate.get("epsilon_floor", 0.05)),
-        swap_max_gain=float(swap_max_gain_raw) if swap_max_gain_raw is not None else None,
-        use_wilson_ci=bool(gate.get("use_wilson_ci", True)),
-        wilson_confidence=float(gate.get("wilson_confidence", 0.95)),
+        lambda_size=float(gate.get("lambda_size", 0.05)),
+        scale=float(gate.get("scale", 0.5)),
     )
 
     logging.info("Initializing LLM: %s", model)
-    llm = LLMService(
-        model_name=model,
-        mode="vllm",
-        tp_size=int(cfg.get("vllm_tp_size", 1)),
-    )
+    llm = llm_service_from_yaml_config(model, cfg)
     agent = Agent(llm, role="GM_Orchestrator")
+
+    roster_init_path = pick("roster_init_path", None) or str(ROOT / "configs" / "roster_init.json")
 
     resume_info = None
     if args.resume:
@@ -142,7 +136,6 @@ def main() -> None:
                     roster_snapshot_path = os.path.join(args.results_dir, run_id, f"roster_step_{resume_step}.json")
                     if os.path.exists(roster_snapshot_path):
                         logging.info("Resuming from step %d (Epoch %d, Batch %d)", resume_step, resume_epoch, resume_batch_idx)
-                        import shutil
                         os.makedirs(os.path.dirname(os.path.abspath(roster_path)), exist_ok=True)
                         shutil.copyfile(roster_snapshot_path, roster_path)
                         resume_info = {
@@ -157,6 +150,17 @@ def main() -> None:
         else:
             logging.info("Resume requested but no log file found at %s. Starting fresh.", log_file)
 
+    if not args.resume and roster_path:
+        init_src = Path(roster_init_path)
+        if not init_src.is_file():
+            init_src = ROOT / roster_init_path
+        if init_src.is_file():
+            os.makedirs(os.path.dirname(os.path.abspath(roster_path)) or ".", exist_ok=True)
+            shutil.copyfile(init_src, roster_path)
+            logging.info("Seeded roster from %s → %s", init_src, roster_path)
+        else:
+            logging.warning("roster_init not found at %s; using ensure_roster default", init_src)
+
     orchestrator = GMEvolutionOrchestrator(
         agent,
         roster_path,
@@ -166,7 +170,7 @@ def main() -> None:
         lcb_release_version=str(cfg.get("lcb_release_version", "release_v5")),
         code_exec_timeout=float(cfg.get("code_exec_timeout", 3.0)),
         war_tiebreak=str(cfg.get("war_tiebreak", "random")),
-        probe_stability_k=int(gate.get("probe_stability_k", 8)),
+        max_lives=int(cfg.get("max_lives", 3)),
         results_dir=args.results_dir,
         run_id=run_id,
         dataset_name=dataset,
