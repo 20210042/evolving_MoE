@@ -14,6 +14,8 @@ build/
 # Runs / artifacts
 logs/
 results/
+wandb/
+checkpoints/
 *.jsonl
 !configs/**/*.yaml
 
