@@ -29,3 +29,7 @@ checkpoints/
 
 # Temp scoring
 *_scored.jsonl
+
+# Training checkpoints & logs
+checkpoints/
+wandb/

@@ -14,7 +14,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from meta_agent_evo.evaluation.scorer import score_one
+from evaluation.scorer import score_one
 
 
 def main() -> None:
@@ -41,7 +41,7 @@ def main() -> None:
     ref_items: dict = {}
     if args.data_dir:
         try:
-            from meta_agent_evo.data.loader import get_dataset
+            from data.loader import get_dataset
 
             dataset_name = args.dataset or "mbpp"
             items = get_dataset(dataset_name, split=args.split, local_dir=args.data_dir)

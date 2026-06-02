@@ -5,9 +5,10 @@ Train an **evolving critic roster** on coding benchmarks (LiveCodeBench, MBPP, H
 ## Setup
 
 ```bash
-cd MetaAgentEvolution_Release
-pip install -e ".[dev]"   # or: pip install -r requirements.txt
-export PYTHONPATH="$PWD/src"
+git clone https://github.com/20210042/evolving_MoE.git
+cd evolving_MoE
+conda env create -f environment.yml --name MoE
+conda activate MoE
 ```
 
 **LiveCodeBench** official scorer expects the `lcb_runner` package. Install the benchmark repo next to this project or set:
