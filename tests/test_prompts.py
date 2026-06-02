@@ -1,6 +1,6 @@
 """Unit tests for prompt family routing (no vLLM)."""
 
-from meta_agent_evo.prompts import coding
+from prompts import coding
 
 
 def test_get_prompt_family_qwen():

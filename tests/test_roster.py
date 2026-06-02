@@ -17,7 +17,7 @@ def test_assign_id_unique():
 
 
 def test_normalize_persona_fields_initializes_metrics():
-    from meta_agent_evo.roster import normalize_persona_fields
+    from roster import normalize_persona_fields
     persona = {"persona_name": "Test Critic"}
     normalized = normalize_persona_fields(persona, "c_test")
     assert normalized["id"] == "c_test"
@@ -27,7 +27,7 @@ def test_normalize_persona_fields_initializes_metrics():
 
 
 def test_pick_worst_agent_cumulative_metrics():
-    from meta_agent_evo.war import pick_worst_agent
+    from war import pick_worst_agent
     import random
     
     # Roster with cumulative metrics
@@ -48,7 +48,7 @@ def test_pick_worst_agent_cumulative_metrics():
 
 def test_orchestrator_cumulative_metrics(tmp_path):
     from unittest.mock import MagicMock
-    from meta_agent_evo.orchestrator import GMEvolutionOrchestrator
+    from orchestrator import GMEvolutionOrchestrator
     import json
     
     # 1. Prepare roster path and data
@@ -80,11 +80,11 @@ def test_orchestrator_cumulative_metrics(tmp_path):
     orchestrator.run_batch = MagicMock(return_value=(squad_res, hard_errs))
     
     # Mock scout_new_persona and select_action to do "noop" so roster size remains 2
-    from meta_agent_evo.action_selector import ActionDecision
-    import meta_agent_evo.orchestrator
+    from action_selector import ActionDecision
+    import orchestrator
     
-    meta_agent_evo.orchestrator.scout_new_persona = MagicMock(return_value={"system_prompt": "new prompt", "persona_name": "new"})
-    meta_agent_evo.orchestrator.select_action = MagicMock(return_value=ActionDecision("noop", {}, 0.0, 0.0))
+    orchestrator.scout_new_persona = MagicMock(return_value={"system_prompt": "new prompt", "persona_name": "new"})
+    orchestrator.select_action = MagicMock(return_value=ActionDecision("noop", {}, 0.0, 0.0))
     orchestrator._run_candidate_on_item = MagicMock(return_value="code")
     orchestrator._score = MagicMock(return_value=1.0)
     
