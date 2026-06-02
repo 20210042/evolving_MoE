@@ -1,6 +1,6 @@
 import random
-from meta_agent_evo.war import pick_worst_agent
-from meta_agent_evo.orchestrator import GMEvolutionOrchestrator
+from war import pick_worst_agent
+from orchestrator import GMEvolutionOrchestrator
 from unittest.mock import MagicMock
 import json
 
@@ -67,10 +67,10 @@ def test_orchestrator_lives_update_and_recharge(tmp_path):
     hard_errs = {}
     orchestrator.run_batch = MagicMock(return_value=(squad_res, hard_errs))
     
-    from meta_agent_evo.action_selector import ActionDecision
-    import meta_agent_evo.orchestrator
-    meta_agent_evo.orchestrator.scout_new_persona = MagicMock(return_value={"system_prompt": "new prompt", "persona_name": "new"})
-    meta_agent_evo.orchestrator.select_action = MagicMock(return_value=ActionDecision("noop", {}, 0.0, 0.0))
+    from action_selector import ActionDecision
+    import orchestrator
+    orchestrator.scout_new_persona = MagicMock(return_value={"system_prompt": "new prompt", "persona_name": "new"})
+    orchestrator.select_action = MagicMock(return_value=ActionDecision("noop", {}, 0.0, 0.0))
     orchestrator._run_candidate_on_item = MagicMock(return_value="code")
     orchestrator._score = MagicMock(return_value=1.0)
     
