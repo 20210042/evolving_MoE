@@ -1,13 +1,41 @@
-from typing import List, Optional
+"""LLM backends (vLLM default)."""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence, Union
 
 try:
     from vllm import LLM, SamplingParams
-    from vllm.lora.request import LoRARequest
 except ImportError:
     LLM = None
-    LoRARequest = None
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+    SamplingParams = None
+
 import torch
+from transformers import AutoTokenizer, pipeline
+
+Message = Union[str, List[MutableMapping[str, str]]]
+
+
+def llm_service_from_yaml_config(model_name: str, cfg: Mapping[str, Any]) -> "LLMService":
+    llm = cfg.get("llm") if isinstance(cfg.get("llm"), dict) else {}
+    vllm = cfg.get("vllm") if isinstance(cfg.get("vllm"), dict) else {}
+    sampling = llm.get("sampling") if isinstance(llm.get("sampling"), dict) else {}
+
+    kwargs = dict(vllm)
+    kwargs.pop("tp_size", None)
+    kwargs["tensor_parallel_size"] = int(vllm.get("tp_size", 1))
+    if llm.get("max_model_len") is not None:
+        kwargs["max_model_len"] = int(llm["max_model_len"])
+
+    return LLMService(
+        model_name,
+        vllm_kwargs=kwargs,
+        max_tokens=int(llm.get("max_tokens", 8192)),
+        temperature=float(sampling.get("temperature", 0.7)),
+        top_p=float(sampling.get("top_p", 0.8)),
+        top_k=int(sampling.get("top_k", 20)),
+        repetition_penalty=float(sampling.get("repetition_penalty", 1.05)),
+    )
 
 
 class LLMService:
@@ -15,99 +43,120 @@ class LLMService:
         self,
         model_name: str,
         mode: str = "vllm",
-        tp_size: int = 1,
-        max_model_len: int = 32768,
-        lora_path: Optional[str] = None,
-    ):
-        self.model_name = model_name
-        self.mode = mode
-        self.model = None
-        self.tokenizer = None
-        self.lora_request = None
-        
-        ## vllm mode
-        if self.mode == "vllm":
-            if LLM is None: raise ImportError("vllm is not installed.")
-            
-            self.model = LLM(
-                model=self.model_name,
-                trust_remote_code=True,
-                tensor_parallel_size=tp_size,
-                max_model_len=max_model_len,
-                enable_lora=lora_path is not None,
-            )
-            
-            self.tokenizer = self.model.get_tokenizer()
-            
-            if lora_path:
-                self.lora_request = LoRARequest("adapter", 1, lora_path)
-                
-        ## hf mode
-        elif self.mode == "hf":
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            
-            base_model = AutoModelForCausalLM.from_pretrained(
-                self.model_name,
-                device_map="auto",
-                torch_dtype=torch.float16,
-                trust_remote_code=True,
-            )
-            
-            if lora_path:
-                from peft import PeftModel
-                base_model = PeftModel.from_pretrained(base_model, lora_path)
-                base_model = base_model.merge_and_unload()
-            
-            
-            self.model = pipeline(
-                "text-generation",
-                model=base_model,
-                tokenizer=self.tokenizer,
-            )
-            
-            
-        else:
-            raise ValueError(f"Unknown mode: {mode}")
-    
-    
-    
-    
-    def chat(
-        self,
-        messages: List[dict],
+        *,
+        vllm_kwargs: Mapping[str, Any] | None = None,
         max_tokens: int = 8192,
         temperature: float = 0.7,
         top_p: float = 0.8,
         top_k: int = 20,
         repetition_penalty: float = 1.05,
-    ) -> str:
-        if isinstance(messages, str):
-            return self.generate(
-                [messages],
-                max_tokens=max_tokens,
-                temperature=temperature,
-                top_p=top_p,
-                top_k=top_k,
-                repetition_penalty=repetition_penalty,
-            )[0]
+    ):
+        self.model_name = model_name
+        self.mode = mode
+        self.model = None
+        self.tokenizer = None
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+        self.top_p = top_p
+        self.top_k = top_k
+        self.repetition_penalty = repetition_penalty
 
-        prompt = self.tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            add_generation_prompt=True,
+        if mode == "vllm":
+            if LLM is None or SamplingParams is None:
+                raise ImportError("vllm is not installed.")
+            kw = dict(vllm_kwargs or {})
+            kw.setdefault("trust_remote_code", True)
+            self.model = LLM(model_name, **kw)
+            self.tokenizer = self.model.get_tokenizer()
+        elif mode == "hf":
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+            self.model = pipeline(
+                "text-generation",
+                model=model_name,
+                tokenizer=self.tokenizer,
+                device_map="auto",
+                torch_dtype=torch.float16,
+            )
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
+
+    def _to_prompt(
+        self,
+        messages: Sequence[MutableMapping[str, str]],
+        enable_thinking: bool | None = None,
+    ) -> str:
+        if self.tokenizer is None:
+            raise RuntimeError("Tokenizer not initialized.")
+        msgs = [dict(m) for m in messages]
+        template_kwargs: Dict[str, Any] = {}
+        if enable_thinking is not None:
+            template_kwargs["enable_thinking"] = enable_thinking
+        if msgs and msgs[-1].get("role") == "assistant":
+            return str(
+                self.tokenizer.apply_chat_template(
+                    msgs,
+                    tokenize=False,
+                    add_generation_prompt=False,
+                    continue_final_message=True,
+                    **template_kwargs,
+                )
+            )
+        return str(
+            self.tokenizer.apply_chat_template(
+                msgs,
+                tokenize=False,
+                add_generation_prompt=True,
+                **template_kwargs,
+            )
         )
 
-        return self.generate(
-            [prompt],
+    def chat(
+        self,
+        messages: Message,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        top_k: int | None = None,
+        repetition_penalty: float | None = None,
+        stop: Optional[List[str]] = None,
+        enable_thinking: bool | None = None,
+    ) -> str:
+        return self.chat_batch(
+            [messages],
             max_tokens=max_tokens,
             temperature=temperature,
             top_p=top_p,
             top_k=top_k,
             repetition_penalty=repetition_penalty,
+            stop=stop,
+            enable_thinking=enable_thinking,
         )[0]
-    
-    
-    
+
+    def chat_batch(
+        self,
+        messages_batch: List[Message],
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        top_k: int | None = None,
+        repetition_penalty: float | None = None,
+        stop: Optional[List[str]] = None,
+        enable_thinking: bool | None = None,
+    ) -> List[str]:
+        prompts = [
+            m if isinstance(m, str) else self._to_prompt(m, enable_thinking=enable_thinking)
+            for m in messages_batch
+        ]
+        return self.generate(
+            prompts,
+            max_tokens=max_tokens or self.max_tokens,
+            temperature=self.temperature if temperature is None else temperature,
+            top_p=self.top_p if top_p is None else top_p,
+            top_k=self.top_k if top_k is None else top_k,
+            repetition_penalty=self.repetition_penalty if repetition_penalty is None else repetition_penalty,
+            stop=stop,
+        )
+
     def generate(
         self,
         prompts: List[str],
@@ -119,7 +168,8 @@ class LLMService:
         stop: Optional[List[str]] = None,
     ) -> List[str]:
         if self.mode == "vllm":
-            sampling_params = SamplingParams(
+            assert SamplingParams is not None and self.model is not None
+            sp = SamplingParams(
                 temperature=temperature,
                 max_tokens=max_tokens,
                 top_p=top_p,
@@ -127,23 +177,20 @@ class LLMService:
                 repetition_penalty=repetition_penalty,
                 stop=stop,
             )
-            outputs = self.model.generate(prompts, sampling_params, lora_request=self.lora_request)
-            return [output.outputs[0].text for output in outputs]
+            return [o.outputs[0].text for o in self.model.generate(prompts, sp)]
 
-        if self.mode == "hf":
-            results = []
-            for prompt in prompts:
-                output = self.model(
-                    prompt,
-                    max_new_tokens=max_tokens,
-                    temperature=temperature if temperature > 0 else 1e-5,
-                    top_p=top_p,
-                    top_k=top_k,
-                    repetition_penalty=repetition_penalty,
-                    do_sample=temperature > 0,
-                    stop_sequence=stop,
-                )
-                results.append(output[0]["generated_text"][len(prompt) :])
-            return results
-
-        raise ValueError(f"Unknown mode: {self.mode}")
+        assert self.tokenizer is not None and self.model is not None
+        out = []
+        for prompt in prompts:
+            gen = self.model(
+                prompt,
+                max_new_tokens=max_tokens,
+                temperature=temperature if temperature > 0 else 1e-5,
+                top_p=top_p,
+                top_k=top_k,
+                repetition_penalty=repetition_penalty,
+                do_sample=temperature > 0,
+                stop_sequence=stop,
+            )
+            out.append(gen[0]["generated_text"][len(prompt) :])
+        return out
