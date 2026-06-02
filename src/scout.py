@@ -1,14 +1,28 @@
-"""Meta-agent (LLM) scouting for a new critic persona."""
+"""Meta-agent (LLM) scouting for a new expert coder persona."""
 
 from __future__ import annotations
 
-import json
 import logging
-import re
 from typing import Any, Dict, List
 
 from agents.base import Agent
 from prompts.meta import META_AGENT_PROMPT
+from utils.helpers import extract_json_object
+
+
+def _format_roster_table(roster: List[Dict[str, Any]]) -> str:
+    lines = [
+        "| id | name | strengths |",
+        "|----|------|-----------|",
+    ]
+    for p in roster:
+        pid = p.get("id", "")
+        name = p.get("name", p.get("persona_name", ""))
+        strengths = (p.get("strengths") or "").replace("|", "/")
+        lines.append(f"| {pid} | {name} | {strengths} |")
+    lines.append("")
+    lines.append("Do NOT duplicate domains already covered above.")
+    return "\n".join(lines)
 
 
 def scout_new_persona(
@@ -16,13 +30,7 @@ def scout_new_persona(
     roster: List[Dict[str, Any]],
     hard_errors_text: str,
 ) -> Dict[str, Any]:
-    roster_str = json.dumps(
-        [
-            {"id": p.get("id"), "name": p.get("name", p.get("persona_name")), "strengths": p.get("strengths")}
-            for p in roster
-        ],
-        indent=2,
-    )
+    roster_str = _format_roster_table(roster)
 
     prompt = META_AGENT_PROMPT.substitute(
         hard_errors=hard_errors_text[:4000],
@@ -33,11 +41,9 @@ def scout_new_persona(
         {"role": "system", "content": "You are a strict JSON API. Only output valid JSON."},
         {"role": "user", "content": prompt},
     ]
-    response = agent.chat(msg, temperature=0.7)
-    try:
-        m = re.search(r"\{.*\}", response, re.DOTALL)
-        if m:
-            return json.loads(m.group(0))
-    except Exception as e:
-        logging.error("Failed to parse new persona JSON: %s", e)
+    response = agent.chat(msg, enable_thinking=True)
+    data = extract_json_object(response)
+    if data:
+        return data
+    logging.error("Failed to parse new persona JSON from scout response.")
     return {}

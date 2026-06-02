@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import json
 import os
-import random
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from datasets import load_dataset
+
+def _load_dataset(*args, **kwargs):
+    from datasets import load_dataset
+
+    return load_dataset(*args, **kwargs)
 
 
 def scoring_kind_for_dataset(name: str) -> str:
@@ -28,7 +31,7 @@ def annotate_items(items: List[Dict[str, Any]], dataset_key: str) -> List[Dict[s
 
 
 def load_humaneval(split: str = "test") -> List[Dict[str, Any]]:
-    dataset = load_dataset("openai_humaneval", split=split)
+    dataset = _load_dataset("openai_humaneval", split=split)
     data = []
     for item in dataset:
         data.append(
@@ -45,7 +48,7 @@ def load_humaneval(split: str = "test") -> List[Dict[str, Any]]:
 
 
 def load_mbpp(split: str = "test") -> List[Dict[str, Any]]:
-    dataset = load_dataset("google-research-datasets/mbpp", "full", split=split)
+    dataset = _load_dataset("google-research-datasets/mbpp", "full", split=split)
 
     data = []
     for item in dataset:
@@ -81,54 +84,25 @@ def load_math(split: str = "test") -> List[Dict[str, Any]]:
     for config in configs:
         for s in splits_to_load:
             try:
-                dataset = load_dataset("EleutherAI/hendrycks_math", config, split=s)
+                dataset = _load_dataset("EleutherAI/hendrycks_math", config, split=s)
                 for i, item in enumerate(dataset):
                     data.append(
                         {
-                                        "id": f"math_{config}_{s}_{i}",
-                        "instruction": item["problem"],
-                                        "ground_truth": item["solution"],
-                                        "topic": config,
-                                        "level": item["level"],
-                        "domain": "math",
-                                    }
-                                )
+                            "id": f"math_{config}_{s}_{i}",
+                            "instruction": item["problem"],
+                            "ground_truth": item["solution"],
+                            "topic": config,
+                            "level": item["level"],
+                            "domain": "math",
+                        }
+                    )
             except Exception as e:
                 print(f"Warning: Failed to load MATH config {config} split {s}: {e}")
     return data
 
 
-def load_bigmath(split: str = "test", categories=None) -> List[Dict[str, Any]]:
-
-    dataset = load_dataset("Jongbin-kr/BIG-MATH_filtered", split=split)
-
-    categories = [categories] if isinstance(categories, str) else categories
-
-    data: List[Dict[str, Any]] = []
-    for i, item in enumerate(dataset):
-
-        if categories and item["categories"] not in categories: continue
-        
-        data.append(
-            {
-               "id": f"bigmath_filtered_{split}_{i}",
-               "instruction": item["problem"],
-               "ground_truth": item["answer"],
-               "domain": "math",
-               "categories": item["categories"],
-               
-               ## 아래는 원본 BIG MATH 데이터셋에서 넘어온 메타데이터들인데 필요할지 모르겟삼
-               "source": item["source"],
-               "original_domain": item["original_domain"],
-               "llama8b_solve_rate": item["llama8b_solve_rate"]
-            }
-        )
-    
-    return data
-
-
 def load_ds1000(split: str = "test") -> List[Dict[str, Any]]:
-    dataset = load_dataset("xlangai/DS-1000", split=split)
+    dataset = _load_dataset("xlangai/DS-1000", split=split)
     data = []
     for i, item in enumerate(dataset):
         data.append(
@@ -142,8 +116,6 @@ def load_ds1000(split: str = "test") -> List[Dict[str, Any]]:
             }
         )
     return data
-
-
 
 
 def load_livecodebench(release_version: str = "release_v5") -> List[Dict[str, Any]]:
@@ -193,17 +165,7 @@ def load_from_jsonl(filepath: str, dataset_key: str) -> List[Dict[str, Any]]:
     return annotate_items(data, dataset_key)
 
 
-
-def get_dataset(
-    name: str,
-    split: str = "test",
-    local_dir: Optional[str] = None,
-    categories: Optional[Union[str, List[str]]] = None,
-    data_ratio: float = 1.0,
-    seed: Optional[int] = 42,
-) -> List[Dict[str, Any]]:
-    
-    ## load from local
+def get_dataset(name: str, split: str = "test", local_dir: Optional[str] = None) -> List[Dict[str, Any]]:
     if local_dir:
         filename = f"{name.lower()}_{split}.jsonl"
         filepath = os.path.join(local_dir, filename)
@@ -214,37 +176,18 @@ def get_dataset(
                 filepath = os.path.join(local_dir, "Coding", filename)
         if os.path.exists(filepath):
             print(f"Loading '{name}' from local file: {filepath}")
-            data = load_from_jsonl(filepath, name.lower())
-        else:
-            print(f"Local file {filepath} not found. Falling back to HuggingFace.")
-            data = None
-    else:
-        data = None
-        
-    ## huggingface fallback
-    if data is None:
-        n = name.lower()
-        if n == "humaneval":
-            data = load_humaneval(split)
-        elif n == "mbpp":
-            data = load_mbpp(split)
-        elif n == "math":
-            data = load_math(split)
-        elif n == "bigmath":
-            data = load_bigmath(split, categories=categories)
-        elif n == "ds1000":
-            data = load_ds1000(split)
-        elif n == "livecodebench":
-            data = load_livecodebench()
-        else:
-            raise ValueError(f"Unknown dataset: {name}")
-    
-    ## shuffle and sample
-    if seed is not None:
-        rng = random.Random(seed)
-        data = list(data)
-        rng.shuffle(data)
-    if data_ratio < 1.0:
-        data = data[:max(1, int(len(data) * data_ratio))]
-        
-    return data
+            return load_from_jsonl(filepath, name.lower())
+        print(f"Local file {filepath} not found. Falling back to HuggingFace.")
+
+    n = name.lower()
+    if n == "humaneval":
+        return load_humaneval(split)
+    if n == "mbpp":
+        return load_mbpp(split)
+    if n == "math":
+        return load_math(split)
+    if n == "ds1000":
+        return load_ds1000(split)
+    if n == "livecodebench":
+        return load_livecodebench()
+    raise ValueError(f"Unknown dataset: {name}")
