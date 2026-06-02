@@ -1,4 +1,4 @@
-name: evolving_moe
+name: pro6000
 channels:
   - conda-forge
   - defaults
@@ -6,7 +6,7 @@ dependencies:
   - python=3.10
   - pip
   - pip:
-      # inference (Gemma-4 backbone)
+      # inference
       - vllm==0.11.0
       - torch==2.8.0
       - transformers==4.57.6

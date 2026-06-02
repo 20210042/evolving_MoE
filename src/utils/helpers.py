@@ -1,42 +1,9 @@
-import json
-import re
+import re, logging
 
+from transformers import set_seed
+import torch
 
-def strip_thinking_channels(text: str) -> str:
-    """Remove Gemma 4 thought channel blocks before parsing JSON or code."""
-    if not text:
-        return ""
-    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
-    text = re.sub(r"<\|channel>thought\n.*?<channel\|>", "", text, flags=re.DOTALL)
-    return text.strip()
-
-
-def extract_json_object(text: str) -> dict | None:
-    """Extract the last balanced JSON object from model output (thinking-safe)."""
-    text = strip_thinking_channels(text or "")
-    if not text:
-        return None
-    start = text.rfind("{")
-    if start < 0:
-        return None
-    depth = 0
-    for i in range(start, len(text)):
-        if text[i] == "{":
-            depth += 1
-        elif text[i] == "}":
-            depth -= 1
-            if depth == 0:
-                try:
-                    return json.loads(text[start : i + 1])
-                except json.JSONDecodeError:
-                    pass
-    m = re.search(r"\{.*\}", text, re.DOTALL)
-    if m:
-        try:
-            return json.loads(m.group(0))
-        except json.JSONDecodeError:
-            return None
-    return None
+logger = logging.getLogger(__name__)
 
 
 def extract_code_block(text: str) -> str:
@@ -46,9 +13,6 @@ def extract_code_block(text: str) -> str:
     """
     if not text:
         return ""
-
-    # Strip Gemma4 thinking blocks before code extraction
-    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
 
     code = text
     if "[BEGIN]" in code and "[DONE]" in code:
@@ -75,6 +39,7 @@ def extract_code_block(text: str) -> str:
         code = code.split("</code>")[0]
 
     return code.strip()
+
 
 
 def check_stop_condition(feedback: str) -> bool:
@@ -107,3 +72,68 @@ def check_stop_condition(feedback: str) -> bool:
 
     matched = sum(1 for sig in strong_signals if sig in feedback_lower)
     return matched >= 2
+
+
+
+def extract_math_answer(text: str) -> str:
+    """모델 출력에서 최종 답을 추출한다.
+
+    1순위: 텍스트 내 마지막 "Final Answer: ..." 라인의 내용.
+    2순위: 텍스트 내 마지막 \\boxed{...} 의 내용 (중첩 괄호 지원).
+    3순위: 원본 텍스트 전체를 그대로 반환.
+
+    Args:
+        text: 모델이 생성한 응답 전체.
+
+    Returns:
+        추출된 답 문자열.
+    """
+    # 1) "Final Answer: X"
+    fa_matches = re.findall(r"Final Answer:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
+    if fa_matches:
+        return fa_matches[-1].strip()
+
+    # 2) \boxed{} — 중첩 괄호 지원 (e.g. \boxed{\frac{1}{2}})
+    boxed: list[str] = []
+    i = 0
+    while i < len(text):
+        idx = text.find(r"\boxed{", i)
+        if idx == -1:
+            break
+        start = idx + len(r"\boxed{")
+        depth, j = 1, start
+        while j < len(text) and depth > 0:
+            if text[j] == "{":
+                depth += 1
+            elif text[j] == "}":
+                depth -= 1
+            j += 1
+        if depth == 0:
+            boxed.append(text[start : j - 1])
+        i = idx + 1
+    if boxed:
+        return boxed[-1].strip()
+
+    # 3) raw text
+    return text.strip()
+
+
+
+def set_all_seeds(seed: int):
+    """
+    CPU와 CUDA 모든 시드를 고정한다.
+
+    HuggingFace set_seed()에 더하여,
+    torch.backends.cudnn의 deterministic 설정까지 적용.
+
+    Args:
+        seed: 고정할 시드 값.
+    """
+    set_seed(seed)                        # HuggingFace 기본 시드 고정
+    torch.manual_seed(seed)               # PyTorch CPU 시드
+    torch.cuda.manual_seed_all(seed)      # 모든 GPU CUDA 시드
+    if torch.cuda.is_available():
+        torch.backends.cudnn.deterministic = True  # 결정론적 CUDA 연산
+        torch.backends.cudnn.benchmark = False     # 자동 최적화 알고리즘 비활성화
+    logger.info(f"모든 시드 고정: {seed} (CPU + CUDA deterministic)")
+

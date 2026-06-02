@@ -1,43 +1,27 @@
 # Base evolution hyperparameters (override via CLI or per-dataset YAML)
 
-model: "google/gemma-4-31B-it"
-
-llm:
-  max_model_len: 16384
-  max_tokens: 8192
-  sampling:
-    temperature: 1.0
-    top_p: 0.95
-    top_k: 64
-    repetition_penalty: 1.05
-
-vllm:
-  tp_size: 1
-  dtype: bfloat16
-  enable_prefix_caching: true
-  max_num_seqs: 64
-  gpu_memory_utilization: 0.90
-  enforce_eager: false
-
+model: "Qwen/Qwen3-Coder-30B-A3B-Instruct"
 data_dir: "/home/jaehoonjeong/data/MultiAgent/Data"
 split: "test"
 roster_path: "results/gm_roster_v8.json"
-roster_init_path: "configs/roster_init.json"
-batch_size: 50
+batch_size: 20
 train_size: 100
 epochs: 6
-# Self-refine baseline only; one-step evolution/inference do not use critic-refine loops
+vllm_tp_size: 1
 max_refine_iters: 2
-infer_batch_size: 64
 
 # WAR / eviction
 war_tiebreak: "random"  # random | alphabetical — avoid systematic bias
-max_lives: 3
 
 # Action gate
 action_gate:
-  lambda_size: 0.05
-  scale: 0.25
+  alpha_stability: 1.0
+  lambda_size: 0.01
+  epsilon_floor: 0.05
+  swap_max_gain: 0.29
+  probe_stability_k: 8
+  use_wilson_ci: true
+  wilson_confidence: 0.95
 
 # Scoring
 lcb_timeout: 10

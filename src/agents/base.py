@@ -1,5 +1,3 @@
-from typing import Any, List
-
 from utils.llm import LLMService
 
 
@@ -13,7 +11,3 @@ class Agent:
 
     def chat(self, messages: list, **kwargs) -> str:
         return self.llm.chat(messages, **kwargs)
-
-    def chat_batch(self, messages_batch: List[Any], **kwargs) -> List[str]:
-        """Batch multimodal/chat prompts mirroring LLMService.chat_batch."""
-        return self.llm.chat_batch(messages_batch, **kwargs)

@@ -5,6 +5,13 @@
 CODING_GEN_SYSTEM = "You are an expert programmer."
 CODING_GEN_USER = """Write a Python function to solve the following problem.
 
+### Example
+Problem: Write a function to check if a number is even.
+Code:
+```python
+def is_even(n):
+    return n % 2 == 0
+```
 ### Task
 Problem:
 {instruction}
