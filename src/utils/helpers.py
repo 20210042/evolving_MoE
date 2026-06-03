@@ -1,5 +1,11 @@
 import json
+import logging
 import re
+
+import torch
+from transformers import set_seed
+
+logger = logging.getLogger(__name__)
 
 
 def strip_thinking_channels(text: str) -> str:
@@ -107,3 +113,48 @@ def check_stop_condition(feedback: str) -> bool:
 
     matched = sum(1 for sig in strong_signals if sig in feedback_lower)
     return matched >= 2
+
+
+def extract_math_answer(text: str) -> str:
+    """모델 출력에서 최종 답을 추출한다.
+
+    1순위: 텍스트 내 마지막 "Final Answer: ..." 라인.
+    2순위: 텍스트 내 마지막 \\boxed{...} (중첩 괄호 지원).
+    3순위: 원본 텍스트 전체.
+    """
+    fa_matches = re.findall(r"Final Answer:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
+    if fa_matches:
+        return fa_matches[-1].strip()
+
+    boxed: list[str] = []
+    i = 0
+    while i < len(text):
+        idx = text.find(r"\boxed{", i)
+        if idx == -1:
+            break
+        start = idx + len(r"\boxed{")
+        depth, j = 1, start
+        while j < len(text) and depth > 0:
+            if text[j] == "{":
+                depth += 1
+            elif text[j] == "}":
+                depth -= 1
+            j += 1
+        if depth == 0:
+            boxed.append(text[start : j - 1])
+        i = idx + 1
+    if boxed:
+        return boxed[-1].strip()
+
+    return text.strip()
+
+
+def set_all_seeds(seed: int):
+    """CPU와 CUDA 모든 시드를 고정한다."""
+    set_seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    if torch.cuda.is_available():
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    logger.info(f"모든 시드 고정: {seed} (CPU + CUDA deterministic)")

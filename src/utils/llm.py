@@ -6,9 +6,11 @@ from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence,
 
 try:
     from vllm import LLM, SamplingParams
+    from vllm.lora.request import LoRARequest
 except ImportError:
     LLM = None
     SamplingParams = None
+    LoRARequest = None
 
 import torch
 from transformers import AutoTokenizer, pipeline
@@ -45,6 +47,8 @@ class LLMService:
         mode: str = "vllm",
         *,
         vllm_kwargs: Mapping[str, Any] | None = None,
+        max_model_len: int | None = None,
+        lora_path: str | None = None,
         max_tokens: int = 8192,
         temperature: float = 0.7,
         top_p: float = 0.8,
@@ -55,6 +59,7 @@ class LLMService:
         self.mode = mode
         self.model = None
         self.tokenizer = None
+        self.lora_request = None
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.top_p = top_p
@@ -66,16 +71,31 @@ class LLMService:
                 raise ImportError("vllm is not installed.")
             kw = dict(vllm_kwargs or {})
             kw.setdefault("trust_remote_code", True)
+            if max_model_len is not None:
+                kw["max_model_len"] = max_model_len
+            if lora_path is not None:
+                kw["enable_lora"] = True
             self.model = LLM(model_name, **kw)
             self.tokenizer = self.model.get_tokenizer()
+            if lora_path is not None:
+                self.lora_request = LoRARequest("adapter", 1, lora_path)
         elif mode == "hf":
+            from transformers import AutoModelForCausalLM
             self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-            self.model = pipeline(
-                "text-generation",
-                model=model_name,
-                tokenizer=self.tokenizer,
+            base_model = AutoModelForCausalLM.from_pretrained(
+                model_name,
                 device_map="auto",
                 torch_dtype=torch.float16,
+                trust_remote_code=True,
+            )
+            if lora_path is not None:
+                from peft import PeftModel
+                base_model = PeftModel.from_pretrained(base_model, lora_path)
+                base_model = base_model.merge_and_unload()
+            self.model = pipeline(
+                "text-generation",
+                model=base_model,
+                tokenizer=self.tokenizer,
             )
         else:
             raise ValueError(f"Unknown mode: {mode}")
@@ -177,7 +197,7 @@ class LLMService:
                 repetition_penalty=repetition_penalty,
                 stop=stop,
             )
-            return [o.outputs[0].text for o in self.model.generate(prompts, sp)]
+            return [o.outputs[0].text for o in self.model.generate(prompts, sp, lora_request=self.lora_request)]
 
         assert self.tokenizer is not None and self.model is not None
         out = []
