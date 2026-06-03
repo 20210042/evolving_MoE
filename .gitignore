@@ -33,3 +33,6 @@ checkpoints/
 # Training checkpoints & logs
 checkpoints/
 wandb/
+
+# API keys
+.env

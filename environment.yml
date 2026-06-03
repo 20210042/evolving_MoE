@@ -25,3 +25,6 @@ dependencies:
       - pytest==8.4.2
       # evaluate
       - math-verify==0.9.0
+      # for API call
+      - openai
+      - python-dotenv

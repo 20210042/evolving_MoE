@@ -14,6 +14,10 @@ def strip_thinking_channels(text: str) -> str:
         return ""
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
     text = re.sub(r"<\|channel>thought\n.*?<channel\|>", "", text, flags=re.DOTALL)
+    # Bare "thought\n" prefix without closing tag (decoded Gemma 4 output):
+    # thinking lines are indented bullets ("    *   "), so the clean answer
+    # starts at the first \n\n followed by a non-indented character.
+    text = re.sub(r"^thought\n.*?\n\n(?=[^ \t])", "", text, count=1, flags=re.DOTALL)
     return text.strip()
 
 
@@ -122,10 +126,16 @@ def extract_math_answer(text: str) -> str:
     2순위: 텍스트 내 마지막 \\boxed{...} (중첩 괄호 지원).
     3순위: 원본 텍스트 전체.
     """
-    fa_matches = re.findall(r"Final Answer:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
-    if fa_matches:
-        return fa_matches[-1].strip()
-
+    text = strip_thinking_channels(text or "")
+    if not text:
+        return ""
+    
+    ## final answer match
+    final_answer_mathces = re.findall(r"Final Answer:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
+    if final_answer_mathces:
+        return final_answer_mathces[-1].strip()
+    
+    ## boxed match
     boxed: list[str] = []
     i = 0
     while i < len(text):
@@ -145,7 +155,8 @@ def extract_math_answer(text: str) -> str:
         i = idx + 1
     if boxed:
         return boxed[-1].strip()
-
+    
+    ## fallback to original text
     return text.strip()
 
 
