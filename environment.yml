@@ -3,21 +3,21 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.10
+  - python=3.10.20
   - pip
   - pip:
       # inference (Gemma-4 backbone)
-      - vllm==0.11.0
-      - torch==2.8.0
-      - transformers==4.57.6
+      - vllm==0.21.0
+      - torch==2.11.0
+      - transformers==5.9.0
       - accelerate==1.10.1
       # training
-      - peft
-      - trl
+      - peft==0.19.1
+      - trl==0.29.1
       # data
       - datasets==4.4.1
       - pandas==2.3.0
-      - numpy==1.26.3
+      - numpy==2.2.6
       # utils
       - pyyaml==6.0.3
       - wandb==0.23.0
