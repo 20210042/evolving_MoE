@@ -1,0 +1,5 @@
+dataset: "bigmath"
+split: "train"
+train_size: 300
+epochs: 5
+batch_size: 50

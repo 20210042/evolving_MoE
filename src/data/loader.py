@@ -124,7 +124,7 @@ def load_bigmath(split: str = "test", categories=None) -> List[Dict[str, Any]]:
                 "llama8b_solve_rate": item["llama8b_solve_rate"],
             }
         )
-    return data
+    return annotate_items(data, "bigmath")
 
 
 def load_ds1000(split: str = "test") -> List[Dict[str, Any]]:
@@ -182,7 +182,7 @@ def load_livecodebench(release_version: str = "release_v5") -> List[Dict[str, An
 
 def load_from_jsonl(filepath: str, dataset_key: str) -> List[Dict[str, Any]]:
     data = []
-    domain = "math" if dataset_key.lower() == "math" else "coding"
+    domain = "math" if dataset_key.lower() in ("math", "bigmath") else "coding"
     with open(filepath, "r") as f:
         for line in f:
             item = json.loads(line)

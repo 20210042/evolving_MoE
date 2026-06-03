@@ -38,7 +38,7 @@ class RawPipeline(BasePipeline):
         raw_output = self.agent.chat(
             build_baseline_prompt(instruction, dataset=ds, model_name=model_name),
         )
-        code = extract_code_block(raw_output) or raw_output
+        code = raw_output if self.domain == "math" else (extract_code_block(raw_output) or raw_output)
 
         return {
             "id": input_item.get("id"),
@@ -58,7 +58,7 @@ class RawPipeline(BasePipeline):
         outs = self.agent.chat_batch(msgs)
         results = []
         for item, raw in zip(items, outs):
-            code = extract_code_block(raw) or raw
+            code = raw if self.domain == "math" else (extract_code_block(raw) or raw)
             results.append(
                 {
                     "id": item.get("id"),
@@ -98,7 +98,11 @@ class SelfRefinePipeline(BasePipeline):
         from prompts import baseline_prompts
 
         model_name = self.agent.llm.model_name
-        neutral_critic_sys = baseline_prompts.CODING_CRITIC_SYSTEM
+        neutral_critic_sys = (
+            baseline_prompts.MATH_CRITIC_SYSTEM
+            if self.domain == "math"
+            else baseline_prompts.CODING_CRITIC_SYSTEM
+        )
 
         instructions = [self._instruction(it) for it in items]
         datasets = [(it.get("dataset") or "mbpp").lower() for it in items]
@@ -107,7 +111,11 @@ class SelfRefinePipeline(BasePipeline):
             build_baseline_prompt(instr, dataset=ds, model_name=model_name)
             for instr, ds in zip(instructions, datasets)
         ]
-        codes = [extract_code_block(r) or r for r in self.agent.chat_batch(init_msgs)]
+        raw_init = self.agent.chat_batch(init_msgs)
+        codes = [
+            r if self.domain == "math" else (extract_code_block(r) or r)
+            for r in raw_init
+        ]
         histories = [[{"step": "initial", "output": c}] for c in codes]
         active = [True] * len(items)
 
@@ -151,7 +159,7 @@ class SelfRefinePipeline(BasePipeline):
             ]
             refined = self.agent.chat_batch(refine_msgs)
             for j, ref_raw in zip(refine_tasks, refined):
-                codes[j] = extract_code_block(ref_raw) or ref_raw
+                codes[j] = ref_raw if self.domain == "math" else (extract_code_block(ref_raw) or ref_raw)
                 histories[j].append({"step": f"refine_{i}", "output": codes[j]})
 
         results = []

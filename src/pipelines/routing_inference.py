@@ -154,7 +154,7 @@ class GMRoutingPipeline(BasePipeline):
             starter_code=None,
         )
         raw = self.agent.chat(gen_msg, enable_thinking=True)
-        code = extract_code_block(raw) or raw
+        code = raw if self.domain == "math" else (extract_code_block(raw) or raw)
         history.append({"stage": "generation", "code": code})
 
         return {
@@ -212,7 +212,7 @@ class GMRoutingPipeline(BasePipeline):
 
         results: List[Dict[str, Any]] = []
         for item, sid, raw in zip(items, selected_ids, gen_out):
-            code = extract_code_block(raw) or raw
+            code = raw if self.domain == "math" else (extract_code_block(raw) or raw)
             results.append(
                 {
                     "id": item.get("id"),

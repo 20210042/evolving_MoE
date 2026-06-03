@@ -168,9 +168,15 @@ class GMEvolutionOrchestrator:
                 pair_order.append((pid, cid))
 
         gen_out = self.agent.chat_batch(gen_msgs, enable_thinking=True)
+        by_id = {b["id"]: b for b in batch_data}
         codes: Dict[Tuple[str, str], str] = {}
         for pair, raw in zip(pair_order, gen_out):
-            codes[pair] = extract_code_block(raw) or raw
+            pid, cid = pair
+            item = by_id[pid]
+            if item.get("domain") == "math":
+                codes[pair] = raw
+            else:
+                codes[pair] = extract_code_block(raw) or raw
 
         scores = self._score_pairs_parallel(batch_data, codes)
 
@@ -189,11 +195,14 @@ class GMEvolutionOrchestrator:
 
             if not any_solved:
                 clean_desc = item.get("prompt_text") or instruction
-                tests_str = "\n".join(item.get("test_list", []))
-                hard_errors_texts[problem_id] = (
-                    f"Problem: {clean_desc}\n"
-                    f"Tests:\n{tests_str}\n"
-                )
+                if item.get("domain") == "math":
+                    hard_errors_texts[problem_id] = f"Problem: {clean_desc}\n"
+                else:
+                    tests_str = "\n".join(item.get("test_list", []))
+                    hard_errors_texts[problem_id] = (
+                        f"Problem: {clean_desc}\n"
+                        f"Tests:\n{tests_str}\n"
+                    )
 
         return squad_results, hard_errors_texts
 
@@ -216,7 +225,8 @@ class GMEvolutionOrchestrator:
             starter_code=item.get("starter_code"),
         )
         raw = self.agent.chat(msg, enable_thinking=True)
-        return extract_code_block(raw) or raw
+        domain = item.get("domain", "coding")
+        return raw if domain == "math" else (extract_code_block(raw) or raw)
 
     def _update_routing_memory(self, batch_data: List[Dict], squad_results: Dict[str, Set[str]]) -> None:
         for item in batch_data:
@@ -299,7 +309,7 @@ class GMEvolutionOrchestrator:
         self._update_routing_memory(batch_data, squad_results)
 
         hard_errors_combined = "\n\n---\n\n".join(hard_errors_texts.values())
-        new_persona = scout_new_persona(self.agent, self.roster, hard_errors_combined)
+        new_persona = scout_new_persona(self.agent, self.roster, hard_errors_combined, dataset_name=self.dataset_name)
         if not new_persona or "system_prompt" not in new_persona:
             logging.warning("Failed to scout new persona. Skipping.")
             return
@@ -326,7 +336,10 @@ class GMEvolutionOrchestrator:
                 )
             probe_out = self.agent.chat_batch(probe_msgs, enable_thinking=True)
             for item, raw in zip(probe_items, probe_out):
-                code = extract_code_block(raw) or raw
+                if item.get("domain") == "math":
+                    code = raw
+                else:
+                    code = extract_code_block(raw) or raw
                 if pass_at_threshold(self._score(item, code)):
                     new_pass_ids.add(item["id"])
 

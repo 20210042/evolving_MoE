@@ -6,6 +6,8 @@ from typing import Any, Dict
 
 from evaluation.code_exec import evaluate_code_score, extract_helper_code
 from evaluation.lcb_score import score_lcb_item
+from evaluation.metrics import math_verify_score
+from utils.helpers import extract_math_answer
 
 
 def score_one(
@@ -42,6 +44,11 @@ def score_one(
 
     domain = item.get("domain", "coding")
     ground_truth = item.get("ground_truth")
+
+    if domain == "math":
+        extracted = extract_math_answer(prediction_code)
+        return 100.0 if math_verify_score(extracted, ground_truth) else 0.0
+
     test_code = item.get("test_code") or item.get("test") or ""
     if isinstance(item.get("test_list"), list):
         test_code = "\n".join(item["test_list"])

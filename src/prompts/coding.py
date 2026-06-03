@@ -30,6 +30,12 @@ def build_baseline_prompt(
     model_name: str,
     starter_code: str | None = None,
 ) -> Message:
+    ds = (dataset or "mbpp").lower()
+    if ds in ("bigmath", "math"):
+        system = baseline_prompts.MATH_GEN_SYSTEM
+        user = baseline_prompts.MATH_GEN_USER.format(instruction=instruction)
+        return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+
     if starter_code:
         instruction = f"{instruction}\n\nStarter Code:\n```python\n{starter_code}\n```"
 
@@ -73,6 +79,12 @@ def build_expert_prompt(
     starter_code: str | None = None,
 ) -> Message:
     """One-shot code generation under an expert persona (system_prompt)."""
+    ds = (dataset or "mbpp").lower()
+    if ds in ("bigmath", "math"):
+        persona_sys = system_prompt or baseline_prompts.MATH_GEN_SYSTEM
+        user = baseline_prompts.MATH_GEN_USER.format(instruction=instruction)
+        return [{"role": "system", "content": persona_sys}, {"role": "user", "content": user}]
+
     if starter_code:
         instruction = f"{instruction}\n\nStarter Code:\n```python\n{starter_code}\n```"
 

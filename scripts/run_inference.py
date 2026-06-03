@@ -23,7 +23,7 @@ if str(SRC) not in sys.path:
 from agents.base import Agent
 from data.loader import get_dataset
 from pipelines.routing_inference import GMRoutingPipeline
-from utils.llm import LLMService
+from utils.llm import LLMService, llm_service_from_yaml_config
 
 
 def main() -> None:
@@ -136,19 +136,23 @@ def main() -> None:
     llm = llm_service_from_yaml_config(str(model_name), cfg)
     agent = Agent(llm, role="Inference_Agent")
 
+    domain = "coding"
+    if test_data:
+        domain = test_data[0].get("domain", "coding")
+
     if args.pipeline == "raw":
         from pipelines.baselines import RawPipeline
-        pipeline = RawPipeline(agent, domain="coding")
+        pipeline = RawPipeline(agent, domain=domain)
         logging.info("Pipeline: Raw (1-pass, no persona)")
     elif args.pipeline == "self-refine":
         from pipelines.baselines import SelfRefinePipeline
-        pipeline = SelfRefinePipeline(agent, domain="coding", max_refine_iters=max_refine_iters)
+        pipeline = SelfRefinePipeline(agent, domain=domain, max_refine_iters=max_refine_iters)
         logging.info("Pipeline: Self-Refine (%d iters, no persona)", max_refine_iters)
     else:
         pipeline = GMRoutingPipeline(
             agent,
             scouting_report_path=args.roster_path,
-            domain="coding",
+            domain=domain,
             routing_memory_path=str(Path(args.output_file).resolve().parent / "routing_memory.json"),
             max_refine_iters=max_refine_iters,
         )

@@ -29,13 +29,22 @@ def scout_new_persona(
     agent: Agent,
     roster: List[Dict[str, Any]],
     hard_errors_text: str,
+    dataset_name: str = "livecodebench",
 ) -> Dict[str, Any]:
     roster_str = _format_roster_table(roster)
 
-    prompt = META_AGENT_PROMPT.substitute(
-        hard_errors=hard_errors_text[:4000],
-        current_roster=roster_str,
-    )
+    ds = (dataset_name or "").lower()
+    if ds in ("bigmath", "math"):
+        from prompts.meta import META_AGENT_MATH_PROMPT
+        prompt = META_AGENT_MATH_PROMPT.substitute(
+            hard_errors=hard_errors_text[:4000],
+            current_roster=roster_str,
+        )
+    else:
+        prompt = META_AGENT_PROMPT.substitute(
+            hard_errors=hard_errors_text[:4000],
+            current_roster=roster_str,
+        )
 
     msg = [
         {"role": "system", "content": "You are a strict JSON API. Only output valid JSON."},
