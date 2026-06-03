@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence, Union
 
 try:
@@ -11,6 +12,19 @@ except ImportError:
     LLM = None
     SamplingParams = None
     LoRARequest = None
+
+try:
+    import httpx
+    from openai import OpenAI as _OpenAI
+except ImportError:
+    httpx = None
+    _OpenAI = None
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 import torch
 from transformers import AutoTokenizer, pipeline
@@ -79,6 +93,8 @@ class LLMService:
             self.tokenizer = self.model.get_tokenizer()
             if lora_path is not None:
                 self.lora_request = LoRARequest("adapter", 1, lora_path)
+                
+                
         elif mode == "hf":
             from transformers import AutoModelForCausalLM
             self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
@@ -88,15 +104,28 @@ class LLMService:
                 torch_dtype=torch.float16,
                 trust_remote_code=True,
             )
+        
             if lora_path is not None:
                 from peft import PeftModel
                 base_model = PeftModel.from_pretrained(base_model, lora_path)
                 base_model = base_model.merge_and_unload()
+                
             self.model = pipeline(
                 "text-generation",
                 model=base_model,
                 tokenizer=self.tokenizer,
             )
+            
+            
+        elif mode == "api":
+            if _OpenAI is None or httpx is None:
+                raise ImportError("openai and httpx are required for api mode.")
+            self.model = _OpenAI(
+                api_key=os.environ["SKIML_API_KEY"],
+                base_url=os.environ["SKIML_BASE_URL"],
+                http_client=httpx.Client(verify=False),
+            )
+            self.tokenizer = None
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
@@ -163,6 +192,15 @@ class LLMService:
         stop: Optional[List[str]] = None,
         enable_thinking: bool | None = None,
     ) -> List[str]:
+        if self.mode == "api":
+            return self._chat_batch_api(
+                messages_batch,
+                max_tokens=max_tokens or self.max_tokens,
+                temperature=self.temperature if temperature is None else temperature,
+                top_p=self.top_p if top_p is None else top_p,
+                stop=stop,
+                reasoning_effort="medium" if enable_thinking else None,
+            )
         prompts = [
             m if isinstance(m, str) else self._to_prompt(m, enable_thinking=enable_thinking)
             for m in messages_batch
@@ -177,6 +215,34 @@ class LLMService:
             stop=stop,
         )
 
+    def _chat_batch_api(
+        self,
+        messages_batch: List[Message],
+        max_tokens: int = 8192,
+        temperature: float = 0.7,
+        top_p: float = 0.8,
+        stop: Optional[List[str]] = None,
+        reasoning_effort: str | None = None,
+    ) -> List[str]:
+        assert self.model is not None
+        results = []
+        for messages in messages_batch:
+            msgs = [{"role": "user", "content": messages}] if isinstance(messages, str) else list(messages)
+            kwargs: Dict[str, Any] = dict(
+                model=self.model_name,
+                messages=msgs,
+                max_tokens=max_tokens,
+                stop=stop,
+            )
+            if reasoning_effort is not None:
+                kwargs["reasoning_effort"] = reasoning_effort
+            else:
+                kwargs["temperature"] = temperature
+                kwargs["top_p"] = top_p
+            response = self.model.chat.completions.create(**kwargs)
+            results.append(response.choices[0].message.content)
+        return results
+
     def generate(
         self,
         prompts: List[str],
@@ -187,6 +253,14 @@ class LLMService:
         repetition_penalty: float = 1.05,
         stop: Optional[List[str]] = None,
     ) -> List[str]:
+        if self.mode == "api":
+            return self._chat_batch_api(
+                prompts,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                stop=stop,
+            )
         if self.mode == "vllm":
             assert SamplingParams is not None and self.model is not None
             sp = SamplingParams(
