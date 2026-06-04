@@ -38,6 +38,7 @@ for EPOCH in $(seq 1 "${MAX_EPOCHS}"); do
         --split test \
         --seed "${SEED}" \
         --roster_path "${ROSTER}" \
+        --max_items "${EVAL_SIZE:-500}" \
         --output_file "results/bigmath/seed${SEED}/inference_test_epoch${EPOCH}.jsonl"
 
     echo "=== [Epoch ${EPOCH}] Score: BigMath test ==="

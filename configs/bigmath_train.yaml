@@ -3,3 +3,4 @@ split: "train"
 train_size: 300
 epochs: 5
 batch_size: 50
+max_lives: 5

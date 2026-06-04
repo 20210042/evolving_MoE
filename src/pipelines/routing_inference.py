@@ -11,7 +11,7 @@ from typing import Any, Dict, List
 from agents.base import Agent
 from pipelines.base_pipeline import BasePipeline
 from prompts.coding import build_expert_prompt
-from prompts.meta import MANAGER_PROMPT
+from prompts.meta import MANAGER_PROMPT, MANAGER_MATH_PROMPT
 from utils.helpers import extract_code_block, extract_json_object
 
 
@@ -114,8 +114,9 @@ class GMRoutingPipeline(BasePipeline):
 
     def _route_one(self, prompt: str, few_shot_str: str) -> str:
         roster_str = self._roster_json()
+        mgr_template = MANAGER_MATH_PROMPT if self.domain == "math" else MANAGER_PROMPT
         manager_prompt = (
-            MANAGER_PROMPT.substitute(scouting_report=roster_str, problem_description=prompt)
+            mgr_template.substitute(scouting_report=roster_str, problem_description=prompt)
             + few_shot_str
         )
         router_res = self.agent.chat(
@@ -174,11 +175,12 @@ class GMRoutingPipeline(BasePipeline):
 
         route_msgs = []
         prompts: List[str] = []
+        mgr_template = MANAGER_MATH_PROMPT if self.domain == "math" else MANAGER_PROMPT
         for item in items:
             prompt = self._prepare_prompt(item)
             prompts.append(prompt)
             manager_prompt = (
-                MANAGER_PROMPT.substitute(scouting_report=roster_str, problem_description=prompt)
+                mgr_template.substitute(scouting_report=roster_str, problem_description=prompt)
                 + few_shot_str
             )
             route_msgs.append(

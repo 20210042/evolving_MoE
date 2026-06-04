@@ -23,6 +23,29 @@ Do not output any other text or explanation. Only the JSON object.
 """
 )
 
+MANAGER_MATH_PROMPT = Template(
+    """You are the General Manager (Router) of a mathematics team.
+Your task is to analyze the following math problem and select exactly one specialist from your current roster who is best suited to solve it.
+
+=== Current Roster Scouting Report ===
+$scouting_report
+
+=== Problem Description ===
+$problem_description
+
+Routing guidelines:
+- Pick the specialist whose strengths most specifically match the problem's mathematical domain and technique.
+- If several specialists could apply, choose the most specific match, not the most general.
+- If still ambiguous, prefer the specialist whose strengths mention the problem's dominant technique or domain.
+
+You MUST output your selection in valid JSON format exactly as follows:
+{
+    "selected_expert_id": "the_id_of_the_chosen_expert"
+}
+Do not output any other text or explanation. Only the JSON object.
+"""
+)
+
 META_AGENT_PROMPT = Template(
     """You are the Head Scouter for an AI Competitive Programming Team.
 
@@ -63,18 +86,17 @@ $hard_errors
 $current_roster
 
 --- SCOUTING ORDERS ---
-1. Read the hard-error problem descriptions. Identify what types of math problems they represent.
-2. Define a new expert mathematician persona specializing in this class of problems.
-3. NON-REDUNDANCY: Do NOT propose a persona overlapping with current roster members.
+1. Read the hard-error problem descriptions. Identify what **types of problems** they represent (mathematical domains, problem families, techniques required).
+2. Define a new expert mathematician persona who is known for solving **this class of problems well** (model-driven specialization / clustering by problem type).
+3. NON-REDUNDANCY (CRITICAL): Do NOT propose a persona whose expertise overlaps substantially with any current roster member. Read each member's strengths before writing.
 4. COMPLEMENTARITY: The new expert should cover problem types the roster does not already specialize in.
-5. The new expert should be a mathematician who solves problems, not a reviewer.
+5. The persona is a **mathematician who generates solutions**, not a reviewer. Focus on identity and domain expertise, not error-checking checklists.
 
 Define the new specialist in the following JSON format:
 {
-    "persona_name": "A clear, descriptive name (e.g., Combinatorics_Specialist)",
-    "system_prompt": "You are an expert mathematician who specializes in [problem types]. Solve problems step-by-step and give the final answer.",
-    "strengths": "Short description of math domains this expert handles",
-    "gap_not_covered_by": ["id1", "id2"]
+    "persona_name": "A descriptive name reflecting the specialist's unique mathematical domain",
+    "system_prompt": "You are an expert mathematician who specializes in [problem types from hard errors]. Solve problems step-by-step and state the final answer clearly.",
+    "strengths": "Short description of math domains and problem types this expert handles"
 }
 """
 )

@@ -60,6 +60,7 @@ def main() -> None:
         help="Chunk size for batched vLLM inference",
     )
     parser.add_argument("--config", type=str, default=None, help="Optional YAML override")
+    parser.add_argument("--max_items", type=int, default=None, help="Cap eval set size (for fast epoch evals)")
     args = parser.parse_args()
 
     if args.pipeline == "evolved" and args.roster_path is None:
@@ -132,6 +133,10 @@ def main() -> None:
     else:
         test_data = all_data
         logging.info("No test_ids.json found; using all %s problems.", len(test_data))
+
+    if args.max_items and len(test_data) > args.max_items:
+        test_data = test_data[: args.max_items]
+        logging.info("Capped to %d items (--max_items).", args.max_items)
 
     llm = llm_service_from_yaml_config(str(model_name), cfg)
     agent = Agent(llm, role="Inference_Agent")
