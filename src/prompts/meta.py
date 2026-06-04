@@ -62,14 +62,14 @@ $current_roster
 2. Define a new expert coder persona who is known for solving **this class of problems well** (model-driven specialization / clustering by problem type).
 3. NON-REDUNDANCY (CRITICAL): Do NOT propose a persona whose expertise overlaps substantially with any current roster member. Read each member's strengths before writing.
 4. COMPLEMENTARITY: The new expert should cover problem types the roster does not already specialize in.
-5. The persona is a **coder who generates solutions**, not a reviewer. Focus on identity and domain expertise, not bug-fix checklists.
+5. ATOMICITY (CRITICAL): The persona must specialize in exactly **one** tightly-scoped algorithmic domain. Do NOT combine multiple domains (e.g., "Graph and DP Specialist" or "String and Geometry Specialist" are invalid). If the hard errors span multiple domains, pick the single most underrepresented one.
+6. The persona is a **coder who generates solutions**, not a reviewer. Focus on identity and domain expertise, not bug-fix checklists.
 
 Define the new specialist in the following JSON format:
 {
-    "persona_name": "A clear, descriptive name (e.g., Graph_Shortest_Path_Specialist)",
+    "persona_name": "A clear, descriptive name for a single focused domain — must NOT contain the word 'and' (e.g., Graph_Shortest_Path_Specialist)",
     "system_prompt": "You are an expert competitive programmer who specializes in [problem types from hard errors]. Write correct, efficient Python solutions.",
-    "strengths": "Short description of problem types and domains this expert handles",
-    "gap_not_covered_by": ["id1", "id2"]
+    "strengths": "Short description of problem types and domains this expert handles"
 }
 """
 )
@@ -90,13 +90,14 @@ $current_roster
 2. Define a new expert mathematician persona who is known for solving **this class of problems well** (model-driven specialization / clustering by problem type).
 3. NON-REDUNDANCY (CRITICAL): Do NOT propose a persona whose expertise overlaps substantially with any current roster member. Read each member's strengths before writing.
 4. COMPLEMENTARITY: The new expert should cover problem types the roster does not already specialize in.
-5. The persona is a **mathematician who generates solutions**, not a reviewer. Focus on identity and domain expertise, not error-checking checklists.
+5. ATOMICITY (CRITICAL): The persona must specialize in exactly **one** tightly-scoped mathematical domain. Do NOT combine multiple domains (e.g., "Geometry and Number Theory Specialist" or "Calculus and Combinatorics Specialist" are invalid). If the hard errors span multiple domains, pick the single most underrepresented one.
+6. The persona is a **mathematician who generates solutions**, not a reviewer. Focus on identity and domain expertise, not error-checking checklists.
 
 Define the new specialist in the following JSON format:
 {
-    "persona_name": "A descriptive name reflecting the specialist's unique mathematical domain",
-    "system_prompt": "You are an expert mathematician who specializes in [problem types from hard errors]. Solve problems step-by-step and state the final answer clearly.",
-    "strengths": "Short description of math domains and problem types this expert handles"
+    "persona_name": "A descriptive name for a single focused domain — must NOT contain the word 'and'",
+    "system_prompt": "You are an expert mathematician who specializes in [one specific problem type from hard errors]. Solve problems step-by-step and state the final answer clearly.",
+    "strengths": "Short description of the one math domain and problem types this expert handles"
 }
 """
 )
