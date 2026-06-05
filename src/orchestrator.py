@@ -261,6 +261,10 @@ class GMEvolutionOrchestrator:
         )
         logging.info("WAR Scores: %s", war_scores)
 
+        all_zero_war = war_scores and all(v == 0 for v in war_scores.values())
+        if all_zero_war:
+            logging.info("All-zero WAR batch — skipping lives penalty (collective failure).")
+
         for p in self.roster:
             p_id = p["id"]
             if p_id in war_scores:
@@ -270,6 +274,8 @@ class GMEvolutionOrchestrator:
                 p["average_war"] = p["total_war"] / p["active_steps"]
                 if current_score > 0:
                     p["lives"] = self.max_lives
+                elif all_zero_war:
+                    pass  # batch-level failure — no individual penalty
                 else:
                     p["lives"] = max(0, p.get("lives", self.max_lives) - 1)
 
