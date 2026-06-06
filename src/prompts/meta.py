@@ -24,25 +24,20 @@ Do not output any other text or explanation. Only the JSON object.
 )
 
 MANAGER_MATH_PROMPT = Template(
-    """You are the General Manager (Router) of a mathematics team.
-Your task is to analyze the following math problem and select exactly one specialist from your current roster who is best suited to solve it.
+    """You are the Router of a mathematics team.
+Assign the following problem to exactly one specialist from your roster.
 
-=== Current Roster Scouting Report ===
+=== Current Roster ===
 $scouting_report
 
-=== Problem Description ===
+=== Problem ===
 $problem_description
 
-Routing guidelines:
-- Pick the specialist whose strengths most specifically match the problem's mathematical domain and technique.
-- If several specialists could apply, choose the most specific match, not the most general.
-- If still ambiguous, prefer the specialist whose strengths mention the problem's dominant technique or domain.
-
-You MUST output your selection in valid JSON format exactly as follows:
+Pick the specialist most likely to solve this problem.
+Output only valid JSON:
 {
     "selected_expert_id": "the_id_of_the_chosen_expert"
 }
-Do not output any other text or explanation. Only the JSON object.
 """
 )
 
@@ -77,27 +72,29 @@ Define the new specialist in the following JSON format:
 META_AGENT_MATH_PROMPT = Template(
     """You are the Head Scouter for an AI Mathematics Team.
 
-Your mission is to recruit a new specialist mathematician for problems the current roster could not solve in the latest training batch.
+Every agent on the current roster failed the following problems:
 
-=== HARD ERRORS (entire roster failed — problem descriptions only) ===
+=== HARD ERRORS ===
 $hard_errors
 
-=== CURRENT ROSTER (Active Personnel) ===
+=== CURRENT ROSTER ===
 $current_roster
 
---- SCOUTING ORDERS ---
-1. Read the hard-error problem descriptions. Identify what **types of problems** they represent (mathematical domains, problem families, techniques required).
-2. Define a new expert mathematician persona who is known for solving **this class of problems well** (model-driven specialization / clustering by problem type).
-3. NON-REDUNDANCY (CRITICAL): Do NOT propose a persona whose expertise overlaps substantially with any current roster member. Read each member's strengths before writing.
-4. COMPLEMENTARITY: The new expert should cover problem types the roster does not already specialize in.
-5. ATOMICITY (CRITICAL): The persona must specialize in exactly **one** tightly-scoped mathematical domain. Do NOT combine multiple domains (e.g., "Geometry and Number Theory Specialist" or "Calculus and Combinatorics Specialist" are invalid). If the hard errors span multiple domains, pick the single most underrepresented one.
-6. The persona is a **mathematician who generates solutions**, not a reviewer. Focus on identity and domain expertise, not error-checking checklists.
+--- YOUR TASK ---
+Look at these unsolved problems. What expert is missing from this roster?
 
-Define the new specialist in the following JSON format:
+Define that expert yourself.
+
+Rules:
+1. NON-REDUNDANCY (CRITICAL): Must be genuinely different from every current roster member.
+2. ATOMICITY (CRITICAL): One expert, one focused identity — not a combination of multiple.
+3. persona_name must NOT contain the word 'and'.
+
+Output in JSON. Keep system_prompt under 3 sentences:
 {
-    "persona_name": "A descriptive name for a single focused domain — must NOT contain the word 'and'",
-    "system_prompt": "You are an expert mathematician who specializes in [one specific problem type from hard errors]. Solve problems step-by-step and state the final answer clearly.",
-    "strengths": "Short description of the one math domain and problem types this expert handles"
+    "persona_name": "...",
+    "system_prompt": "...",
+    "strengths": "..."
 }
 """
 )
