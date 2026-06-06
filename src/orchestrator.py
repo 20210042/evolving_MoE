@@ -272,10 +272,13 @@ class GMEvolutionOrchestrator:
                 p["total_war"] = p.get("total_war", 0) + current_score
                 p["active_steps"] = p.get("active_steps", 0) + 1
                 p["average_war"] = p["total_war"] / p["active_steps"]
+                agent_solved_any = bool(squad_results.get(p_id, set()))
                 if current_score > 0:
                     p["lives"] = self.max_lives
                 elif all_zero_war:
-                    pass  # batch-level failure — no individual penalty
+                    pass  # batch-level collective failure — no individual penalty
+                elif agent_solved_any:
+                    pass  # solved shared problems — not an individual failure
                 else:
                     p["lives"] = max(0, p.get("lives", self.max_lives) - 1)
 
