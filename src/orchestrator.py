@@ -456,6 +456,7 @@ class GMEvolutionOrchestrator:
         record = {
             "upper_bound_pct": upper_bound_rate,
             "war": war_scores,
+            "squad_solves": {cid: sorted(pids) for cid, pids in squad_results.items()},
             "worst_eject_candidate": worst_agent,
             "hard_error_n": len(hard_errors_texts),
             "probe": {"hard_n": len(probe_hard), "stab_n": 0},
