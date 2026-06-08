@@ -196,12 +196,12 @@ class GMEvolutionOrchestrator:
             if not any_solved:
                 clean_desc = item.get("prompt_text") or instruction
                 if item.get("domain") == "math":
-                    hard_errors_texts[problem_id] = f"Problem: {clean_desc}\n"
+                    hard_errors_texts[problem_id] = clean_desc
                 else:
                     tests_str = "\n".join(item.get("test_list", []))
                     hard_errors_texts[problem_id] = (
-                        f"Problem: {clean_desc}\n"
-                        f"Tests:\n{tests_str}\n"
+                        f"{clean_desc}\n"
+                        f"Tests:\n{tests_str}"
                     )
 
         return squad_results, hard_errors_texts
@@ -317,7 +317,9 @@ class GMEvolutionOrchestrator:
 
         self._update_routing_memory(batch_data, squad_results)
 
-        hard_errors_combined = "\n\n---\n\n".join(hard_errors_texts.values())
+        hard_errors_combined = "\n".join(
+            f"{i+1}. {txt}" for i, txt in enumerate(hard_errors_texts.values())
+        )
         new_persona = scout_new_persona(self.agent, self.roster, hard_errors_combined, dataset_name=self.dataset_name)
         if not new_persona or "system_prompt" not in new_persona:
             logging.warning("Failed to scout new persona. Skipping.")

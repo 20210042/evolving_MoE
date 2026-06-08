@@ -12,16 +12,13 @@ from utils.helpers import extract_json_object
 
 def _format_roster_table(roster: List[Dict[str, Any]]) -> str:
     lines = [
-        "| id | name | strengths |",
-        "|----|------|-----------|",
+        "| name | strengths |",
+        "|------|-----------|",
     ]
     for p in roster:
-        pid = p.get("id", "")
         name = p.get("name", p.get("persona_name", ""))
         strengths = (p.get("strengths") or "").replace("|", "/")
-        lines.append(f"| {pid} | {name} | {strengths} |")
-    lines.append("")
-    lines.append("Do NOT duplicate domains already covered above.")
+        lines.append(f"| {name} | {strengths} |")
     return "\n".join(lines)
 
 

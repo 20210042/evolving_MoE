@@ -1,25 +1,20 @@
 from string import Template
 
 MANAGER_PROMPT = Template(
-    """You are the General Manager (Router) of a software engineering team.
-Your task is to analyze the following programming problem and select exactly one expert coder from your current roster who is best suited to solve it.
+    """You are the Router of a software engineering team.
+Assign the following problem to exactly one specialist from your roster.
 
-=== Current Roster Scouting Report ===
+=== Current Roster ===
 $scouting_report
 
-=== Problem Description ===
+=== Problem ===
 $problem_description
 
-Routing guidelines:
-- Pick the expert whose strengths most specifically match the problem (e.g. subarray/indexing → array; parsing/text → string; DP/table → dp; graph/tree → graph; formulas/modulo/coordinates → math_geom).
-- If several experts could apply, choose the most specific match, not the most general.
-- If still ambiguous, prefer the expert whose strengths mention the problem's dominant algorithm type.
-
-You MUST output your selection in valid JSON format exactly as follows:
+Pick the specialist most likely to solve this problem.
+Output only valid JSON:
 {
     "selected_expert_id": "the_id_of_the_chosen_expert"
 }
-Do not output any other text or explanation. Only the JSON object.
 """
 )
 
@@ -44,27 +39,29 @@ Output only valid JSON:
 META_AGENT_PROMPT = Template(
     """You are the Head Scouter for an AI Competitive Programming Team.
 
-Your mission is to recruit a new specialist coder for problems the current roster could not solve in the latest training batch.
+Every agent on the current roster failed the following problems:
 
-=== HARD ERRORS (entire roster failed — problem descriptions only) ===
+=== HARD ERRORS ===
 $hard_errors
 
-=== CURRENT ROSTER (Active Personnel) ===
+=== CURRENT ROSTER ===
 $current_roster
 
---- SCOUTING ORDERS ---
-1. Read the hard-error problem descriptions. Identify what **types of problems** they represent (algorithm families, domains, patterns).
-2. Define a new expert coder persona who is known for solving **this class of problems well** (model-driven specialization / clustering by problem type).
-3. NON-REDUNDANCY (CRITICAL): Do NOT propose a persona whose expertise overlaps substantially with any current roster member. Read each member's strengths before writing.
-4. COMPLEMENTARITY: The new expert should cover problem types the roster does not already specialize in.
-5. ATOMICITY (CRITICAL): The persona must specialize in exactly **one** tightly-scoped algorithmic domain. Do NOT combine multiple domains (e.g., "Graph and DP Specialist" or "String and Geometry Specialist" are invalid). If the hard errors span multiple domains, pick the single most underrepresented one.
-6. The persona is a **coder who generates solutions**, not a reviewer. Focus on identity and domain expertise, not bug-fix checklists.
+--- YOUR TASK ---
+Look at these unsolved problems. What expert is missing from this roster?
 
-Define the new specialist in the following JSON format:
+Define that expert yourself.
+
+Rules:
+1. NON-REDUNDANCY (CRITICAL): Must be genuinely different from every current roster member.
+2. ATOMICITY (CRITICAL): One expert, one focused identity — not a combination of multiple.
+3. persona_name must NOT contain the word 'and'.
+
+Output in JSON. Keep system_prompt under 3 sentences:
 {
-    "persona_name": "A clear, descriptive name for a single focused domain — must NOT contain the word 'and' (e.g., Graph_Shortest_Path_Specialist)",
-    "system_prompt": "You are an expert competitive programmer who specializes in [problem types from hard errors]. Write correct, efficient Python solutions.",
-    "strengths": "Short description of problem types and domains this expert handles"
+    "persona_name": "...",
+    "system_prompt": "...",
+    "strengths": "..."
 }
 """
 )
