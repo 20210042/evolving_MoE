@@ -18,10 +18,10 @@ MAX_EPOCHS=1 \
 BATCH_SIZE=50 \
 sbatch \
     --job-name=mae_evolve_bigmath \
-    --gres=gpu:PRO6000:4 \
+    --gres=gpu:PRO6000:2 \
     --nodelist=n04 \
-    --cpus-per-task=8 \
-    --mem=128G \
+    --cpus-per-task=4 \
+    --mem=64G \
     --time=48:00:00 \
     --output="${REPO}/logs/%x.%j.out" \
     --error="${REPO}/logs/%x.%j.err" \

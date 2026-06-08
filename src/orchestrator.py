@@ -56,10 +56,12 @@ class GMEvolutionOrchestrator:
         dataset_name: str = "livecodebench",
         seed: int = 42,
         score_workers: int = _SCORE_WORKERS,
+        enable_thinking: bool = True,
     ):
         self.agent = agent
         self.roster_path = roster_path
         self.roster = ensure_roster(roster_path)
+        self.enable_thinking = enable_thinking
         self.max_lives = max_lives
         for p in self.roster:
             p.setdefault("total_war", 0)
@@ -167,7 +169,7 @@ class GMEvolutionOrchestrator:
                 )
                 pair_order.append((pid, cid))
 
-        gen_out = self.agent.chat_batch(gen_msgs, enable_thinking=True)
+        gen_out = self.agent.chat_batch(gen_msgs, enable_thinking=self.enable_thinking)
         by_id = {b["id"]: b for b in batch_data}
         codes: Dict[Tuple[str, str], str] = {}
         for pair, raw in zip(pair_order, gen_out):
@@ -224,7 +226,7 @@ class GMEvolutionOrchestrator:
             model_name=model_name,
             starter_code=item.get("starter_code"),
         )
-        raw = self.agent.chat(msg, enable_thinking=True)
+        raw = self.agent.chat(msg, enable_thinking=self.enable_thinking)
         domain = item.get("domain", "coding")
         return raw if domain == "math" else (extract_code_block(raw) or raw)
 
@@ -320,7 +322,7 @@ class GMEvolutionOrchestrator:
         hard_errors_combined = "\n".join(
             f"{i+1}. {txt}" for i, txt in enumerate(hard_errors_texts.values())
         )
-        new_persona = scout_new_persona(self.agent, self.roster, hard_errors_combined, dataset_name=self.dataset_name)
+        new_persona = scout_new_persona(self.agent, self.roster, hard_errors_combined, dataset_name=self.dataset_name, enable_thinking=self.enable_thinking)
         if not new_persona or "system_prompt" not in new_persona:
             logging.warning("Failed to scout new persona. Skipping.")
             return
@@ -345,7 +347,7 @@ class GMEvolutionOrchestrator:
                         starter_code=item.get("starter_code"),
                     )
                 )
-            probe_out = self.agent.chat_batch(probe_msgs, enable_thinking=True)
+            probe_out = self.agent.chat_batch(probe_msgs, enable_thinking=self.enable_thinking)
             for item, raw in zip(probe_items, probe_out):
                 if item.get("domain") == "math":
                     code = raw

@@ -175,6 +175,7 @@ def main() -> None:
         run_id=run_id,
         dataset_name=dataset,
         seed=seed,
+        enable_thinking=bool(cfg.get("enable_thinking", True)),
     )
 
     step_count = 0

@@ -27,6 +27,7 @@ def scout_new_persona(
     roster: List[Dict[str, Any]],
     hard_errors_text: str,
     dataset_name: str = "livecodebench",
+    enable_thinking: bool = True,
 ) -> Dict[str, Any]:
     roster_str = _format_roster_table(roster)
 
@@ -47,7 +48,7 @@ def scout_new_persona(
         {"role": "system", "content": "You are a strict JSON API. Only output valid JSON."},
         {"role": "user", "content": prompt},
     ]
-    response = agent.chat(msg, enable_thinking=True)
+    response = agent.chat(msg, enable_thinking=enable_thinking)
     data = extract_json_object(response)
     if data:
         return data

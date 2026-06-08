@@ -1,9 +1,10 @@
 dataset: "bigmath"
 split: "train"
-train_size: 50000
-epochs: 1
+train_size: 300
+epochs: 5
 batch_size: 50
 max_lives: 5
+enable_thinking: false
 
 vllm:
   tp_size: 2
