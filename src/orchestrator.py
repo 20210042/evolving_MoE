@@ -57,11 +57,13 @@ class GMEvolutionOrchestrator:
         seed: int = 42,
         score_workers: int = _SCORE_WORKERS,
         enable_thinking: bool = True,
+        use_exclusive_solves: bool = False,
     ):
         self.agent = agent
         self.roster_path = roster_path
         self.roster = ensure_roster(roster_path)
         self.enable_thinking = enable_thinking
+        self.use_exclusive_solves = use_exclusive_solves
         self.max_lives = max_lives
         for p in self.roster:
             p.setdefault("total_war", 0)
@@ -69,6 +71,7 @@ class GMEvolutionOrchestrator:
             p.setdefault("average_war", 0.0)
             p.setdefault("lives", self.max_lives)
             p.setdefault("routing_history", [])
+            p.setdefault("exclusive_solves", [])
         self.action_cfg = action_cfg or ActionGateConfig()
         self.max_refine_iters = max_refine_iters
         self.lcb_timeout = lcb_timeout
@@ -284,6 +287,20 @@ class GMEvolutionOrchestrator:
                 else:
                     p["lives"] = max(0, p.get("lives", self.max_lives) - 1)
 
+        # Accumulate exclusive solve history per agent (problems only that agent solved).
+        roster_by_id = {p["id"]: p for p in self.roster}
+        for item in batch_data:
+            pid = item["id"]
+            solvers = [cid for cid, solved_set in squad_results.items() if pid in solved_set]
+            if len(solvers) == 1:
+                p = roster_by_id.get(solvers[0])
+                if p is not None:
+                    text = (item.get("prompt_text") or item.get("instruction", ""))[:200]
+                    p.setdefault("exclusive_solves", [])
+                    if text not in p["exclusive_solves"]:
+                        p["exclusive_solves"].append(text)
+                    p["exclusive_solves"] = p["exclusive_solves"][-10:]
+
         save_roster(self.roster_path, self.roster)
 
         worst_agent = pick_worst_agent(
@@ -322,7 +339,20 @@ class GMEvolutionOrchestrator:
         hard_errors_combined = "\n".join(
             f"{i+1}. {txt}" for i, txt in enumerate(hard_errors_texts.values())
         )
-        new_persona = scout_new_persona(self.agent, self.roster, hard_errors_combined, dataset_name=self.dataset_name, enable_thinking=self.enable_thinking)
+
+        exclusive_solves_map: Optional[Dict[str, List[str]]] = None
+        if self.use_exclusive_solves:
+            exclusive_solves_map = {
+                p.get("name", p.get("persona_name", p["id"])): p.get("exclusive_solves", [])
+                for p in self.roster
+            }
+
+        new_persona = scout_new_persona(
+            self.agent, self.roster, hard_errors_combined,
+            dataset_name=self.dataset_name,
+            enable_thinking=self.enable_thinking,
+            exclusive_solves_map=exclusive_solves_map,
+        )
         if not new_persona or "system_prompt" not in new_persona:
             logging.warning("Failed to scout new persona. Skipping.")
             return
