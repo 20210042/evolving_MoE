@@ -25,9 +25,11 @@ class GMRoutingPipeline(BasePipeline):
         domain: str = "coding",
         routing_memory_path: str = "results/routing_memory.json",
         max_refine_iters: int = 2,  # deprecated: kept for CLI compat
+        gen_enable_thinking: bool = True,
     ):
         super().__init__(agent, domain)
         self.max_refine_iters = max_refine_iters
+        self.gen_enable_thinking = gen_enable_thinking
         self.scouting_report_path = scouting_report_path
 
         try:
@@ -154,7 +156,7 @@ class GMRoutingPipeline(BasePipeline):
             model_name=model_name,
             starter_code=None,
         )
-        raw = self.agent.chat(gen_msg, enable_thinking=True)
+        raw = self.agent.chat(gen_msg, enable_thinking=self.gen_enable_thinking)
         code = raw if self.domain == "math" else (extract_code_block(raw) or raw)
         history.append({"stage": "generation", "code": code})
 
@@ -210,7 +212,7 @@ class GMRoutingPipeline(BasePipeline):
                 )
             )
 
-        gen_out = self.agent.chat_batch(gen_msgs, enable_thinking=True)
+        gen_out = self.agent.chat_batch(gen_msgs, enable_thinking=self.gen_enable_thinking)
 
         results: List[Dict[str, Any]] = []
         for item, sid, raw in zip(items, selected_ids, gen_out):

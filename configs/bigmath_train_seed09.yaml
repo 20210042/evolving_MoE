@@ -4,7 +4,7 @@ train_size: 300
 epochs: 5
 batch_size: 50
 max_lives: 5
-enable_thinking: true
+enable_thinking: false
 use_exclusive_solves: true
 
 vllm:

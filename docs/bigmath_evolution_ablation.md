@@ -182,6 +182,70 @@ all_zero_war = war_scores and all(v == 0 for v in war_scores.values())
 
 ---
 
+## 20210008 — Thinking OFF ablation (seed06 분기)
+
+> seed06(Verbal RL, 최소개입, 300×5)에서 **진화 단계의 thinking만 OFF**로 바꾼 분기. tp=2 병렬화.
+> 가설: "thinking이 전문화에 기여하는가?"
+
+**설정 (vs seed06)**: `enable_thinking: false` (solver/scout/router 진화 단계), tp_size 1→2, 나머지 동일.
+
+**진화 결과**: All-zero WAR **43.3%** (seed06 30% 대비 ↑) — Thinking OFF에서 독점 기여 신호가 더 약함. 최종 로스터 9명(LUCA + 8 specialists).
+
+### ⚠️ Eval 방법론 수정 (2026-06-08 오후)
+
+기존 seed08 eval 수치(MoE 65.8%)와 seed06과의 비교가 **두 가지 오류**로 무효임을 발견, 재측정 중.
+
+**오류 1 — 생성 thinking 하드코딩**: config `enable_thinking`은 **진화(orchestrator)에만** 적용되고 **eval inference에는 전달되지 않았음**. `routing_inference.py`의 `GMRoutingPipeline`이 생성 단계에 `enable_thinking=True`를 하드코딩 → seed08의 "Thinking OFF" eval이 실제로는 **생성 thinking ON**으로 측정됨.
+- **수정**: `GMRoutingPipeline(gen_enable_thinking=...)` 파라미터 추가, `run_inference.py`에서 `cfg.get("enable_thinking")`로 주입. 라우팅 단계(`enable_thinking=False`)는 seed06·08 공통이라 변경 없음. 기본값 True → 기존 Thinking ON 실험(seed01~06) 수치 영향 없음.
+
+**오류 2 — per-epoch vs single-final 비교**: seed01~06은 **에포크별**(roster_step_6/12/18/24/30) eval 후 best epoch 보고. seed08은 **최종 roster 1회**만(65.8%). 보고서가 seed06 **best epoch(Ep3=67.4%)** vs seed08 **single-final(65.8%)**을 비교 → 사과 대 오렌지. 실제로 seed06 **final epoch(Ep5)=65.8%** = seed08과 동일.
+
+**오류 3 — UB test-set 정렬**: ub_eval은 MoE eval과 동일 `--seed`로 같은 held-out 500을 써야 함. 기존 seed06 ub_eval은 `--seed 0`(full-split 첫 500)이라 자기 MoE eval과도 어긋남. seed08 ub_eval은 `--seed 20210008`로 정렬.
+
+### 재측정 (진행 중)
+- seed07(50K, job 177045) **취소** → GPU 확보
+- **177558** `run_bigmath_eval_epochs_nothink.sh` — seed08 per-epoch eval (roster_step 6~30), 생성 thinking OFF, tp=2
+- **177559** `ub_eval/run_all.sh` — seed08 per-agent UB(9 roster), thinking OFF, `--seed 20210008`
+
+### 재측정 결과 (2026-06-08 완료, jobs 177558/177559)
+
+**seed08 per-epoch MoE Pass@1 (생성 thinking OFF):**
+
+| Ep1 | Ep2 | Ep3 | Ep4 | Ep5 | 평균 | 최고 | 최종(Ep5) |
+|----|----|----|----|----|------|------|-----------|
+| 67.6 | 67.4 | 67.0 | 65.6 | 67.2 | **67.0** | 67.6 | 67.2 |
+
+**seed08 Test UB (per-agent, held-out 500, thinking OFF, `--seed 20210008`):**
+
+| 에이전트 | Pass@1 | | 집계 | 값 |
+|---|---|---|---|---|
+| LUCA | 67.2% (336) | | LUCA 단독 | 67.20% |
+| c_23871 | 68.0% (340) | | **UB union (9명)** | **71.20%** (356) |
+| c_33267 | **68.4%** (342) | | specialist가 LUCA 너머 | **+20문제 (4.0%)** |
+| c_56511 | 68.2% (341) | | 아무도 못 푼 문제 | 144/500 (28.8%) |
+| 나머지 5명 | 67.2~67.4% | | | |
+
+### seed06 (ON) vs seed08 (OFF) 정면 비교 — 가설 판정
+
+| 지표 | seed06 (Thinking ON) | seed08 (Thinking OFF) | 차이 |
+|------|---------------------|----------------------|------|
+| MoE Pass@1 평균 | 66.3% | **67.0%** | +0.7 |
+| MoE 최고 epoch | 67.4 (Ep3) | 67.6 (Ep1) | +0.2 |
+| MoE 최종 epoch | 65.8 | **67.2** | +1.4 |
+| LUCA 단독 | ~67.0 | 67.2 | ≈ |
+| Test UB (union) | 70.8% | **71.2%** | +0.4 |
+| specialist 추가 기여 | +19 (3.8%) | +20 (4.0%) | ≈ |
+| 아무도 못 풂 | 29.2% | 28.8% | ≈ |
+| **All-zero WAR** | **30%** | **43.3%** | **+13.3** |
+
+**판정:**
+1. **성능(MoE)·UB 저하 없음 — 사실상 동률** (OFF가 오히려 미세하게 높음). 기존 보고서의 "Thinking OFF -1.6pp 저하"는 **측정 버그의 산물**: seed06 best-epoch(67.4) vs seed08 single-final(65.8) 비교였고, 게다가 seed08은 생성 thinking이 ON으로 잘못 측정됨. 정합 측정(per-epoch + 생성 thinking OFF)하니 **65.8 → 67.2로 회복**. → **"Thinking OFF가 성능 저하"는 기각.**
+2. **유일하게 살아남은 실제 차이 = All-zero WAR 30%→43.3%**. Thinking OFF는 진화 중 **독점 기여(WAR) 신호를 약화**시키지만, 그것이 end-to-end 성능으로 이어지지 않음. 이유: 두 조건 모두 specialist가 LUCA 너머 +4%만 보태고 ~29%는 누구도 못 풂 → **system-prompt 수준 전문화의 ceiling**이 thinking 변수보다 지배적. (= 위 §"UB 분석"의 "LoRA-MoE 필요" 논지 강화)
+
+**caveat**: seed06/08은 seed가 달라 held-out set이 다르고 seed06 UB는 `--seed 0`(full-split)로 측정됨 → 절대 수치 cross-seed 비교는 seed 교란 있음. 다만 **within-seed 구조(MoE≈LUCA, UB가 LUCA+4%, ~29% 미해결)가 양쪽에서 거의 동일**하다는 점이 오히려 견고한 발견.
+
+---
+
 ## Git 이력 (jh/evolution 브랜치)
 
 | 커밋 | 내용 |
@@ -196,3 +260,6 @@ all_zero_war = war_scores and all(v == 0 for v in war_scores.values())
 | `3f3edb7` | Action gate lambda batch_size 정규화 (batch_size_ref=50) |
 | `ebccef5` | squad_solves 로깅 추가 (WAR 기반 expert 라벨링용) |
 | `8730c9a` | seed20210007 설정 — 50K BigMath, tp=4, 1 epoch |
+| `8fe16f1` | seed20210008 — Thinking OFF ablation, tp=2 병렬화, eval 자동화 |
+| `26c6f8a` | seed20210009 — data-driven scout with exclusive solve history |
+| (uncommitted) | **eval 생성 thinking 파라미터화** (`gen_enable_thinking`) — seed08 thinking-OFF 재측정용 |

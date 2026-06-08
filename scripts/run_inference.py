@@ -160,11 +160,13 @@ def main() -> None:
             domain=domain,
             routing_memory_path=str(Path(args.output_file).resolve().parent / "routing_memory.json"),
             max_refine_iters=max_refine_iters,
+            gen_enable_thinking=bool(cfg.get("enable_thinking", True)),
         )
         logging.info(
-            "Pipeline: Evolved GMRoutingPipeline one-step (roster=%s, infer_batch_size=%d)",
+            "Pipeline: Evolved GMRoutingPipeline one-step (roster=%s, infer_batch_size=%d, gen_thinking=%s)",
             args.roster_path,
             infer_batch_size,
+            bool(cfg.get("enable_thinking", True)),
         )
 
     processed_ids = set()
