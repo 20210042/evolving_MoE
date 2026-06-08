@@ -13,6 +13,7 @@ Action = Literal["noop", "add", "swap", "delete"]
 class ActionGateConfig:
     lambda_size: float = 0.005  # Base coefficient for exponential penalty
     scale: float = 0.5          # Scale factor for exponential penalty
+    batch_size_ref: int = 50    # Reference batch size; lambda is scaled by (ref/actual) to keep sensitivity invariant
 
 
 @dataclass
@@ -44,9 +45,11 @@ def select_action(
     N = len(r_ids)
     
     # 1. Non-linear marginal penalty/savings coefficients (Exponential)
+    # batch_norm keeps action gate sensitivity invariant across different batch sizes
+    batch_norm = cfg.batch_size_ref / batch_size if batch_size > 0 else 1.0
     factor = cfg.scale * (math.exp(cfg.lambda_size) - 1.0)
-    lambda_add = math.exp(N * cfg.lambda_size) * factor
-    lambda_del = math.exp((N - 1) * cfg.lambda_size) * factor
+    lambda_add = math.exp(N * cfg.lambda_size) * factor * batch_norm
+    lambda_del = math.exp((N - 1) * cfg.lambda_size) * factor * batch_norm
 
     # 2. Phase 1 (Add) Utility
     # Marginal hard gain is scaled against the entire batch_size (overall solve rate delta)
