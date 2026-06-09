@@ -11,6 +11,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
 from trl import SFTConfig, SFTTrainer
 
 from data import get_dataset
+from prompts.math import build_generation_prompt as build_math_prompt
 from utils.helpers import set_all_seeds
 
 logger = logging.getLogger(__name__)
@@ -96,13 +97,15 @@ def build_hf_dataset(
     seed: Optional[int] = None,
     categories: Optional[str] = None,
 ) -> Dataset:
-    
     items = get_dataset(name, split=split, categories=categories, data_ratio=data_ratio, seed=seed)
+    is_math = name.lower() in {"bigmath", "math", "numina_cot"}
 
     return Dataset.from_list([
         {
-            "prompt": [{"role": "user", "content": item["instruction"]}],
-            "completion": [{"role": "assistant", "content": item["ground_truth"]}],
+            "prompt": build_math_prompt(item["instruction"]) if is_math
+                      else [{"role": "user", "content": item["instruction"]}],
+            # numina_cot처럼 solution(full CoT)이 있으면 그걸 completion으로, 없으면 ground_truth 사용
+            "completion": [{"role": "assistant", "content": item.get("solution", item["ground_truth"])}],
         }
         for item in items
     ])
@@ -152,8 +155,8 @@ def main():
         categories=data_args.categories,
     )
     logger.info(f"학습 데이터셋: {len(train_dataset)}개 예제")
-    
-    
+
+
     logger.info(f"평가 데이터셋 로딩: {data_args.eval_dataset}")
     eval_dataset = build_hf_dataset(
         data_args.eval_dataset,
@@ -162,9 +165,9 @@ def main():
         categories=data_args.categories,
     )
     logger.info(f"평가 데이터셋: {len(eval_dataset)}개 예제")
-    
-    
-    
+
+
+
     # 모델 및 토크나이저 로드
     dtype_map = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}
     torch_dtype = dtype_map.get(model_args.dtype, torch.bfloat16)

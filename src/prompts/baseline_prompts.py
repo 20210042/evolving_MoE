@@ -72,27 +72,11 @@ Return the improved code in the following format:
 ```
 """
 
-# --- MATH PROMPTS (Gemma4 reasoning and BIG-MATH style) ---
+# --- MATH PROMPTS (GSM8K Style) ---
 
 MATH_GEN_SYSTEM = "You are a helpful math assistant."
-MATH_GEN_USER = """Solve the following math problem. At the end of your response, write your final answer after "Final Answer:".
+MATH_GEN_USER = """Solve the following math problem. Show your work step-by-step, and put your final answer in \\boxed{{}}.
 
-### Example
-Question:
-Find the interval where f(x) = x^2 - 9 is negative. Express your answer as an interval, using interval notation (e.g., (a, b)).
-
-thought
-We need to find where $f(x) = x^2 - 9 < 0$.
-
-    *   Rewrite: $x^2 < 9$.
-    *   Take the square root: $|x| < 3$, which gives $-3 < x < 3$.
-    *   Check endpoints: $f(-3) = 0$ and $f(3) = 0$, so endpoints are excluded.
-
-The function $f(x) = x^2 - 9$ is negative on the interval $(-3, 3)$.
-
-Final Answer: (-3, 3)
-
-### Task
 Question:
 {instruction}
 """
