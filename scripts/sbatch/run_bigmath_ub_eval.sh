@@ -22,7 +22,7 @@ source "${REPO}/scripts/sbatch/common_bigmath.sh"
 setup_job_env
 
 EVAL_CONFIG="${EVAL_CONFIG:-configs/bigmath_train_nothink.yaml}"
-RESULTS_DIR="results/bigmath/seed${SEED}"
+RESULTS_DIR="results/${DATASET}/seed${SEED}"
 ROSTER_FINAL="${RESULTS_DIR}/roster_final.json"
 OUT="${RESULTS_DIR}/ub_eval"
 
@@ -55,14 +55,14 @@ for PID in ${PIDS}; do
     echo "=== Running: ${PID} ==="
     python scripts/run_inference.py \
         --config "${EVAL_CONFIG}" \
-        --dataset bigmath --split test \
+        --dataset "${DATASET}" --split test \
         --pipeline evolved \
         --roster_path "${OUT}/roster_${PID}.json" \
         --seed "${SEED}" --max_items "${EVAL_SIZE:-500}" \
         --output_file "${OUT}/inference_${PID}.jsonl"
     python scripts/score_outputs.py \
         --input "${OUT}/inference_${PID}.jsonl" \
-        --dataset bigmath --split test
+        --dataset "${DATASET}" --split test
 done
 
 echo "=== UB eval done. Per-agent scores in ${OUT}/ (compute union post-hoc). ==="

@@ -8,9 +8,10 @@
 : "${TRAIN_SIZE:=300}"
 : "${BATCH_SIZE:=50}"
 : "${MAX_EPOCHS:=5}"
+: "${DATASET:=bigmath}"   # results/<DATASET>/ 경로·평가 dataset 키. NuminaMath 등은 submit에서 override.
 
-RESULTS_DIR="results/bigmath/seed${SEED}"
-RUN_ID="bigmath/seed${SEED}"
+RESULTS_DIR="results/${DATASET}/seed${SEED}"
+RUN_ID="${DATASET}/seed${SEED}"
 ROSTER_SNAPSHOT_DIR="${RESULTS_DIR}/${RUN_ID}"
 INIT_ROSTER="${REPO}/configs/roster_init.json"
 

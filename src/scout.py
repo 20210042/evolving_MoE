@@ -11,6 +11,15 @@ from utils.helpers import extract_json_object
 
 
 def _format_roster_table(roster: List[Dict[str, Any]]) -> str:
+    # approach 모드(strengths 없이 identity+approach)면 그 둘을 보여준다.
+    if any(p.get("approach") for p in roster):
+        lines = ["| name | identity | approach |", "|------|----------|----------|"]
+        for p in roster:
+            name = p.get("name", p.get("persona_name", ""))
+            ident = (p.get("system_prompt") or "").replace("|", "/")
+            appr = (p.get("approach") or "").replace("|", "/")
+            lines.append(f"| {name} | {ident} | {appr} |")
+        return "\n".join(lines)
     lines = [
         "| name | strengths |",
         "|------|-----------|",
@@ -42,12 +51,20 @@ def scout_new_persona(
     dataset_name: str = "livecodebench",
     enable_thinking: bool = True,
     exclusive_solves_map: Optional[Dict[str, List[str]]] = None,
+    use_approach_persona: bool = False,
 ) -> Dict[str, Any]:
     roster_str = _format_roster_table(roster)
 
     ds = (dataset_name or "").lower()
     if ds in ("bigmath", "math"):
-        if exclusive_solves_map is not None:
+        if exclusive_solves_map is not None and use_approach_persona:
+            from prompts.meta import META_AGENT_MATH_PROMPT_V3
+            prompt = META_AGENT_MATH_PROMPT_V3.substitute(
+                hard_errors=hard_errors_text[:4000],
+                current_roster=roster_str,
+                exclusive_solves=_format_exclusive_solves(exclusive_solves_map),
+            )
+        elif exclusive_solves_map is not None:
             from prompts.meta import META_AGENT_MATH_PROMPT_V2
             prompt = META_AGENT_MATH_PROMPT_V2.substitute(
                 hard_errors=hard_errors_text[:4000],

@@ -177,6 +177,7 @@ def main() -> None:
         seed=seed,
         enable_thinking=bool(cfg.get("enable_thinking", True)),
         use_exclusive_solves=bool(cfg.get("use_exclusive_solves", False)),
+        use_approach_persona=bool(cfg.get("use_approach_persona", False)),
     )
 
     step_count = 0

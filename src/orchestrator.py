@@ -58,12 +58,14 @@ class GMEvolutionOrchestrator:
         score_workers: int = _SCORE_WORKERS,
         enable_thinking: bool = True,
         use_exclusive_solves: bool = False,
+        use_approach_persona: bool = False,
     ):
         self.agent = agent
         self.roster_path = roster_path
         self.roster = ensure_roster(roster_path)
         self.enable_thinking = enable_thinking
         self.use_exclusive_solves = use_exclusive_solves
+        self.use_approach_persona = use_approach_persona
         self.max_lives = max_lives
         for p in self.roster:
             p.setdefault("total_war", 0)
@@ -168,6 +170,7 @@ class GMEvolutionOrchestrator:
                         dataset=ds,
                         model_name=model_name,
                         starter_code=starter,
+                        approach=player.get("approach"),
                     )
                 )
                 pair_order.append((pid, cid))
@@ -352,6 +355,7 @@ class GMEvolutionOrchestrator:
             dataset_name=self.dataset_name,
             enable_thinking=self.enable_thinking,
             exclusive_solves_map=exclusive_solves_map,
+            use_approach_persona=self.use_approach_persona,
         )
         if not new_persona or "system_prompt" not in new_persona:
             logging.warning("Failed to scout new persona. Skipping.")
@@ -375,6 +379,7 @@ class GMEvolutionOrchestrator:
                         dataset=item.get("dataset") or self.dataset_name,
                         model_name=self.agent.llm.model_name,
                         starter_code=item.get("starter_code"),
+                        approach=new_persona.get("approach"),
                     )
                 )
             probe_out = self.agent.chat_batch(probe_msgs, enable_thinking=self.enable_thinking)

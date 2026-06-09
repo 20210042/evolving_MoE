@@ -48,17 +48,20 @@ class GMRoutingPipeline(BasePipeline):
                 pass
 
     def _roster_json(self) -> str:
-        return json.dumps(
-            [
-                {
-                    "id": p.get("id", "default_id"),
-                    "name": p.get("name", p.get("persona_name", "Expert")),
-                    "strengths": p.get("strengths", "Specialized coding expert"),
-                }
-                for p in self.roster
-            ],
-            indent=2,
-        )
+        def summary(p):
+            base = {
+                "id": p.get("id", "default_id"),
+                "name": p.get("name", p.get("persona_name", "Expert")),
+            }
+            # approach 모드: strengths 대신 identity(system_prompt)+approach를 라우터에 노출
+            if p.get("approach"):
+                base["identity"] = p.get("system_prompt", "")
+                base["approach"] = p.get("approach", "")
+            else:
+                base["strengths"] = p.get("strengths", "Specialized coding expert")
+            return base
+
+        return json.dumps([summary(p) for p in self.roster], indent=2)
 
     def _few_shot_suffix(self) -> str:
         examples: list = []
@@ -155,6 +158,7 @@ class GMRoutingPipeline(BasePipeline):
             dataset=ds,
             model_name=model_name,
             starter_code=None,
+            approach=selected_player.get("approach"),
         )
         raw = self.agent.chat(gen_msg, enable_thinking=self.gen_enable_thinking)
         code = raw if self.domain == "math" else (extract_code_block(raw) or raw)
@@ -209,6 +213,7 @@ class GMRoutingPipeline(BasePipeline):
                     dataset=ds,
                     model_name=model_name,
                     starter_code=None,
+                    approach=player.get("approach") if player else None,
                 )
             )
 

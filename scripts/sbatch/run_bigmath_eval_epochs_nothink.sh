@@ -35,20 +35,20 @@ for EPOCH in $(seq 1 "${MAX_EPOCHS}"); do
     echo "=== Epoch ${EPOCH} eval (roster_step_${STEP}.json) ==="
     echo "=========================================================================="
 
-    echo "=== [Epoch ${EPOCH}] Inference: BigMath test ==="
+    echo "=== [Epoch ${EPOCH}] Inference: ${DATASET} test ==="
     python scripts/run_inference.py \
         --config "${EVAL_CONFIG}" \
-        --dataset bigmath \
+        --dataset "${DATASET}" \
         --split test \
         --seed "${SEED}" \
         --roster_path "${ROSTER}" \
         --max_items "${EVAL_SIZE:-500}" \
-        --output_file "results/bigmath/seed${SEED}/inference_test_epoch${EPOCH}.jsonl"
+        --output_file "${RESULTS_DIR}/inference_test_epoch${EPOCH}.jsonl"
 
-    echo "=== [Epoch ${EPOCH}] Score: BigMath test ==="
+    echo "=== [Epoch ${EPOCH}] Score: ${DATASET} test ==="
     python scripts/score_outputs.py \
-        --input "results/bigmath/seed${SEED}/inference_test_epoch${EPOCH}.jsonl" \
-        --dataset bigmath \
+        --input "${RESULTS_DIR}/inference_test_epoch${EPOCH}.jsonl" \
+        --dataset "${DATASET}" \
         --split test
 done
 

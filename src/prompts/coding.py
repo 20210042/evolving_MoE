@@ -77,12 +77,16 @@ def build_expert_prompt(
     dataset: str,
     model_name: str,
     starter_code: str | None = None,
+    approach: str | None = None,
 ) -> Message:
-    """One-shot code generation under an expert persona (system_prompt)."""
+    """One-shot generation under a persona. system_prompt=정체성, approach(있으면)는
+    user 턴에 프리앰블로 주입(Gemma가 user 지시를 더 잘 따름)."""
     ds = (dataset or "mbpp").lower()
     if ds in ("bigmath", "math"):
         persona_sys = system_prompt or baseline_prompts.MATH_GEN_SYSTEM
         user = baseline_prompts.MATH_GEN_USER.format(instruction=instruction)
+        if approach:
+            user = f"{approach}\n\n{user}"
         return [{"role": "system", "content": persona_sys}, {"role": "user", "content": user}]
 
     if starter_code:
