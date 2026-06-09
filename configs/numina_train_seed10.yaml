@@ -1,5 +1,5 @@
 # seed20210010 (control): NuminaMath, verbal-RL scout (exclusive_solves), 현행 persona(identity+strengths), Thinking OFF
-dataset: "numina"   # ⚠️ NuminaMath loader 키 — 협업자 merge 후 실제 키로 교체
+dataset: "numina_cot"   # ⚠️ NuminaMath loader 키 — 협업자 merge 후 실제 키로 교체
 split: "train"
 train_size: 300
 epochs: 5

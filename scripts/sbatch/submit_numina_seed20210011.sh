@@ -7,7 +7,7 @@
 REPO="${REPO:-/home/jaehoonjeong/data/MetaAgentEvolution_Release}"
 
 # ⚠️ NuminaMath loader 키 — 협업자 merge 후 실제 값으로 (config의 dataset과 일치해야 함)
-DATASET="numina"
+DATASET="numina_cot"
 EVOL_CFG="configs/numina_train_seed11.yaml"
 
 RESUME_FLAG=""
