@@ -1,10 +1,44 @@
 # MetaAgentEvolution — 인수인계 문서
 
-작성일: 2026-06-08 (갱신: 2026-06-08 오후 — eval 방법론 수정 작업 반영)
+작성일: 2026-06-08 (갱신: 2026-06-09 — 채점기 버그 발견·수정, 진화 재실행)
 
 ---
 
-## 0. 2026-06-08 오후 작업 요약 (eval 방법론 수정)
+## 0. 2026-06-09 작업 요약 (채점기 버그 + 진화 재실행 + NuminaMath 준비)
+
+> ⚠️ **결론 해석 보류**: 진화 WAR도 같은 버그 채점기로 계산됐으므로, 교정 채점기로 진화를 재실행(106/108)해 검증하기 전까지 "MoE가 baseline 못 넘는다 / math = 음성 대조군" 등 **해석은 확정하지 않는다.** 아래는 사실만.
+
+### (A) 채점기 버그 — math_verify_score raw LaTeX false-negative
+- **현상**: 모델 답이 gold와 글자까지 동일해도 오답 처리되는 케이스 대량. 재채점 시 모든 로스터·baseline이 **일괄 +16pp**.
+- **원인**: `math_verify.parse()`는 `$...$`/`\boxed{}`로 감싼 LaTeX만 인식. raw LaTeX(`\frac{5\pi}{12}`, `\dfrac{1}{6}`)는 `[]`로 파싱돼 무조건 0.0.
+- **조치**: [src/evaluation/metrics.py](src/evaluation/metrics.py) `math_verify_score` 수정 — `$`-래핑 + Latex/Expr extractor + 양방향 verify. 진짜 오답(13 vs 7, degree vs radian)은 그대로 0.
+- **브랜치**: `fix/math-verify-scorer` (main 기반, 이 파일 하나만, origin 푸시됨) — 협업자/타인이 이것만 merge 가능. jh/evolution엔 cherry-pick(a310b01).
+
+**재채점 결과 (OLD → FIXED, BigMath test 500):**
+| | seed06 | seed08 | seed09 | raw baseline |
+|---|---|---|---|---|
+| MoE 평균 | 66.3→82.2 | 67.0→83.0 | 67.5→83.4 | — |
+| UB union | 70.8→87.0 | 71.2→86.8 | 70.2→86.4 | — |
+| raw 1-pass | | | | 68.0→**84.0** |
+| 아무도 못 풂 | →13.0% | →13.2% | →13.6% | — |
+
+### (B) 진화 재실행 (교정 WAR) — running
+새 seed id로 기존 버그-WAR 런 보존하며 재실행. **106(=06,Thinking ON)·108(=08,Thinking OFF)** 풀세트(evolution+per-epoch eval+UB). 109(exclusive_solves) 보류.
+- submit: `scripts/sbatch/submit_bigmath_seed2021010{6,8}.sh`, config `bigmath_train_think.yaml`(신규, Thinking ON 복원) / `bigmath_train_nothink.yaml`.
+- 목적: 버그-WAR(06/08) vs 교정-WAR(106/108) 로스터·UB 비교 → 채점 버그가 진화 신호를 망쳤는지 검증.
+
+### (C) math 생성 프롬프트 → `\boxed{}` (commit ebf97e6)
+[src/prompts/baseline_prompts.py](src/prompts/baseline_prompts.py) `MATH_GEN_USER`를 `Final Answer:` → `\boxed{}`로. NuminaMath gold·math_verify 네이티브와 정합, 추출 안정, stray backtick 제거.
+
+### (D) thinking ON/OFF — eval 출력으로 재확인
+seed06(ON) eval 출력 평균 6,565자 vs seed08(OFF) 1,863자 (~3.5×). thinking은 작동하나 **정확도 이득 0** → thinking OFF 기본값 유지. 짭추론 arm은 우선순위 낮춤.
+
+### (E) NuminaMath 파일럿 (협업자 협업)
+협업자가 `Jongbin-kr/NuminaMath-CoT_filtered`(gold 전부 `\boxed{}`) + eval/training 코드 수정을 **오늘 저녁 main merge 예정**. 우리 쪽(프롬프트·진화로직) 독립이라 \boxed 준비 완료. merge 후 **300×5 한 arm** 파일럿 예정.
+
+---
+
+## 0-1. 2026-06-08 오후 작업 요약 (eval 방법론 수정)
 
 기존 seed06↔seed08 ablation 비교가 **두 가지 방법론 오류**로 무효였음을 발견하고 수정·재실행 중.
 

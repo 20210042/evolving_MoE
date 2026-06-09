@@ -1,5 +1,9 @@
 # BigMath Evolution Ablation Study
 
+> ⚠️ **(2026-06-09) 이 문서의 Pass@1/UB 수치는 채점기 버그(raw LaTeX false-negative) 영향을 받은 값이다.**
+> 재채점 시 모든 값이 +16pp 상승(예: raw baseline 68→84%, MoE ~67→~83%, UB ~71→~87%). 채점기는 수정됨(`fix/math-verify-scorer`).
+> 또한 진화 WAR도 같은 버그 채점기로 계산됐으므로 교정 채점기로 진화 재실행 중(seed 20210106/108). **재실행 완료 전까지 결론 해석은 보류.** 상세: [HANDOVER.md](HANDOVER.md) §0.
+
 BigMath (`Jongbin-kr/BIG-MATH_filtered`) 데이터셋에 대한 Meta-Agent Evolution 실험 기록.  
 각 시드는 이전 시드에서 발견된 문제를 하나씩 수정하는 누적 ablation 구조다.
 
@@ -243,6 +247,54 @@ all_zero_war = war_scores and all(v == 0 for v in war_scores.values())
 2. **유일하게 살아남은 실제 차이 = All-zero WAR 30%→43.3%**. Thinking OFF는 진화 중 **독점 기여(WAR) 신호를 약화**시키지만, 그것이 end-to-end 성능으로 이어지지 않음. 이유: 두 조건 모두 specialist가 LUCA 너머 +4%만 보태고 ~29%는 누구도 못 풂 → **system-prompt 수준 전문화의 ceiling**이 thinking 변수보다 지배적. (= 위 §"UB 분석"의 "LoRA-MoE 필요" 논지 강화)
 
 **caveat**: seed06/08은 seed가 달라 held-out set이 다르고 seed06 UB는 `--seed 0`(full-split)로 측정됨 → 절대 수치 cross-seed 비교는 seed 교란 있음. 다만 **within-seed 구조(MoE≈LUCA, UB가 LUCA+4%, ~29% 미해결)가 양쪽에서 거의 동일**하다는 점이 오히려 견고한 발견.
+
+---
+
+## 20210009 — exclusive_solves scout (seed08에서 NON-REDUNDANCY 텍스트 규칙 제거)
+
+> seed08(Thinking OFF, 텍스트 NON-REDUNDANCY+ATOMICITY 규칙)에서 **scout 입력만 교체**한 분기.
+> 텍스트 규칙 대신 각 에이전트가 **실제로 단독 해결한 문제(exclusive_solves)**를 보여줌(`META_AGENT_MATH_PROMPT_V2`, ATOMICITY·`and`금지 규칙 없음). Thinking OFF 유지.
+> 가설: "단독풀이 증거를 데이터로 보여주면 텍스트 규칙 없이도 자연 분화한다."
+
+**결과 (per-epoch eval + UB, 모두 Thinking OFF, jobs 177946~177948):**
+- per-epoch MoE: 67.0 / 67.6 / 68.0 / 68.0 / 67.0 → 평균 **67.5%**, 최고 68.0, 최종 67.0
+- Test UB union(7명) **70.2%**, LUCA 단독 67.4%, specialist가 LUCA 너머 **+14(2.8%)**, 아무도 못 풂 149/500(29.8%)
+- All-zero WAR **46.7%**, 최종 로스터 7명(LUCA + 6 specialists)
+
+### seed06 / seed08 / seed09 3-way 종합
+
+| 지표 | seed06 (ON, 텍스트규칙) | seed08 (OFF, 텍스트규칙) | seed09 (OFF, exclusive_solves) |
+|------|------|------|------|
+| MoE Pass@1 평균 | 66.3 | 67.0 | **67.5** |
+| MoE 최고 epoch | 67.4 | 67.6 | **68.0** |
+| MoE 최종 epoch | 65.8 | 67.2 | 67.0 |
+| LUCA 단독 | ~67.0 | 67.2 | 67.4 |
+| **Test UB (union)** | 70.8 | **71.2** | 70.2 |
+| specialist 추가 기여 | +19 (3.8%) | **+20 (4.0%)** | +14 (2.8%) |
+| 라우팅 갭 (UB−MoE최종) | 5.0 | 4.0 | **3.2** |
+| MoE/UB 실현율 | 93.0% | 94.4% | **95.4%** |
+| 아무도 못 풂 | 29.2% | 28.8% | 29.8% |
+| 로스터 크기 | 6 | 9 | 7 |
+| **All-zero WAR** | 30% | 43.3% | **46.7%** |
+
+### 전문가 분화 양상 (이름·유형)
+
+- **seed08 (텍스트 ATOMICITY 규칙)** → **원자적 단일 도메인** 전문가 8명. 이름도 단일: Real Analyst / Complex Analyst / Calculus Specialist / Discrete Logician / Set-Theoretic Probabilist / Analytical Geometer / Competition Mathematician / Applied Numerist. 도메인 중복 최소.
+- **seed09 (exclusive_solves, ATOMICITY 규칙 없음)** → **다중 도메인 묶음형** 전문가 6명. 이름에 `&`/`and` 다수: "Discrete **&** Foundations", "Algebraic **&** Precalculus", "Geometry **&** Trigonometry", 그리고 c_48067은 프롬프트에 "**synthesizing multiple domains**"라고 명시. 기하가 6명 중 4명, 삼각이 4명에 등장 → **부분 중복 큼**.
+
+### 해석 — 부분 교집합(완전겹침 아님)이 만드는 두 가지 애매함
+
+핵심: seed09 전문가들은 서로 **완전히 겹치지도, 완전히 분리되지도 않은 "부분 교집합"** 상태다. 각자 공유 문제 + 약간의 단독 문제를 가진다. 이 구조가 진화와 라우팅 양쪽에 애매함을 만든다.
+
+1. **방출(eviction)이 애매해짐** — 데이터로 확증됨.
+   WAR/lives는 "독점 기여"로 생존을 판정한다. 부분 교집합이면 **누구도 명백히 잉여가 아니다**(각자 단독 문제가 조금씩 있음) → 명확히 뺄 대상이 없어 반(半)중복 전문가가 로스터에 잔류. 동시에 한 배치의 문제가 여러 전문가에게 나뉘어 **아무도 깔끔한 독점 크레딧을 못 받음** → All-zero WAR가 가장 높음(46.7%). 즉 *"누굴 뺄지 애매하다"*는 직관이 그대로 수치로 나타남.
+
+2. **라우팅 — 직관과 미묘하게 갈리는 지점.**
+   라우터는 문제당 전문가 1명을 골라야 한다. 부분 교집합이면 경계가 흐려 "정답 전문가"가 모호해지는 건 맞다. **그러나** 겹치기 때문에 **오라우팅이 관대해진다** — 교집합 영역 문제는 엉뚱한(그래도 겹치는) 전문가를 골라도 풀린다. 그 결과 seed09의 라우팅 갭(UB−MoE최종)이 **3.2로 가장 작다**(MoE/UB 실현율 95.4%, 천장에 가장 근접). 반대로 seed08의 원자적 전문가는 "기하 문제는 반드시 기하 전문가로" 정밀 라우팅이 필요해 갭이 크지만(4.0, 실현율 94.4%), **천장(UB) 자체가 더 높다(+20)**. ※ seed06 갭(5.0)은 UB가 `--seed 0`(다른 500)로 측정돼 정합성 약함 — 참고만.
+
+   → 정리하면 **트레이드오프**다: 부분 교집합(seed09)은 *라우팅은 쉬워지지만(관대) 전문화 천장이 낮고*, 원자적 분화(seed08)는 *라우팅 정밀도를 요구하지만 천장이 높다*. seed09의 "+14(2.8%)"라는 낮은 UB는 이 낮은 천장의 직접 증거다.
+
+3. **가설 판정**: exclusive_solves 데이터만으로는 분화가 *덜* 일어났다. 텍스트 ATOMICITY 규칙(seed08)이 오히려 더 깔끔한 단일 도메인 분화 + 더 높은 UB(+20)를 만들었다. → **seed09 가설(데이터가 텍스트 규칙을 대체)은 지지받지 못함.** 단, 세 조건 모두 UB ~70–71% / ~29% 미해결로 수렴 → **system-prompt 수준 전문화의 천장**이 scout 전략·thinking보다 지배적이라는 결론(= LoRA-MoE 필요)을 재확인.
 
 ---
 
