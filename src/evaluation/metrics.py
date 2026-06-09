@@ -5,6 +5,16 @@ from collections import Counter
 
 from math_verify import parse as _mv_parse, verify as _mv_verify
 
+try:  
+    from math_verify import LatexExtractionConfig as _LatexCfg, ExprExtractionConfig as _ExprCfg
+except Exception:  
+    from math_verify.parser import LatexExtractionConfig as _LatexCfg, ExprExtractionConfig as _ExprCfg
+
+# math_verify.parse는 $...$ 나 \boxed{} 로 감싼 내용에만 LaTeX extractor가 동작
+# Raw LaTeX(예: "\frac{5\pi}{12}", "\dfrac{1}{6}")는 []로 파싱돼 오답으로 처리
+# → 답이 감싸지지 않은 분수/기호인 문제는 예측이 정답과 글자까지 같아도 자동 오답
+_MV_EXTRACTION = [_LatexCfg(), _ExprCfg()]
+
 
 logger = logging.getLogger(__name__)
 
@@ -171,18 +181,28 @@ def numerical_match_score(prediction: str, reference: str, tolerance: float = 1e
 
 
 
+def _mv_wrap(text: str) -> str:
+    """Raw LaTeX를 $...$ 로 감싸 math_verify의 LaTeX extractor가 동작하게 한다.
+    이미 $ 나 \\boxed 가 있으면 그대로 둔다."""
+    s = str(text).strip()
+    if "$" in s or "\\boxed" in s:
+        return s
+    return f"${s}$"
+
+
 def math_verify_score(prediction: str, reference: str) -> float:
     """
     math_verify 기반 정답 검증.
     - reference가 파싱 가능하면 수학 검증 결과(1/0)를 반환한다.
     - reference가 파싱 불가한 경우, 0.0을 반환한다.
     """
-    ## math-verfiy 형식으로 숫자 파싱. '64%' → [64*(1/100), '64']
-    ## 파싱 실패시 틀린 것으로 간주하고 0.0 반환
-    ref = _mv_parse(str(reference))
-    pred = _mv_parse(str(prediction))
+    ## math-verfiy 형식으로 파싱. '64%' → [64*(1/100), '64']
+    ## Raw LaTeX도 잡도록 $로 감싸기 + Latex/Expr extractor 명시. 파싱 실패 시 0.0.
+    ref = _mv_parse(_mv_wrap(reference), extraction_config=_MV_EXTRACTION)
+    pred = _mv_parse(_mv_wrap(prediction), extraction_config=_MV_EXTRACTION)
     if not ref or not pred: return 0.0
 
-    return 1.0 if _mv_verify(pred, ref) else 0.0
+    ## 표현 순서/형식 차이(예: ap+p^2 vs p^2+ap)를 잡기 위해 양방향 검증
+    return 1.0 if (_mv_verify(ref, pred) or _mv_verify(pred, ref)) else 0.0
 
 
