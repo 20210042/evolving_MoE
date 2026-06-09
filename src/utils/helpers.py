@@ -130,12 +130,7 @@ def extract_math_answer(text: str) -> str:
     if not text:
         return ""
     
-    ## final answer match
-    final_answer_mathces = re.findall(r"Final Answer:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
-    if final_answer_mathces:
-        return final_answer_mathces[-1].strip()
-    
-    ## boxed match
+    ## boxed match (1순위)
     boxed: list[str] = []
     i = 0
     while i < len(text):
@@ -155,7 +150,14 @@ def extract_math_answer(text: str) -> str:
         i = idx + 1
     if boxed:
         return boxed[-1].strip()
-    
+
+    ## final answer match (2순위)
+    final_answer_mathces = re.findall(r"Final Answer:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
+    if final_answer_mathces:
+        candidate = re.sub(r"^\*+|\*+$", "", final_answer_mathces[-1]).strip()
+        if candidate:
+            return candidate
+
     ## fallback to original text
     return text.strip()
 
