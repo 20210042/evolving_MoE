@@ -6,18 +6,25 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 import wandb
 from transformers import HfArgumentParser
 
 from data import get_dataset
 from evaluation.metrics import exact_match_score, token_f1_score, numerical_match_score, math_verify_score
 from evaluation.scorer import score_one
+from prompts.math import build_generation_prompt as build_math_prompt
 from utils.helpers import extract_math_answer, set_all_seeds
 from utils.llm import LLMService
 
 logger = logging.getLogger(__name__)
 
-MATH_DATASETS = {"bigmath", "math"}     ## 수학 데이터셋이냐 코딩 데이터셋이냐에 따라 메트릭이 달라짐.
+MATH_DATASETS = {"bigmath", "math", "numina_cot"}     ## 수학 데이터셋이냐 코딩 데이터셋이냐에 따라 메트릭이 달라짐.
 
 @dataclass
 class ModelArguments:
@@ -63,7 +70,7 @@ class DataArguments:
 class ExtraArguments:
     inference_mode: str = field(
         default="vllm",
-        metadata={"help": "추론 백엔드: vllm (추천) 또는 hf."},
+        metadata={"help": "추론 백엔드: vllm (추천), hf, 또는 api."},
     )
     max_model_len: int = field(
         default=32768,
@@ -93,6 +100,10 @@ class ExtraArguments:
     seed: int = field(
         default=42,
         metadata={"help": "모든 시드 고정"}
+    )
+    enable_thinking: bool = field(
+        default=False,
+        metadata={"help": "reasoning 활성화. vllm/hf: chat template enable_thinking=True, api: reasoning_effort=medium."},
     )
 
 
@@ -155,6 +166,17 @@ def main():
     
     
     # 모델 + LoRA 로드
+    logger.info("=" * 60)
+    logger.info("평가 설정")
+    logger.info(f"  모델       : {model_args.model_name_or_path}")
+    logger.info(f"  LoRA       : {model_args.finetuned_lora_path or '없음'}")
+    logger.info(f"  inference mode  : {extra_args.inference_mode}")
+    logger.info(f"  enable thinking  : {extra_args.enable_thinking}")
+    logger.info(f"  데이터셋   : {data_args.test_dataset} (ratio={data_args.data_ratio})")
+    logger.info(f"  max_tokens : {extra_args.max_new_tokens}")
+    logger.info(f"  temperature: {extra_args.temperature if extra_args.inference_mode != 'api' else 'N/A (api)'}")
+    logger.info(f"  출력 디렉토리: {extra_args.output_dir}")
+    logger.info("=" * 60)
     logger.info(f"모델 로딩: {model_args.model_name_or_path} (mode={extra_args.inference_mode})")
     llm = LLMService(
         model_name=model_args.model_name_or_path,
@@ -164,52 +186,67 @@ def main():
     )
     
     
-    # 배치 예측 생성
-    logger.info("프롬프트 구성 중...")
-    prompts = [
-        llm.tokenizer.apply_chat_template(
-            [{"role": "user", "content": item["instruction"]}],
-            tokenize=False,
-            add_generation_prompt=True,
-        )
-        for item in items_list
-    ]
-
-    logger.info(f"{len(prompts)}개 프롬프트 배치 생성 시작...")
-    predictions = llm.generate(
-        prompts,
-        max_tokens=extra_args.max_new_tokens,
-        temperature=extra_args.temperature,
-    )
-    
-    
-    
-    # 채점
-    if data_args.test_dataset.lower() in {"math", "bigmath"}:
-        is_math_dataset = True
-        logger.info("수학 데이터셋 채점 중...")
-    else: 
-        logger.info("코딩 데이터셋 채점 중...")
-        is_math_dataset = False
-    
-    
-    results = []
-    for item, prediction in zip(items_list, predictions):
-        scores = evaluate_item(item, prediction, is_math_dataset=is_math_dataset)
-        results.append({
-            "id": item["id"],
-            "prediction": prediction,
-            "ground_truth": item["ground_truth"],
-            "category": item.get("categories", []),
-            **scores,
-        })
-
-    # 결과 저장
+    # 출력 파일 경로 설정
     os.makedirs(extra_args.output_dir, exist_ok=True)
     out_path = os.path.join(extra_args.output_dir, f"{data_args.test_dataset}_results.jsonl")
-    with open(out_path, "w", encoding="utf-8") as f:
-        for r in results:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+    # 이미 처리된 ID 로드 (재시작 시 이어서 진행)
+    done_ids: set = set()
+    if os.path.exists(out_path):
+        with open(out_path, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    done_ids.add(json.loads(line)["id"])
+                except Exception:
+                    pass
+        logger.info(f"기존 결과 {len(done_ids)}개 발견 — 건너뜀.")
+
+    items_todo = [item for item in items_list if item["id"] not in done_ids]
+    logger.info(f"처리할 항목: {len(items_todo)}개 / 전체: {len(items_list)}개")
+
+    is_math = data_args.test_dataset.lower() in MATH_DATASETS
+    is_math_dataset = data_args.test_dataset.lower() in {"math", "bigmath", "numina_cot"}
+
+    # 청크 단위로 예측 → 즉시 append
+    chunk_size = 1000
+    with open(out_path, "a", encoding="utf-8") as out_f:
+        for chunk_start in range(0, len(items_todo), chunk_size):
+            chunk = items_todo[chunk_start : chunk_start + chunk_size]
+            messages_chunk = [
+                build_math_prompt(item["instruction"]) if is_math
+                else [{"role": "user", "content": item["instruction"]}]
+                for item in chunk
+            ]
+
+            logger.info(f"예측 중: {chunk_start + 1}~{chunk_start + len(chunk)} / {len(items_todo)}")
+            predictions = llm.chat_batch(
+                messages_chunk,
+                max_tokens=extra_args.max_new_tokens,
+                temperature=extra_args.temperature if extra_args.inference_mode != "api" else None,
+                enable_thinking=extra_args.enable_thinking,
+            )
+
+            for item, messages, prediction in zip(chunk, messages_chunk, predictions):
+                scores = evaluate_item(item, prediction, is_math_dataset=is_math_dataset)
+                out_f.write(json.dumps({
+                    "id": item["id"],
+                    "input": messages,
+                    "prediction": prediction,
+                    "ground_truth": item["ground_truth"],
+                    "category": item.get("category") or item.get("categories", []),
+                    **scores,
+                }, ensure_ascii=False) + "\n")
+            out_f.flush()
+            logger.info(f"청크 저장 완료: {chunk_start + len(chunk)}/{len(items_todo)}")
+
+    # 전체 결과 로드 (기존 + 새로 처리한 것)
+    results = []
+    with open(out_path, "r", encoding="utf-8") as f:
+        for line in f:
+            try:
+                results.append(json.loads(line))
+            except Exception:
+                pass
     
     
     # 집계 + 로깅
@@ -228,7 +265,8 @@ def main():
     cat_groups: dict = defaultdict(list)
     for r in results:
         cats = r.get("category", [])
-    
+        if isinstance(cats, str):
+            cats = [cats]
         for cat in cats:
             cat_groups[cat].append(r)
 

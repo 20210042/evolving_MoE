@@ -127,6 +127,28 @@ def load_bigmath(split: str = "test", categories=None) -> List[Dict[str, Any]]:
     return annotate_items(data, "bigmath")
 
 
+def load_numina_cot_filtered(split: str = "train", categories=None) -> List[Dict[str, Any]]:
+    dataset = _load_dataset("Jongbin-kr/NuminaMath-CoT_filtered", split=split)
+
+    if isinstance(categories, str):
+        categories = [categories]
+
+    data: List[Dict[str, Any]] = []
+    for item in dataset:
+        if categories and item["category"] not in categories:
+            continue
+        data.append({
+            "id":           item["id"],
+            "instruction":  item["problem"],
+            "ground_truth": item["answer"],    # eval용 raw answer
+            "solution":     item["solution"],  # SFT completion용 full CoT
+            "domain":       "math",
+            "category":     item["category"],
+            "source":       item["source"],
+        })
+    return data
+
+
 def load_ds1000(split: str = "test") -> List[Dict[str, Any]]:
     dataset = _load_dataset("xlangai/DS-1000", split=split)
     data = []
@@ -225,6 +247,8 @@ def get_dataset(
             data = load_math(split)
         elif n == "bigmath":
             data = load_bigmath(split, categories=categories)
+        elif n == "numina_cot":
+            data = load_numina_cot_filtered(split, categories=categories)
         elif n == "ds1000":
             data = load_ds1000(split)
         elif n == "livecodebench":
