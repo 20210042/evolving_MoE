@@ -186,50 +186,67 @@ def main():
     )
     
     
-    # 배치 예측 생성
-    logger.info(f"{len(items_list)}개 프롬프트 배치 생성 시작...")
-    is_math = data_args.test_dataset.lower() in MATH_DATASETS
-    messages_batch = [
-        build_math_prompt(item["instruction"]) if is_math
-        else [{"role": "user", "content": item["instruction"]}]
-        for item in items_list
-    ]
-    predictions = llm.chat_batch(
-        messages_batch,
-        max_tokens=extra_args.max_new_tokens,
-        temperature=extra_args.temperature if extra_args.inference_mode != "api" else None,
-        enable_thinking=extra_args.enable_thinking,
-    )
-    
-    
-    
-    # 채점
-    if data_args.test_dataset.lower() in {"math", "bigmath"}:
-        is_math_dataset = True
-        logger.info("수학 데이터셋 채점 중...")
-    else: 
-        logger.info("코딩 데이터셋 채점 중...")
-        is_math_dataset = False
-    
-    
-    results = []
-    for item, messages, prediction in zip(items_list, messages_batch, predictions):
-        scores = evaluate_item(item, prediction, is_math_dataset=is_math_dataset)
-        results.append({
-            "id": item["id"],
-            "input": messages,
-            "prediction": prediction,
-            "ground_truth": item["ground_truth"],
-            "category": item.get("categories", []),
-            **scores,
-        })
-
-    # 결과 저장
+    # 출력 파일 경로 설정
     os.makedirs(extra_args.output_dir, exist_ok=True)
     out_path = os.path.join(extra_args.output_dir, f"{data_args.test_dataset}_results.jsonl")
-    with open(out_path, "w", encoding="utf-8") as f:
-        for r in results:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+    # 이미 처리된 ID 로드 (재시작 시 이어서 진행)
+    done_ids: set = set()
+    if os.path.exists(out_path):
+        with open(out_path, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    done_ids.add(json.loads(line)["id"])
+                except Exception:
+                    pass
+        logger.info(f"기존 결과 {len(done_ids)}개 발견 — 건너뜀.")
+
+    items_todo = [item for item in items_list if item["id"] not in done_ids]
+    logger.info(f"처리할 항목: {len(items_todo)}개 / 전체: {len(items_list)}개")
+
+    is_math = data_args.test_dataset.lower() in MATH_DATASETS
+    is_math_dataset = data_args.test_dataset.lower() in {"math", "bigmath"}
+
+    # 청크 단위로 예측 → 즉시 append
+    chunk_size = 1000
+    with open(out_path, "a", encoding="utf-8") as out_f:
+        for chunk_start in range(0, len(items_todo), chunk_size):
+            chunk = items_todo[chunk_start : chunk_start + chunk_size]
+            messages_chunk = [
+                build_math_prompt(item["instruction"]) if is_math
+                else [{"role": "user", "content": item["instruction"]}]
+                for item in chunk
+            ]
+
+            logger.info(f"예측 중: {chunk_start + 1}~{chunk_start + len(chunk)} / {len(items_todo)}")
+            predictions = llm.chat_batch(
+                messages_chunk,
+                max_tokens=extra_args.max_new_tokens,
+                temperature=extra_args.temperature if extra_args.inference_mode != "api" else None,
+                enable_thinking=extra_args.enable_thinking,
+            )
+
+            for item, messages, prediction in zip(chunk, messages_chunk, predictions):
+                scores = evaluate_item(item, prediction, is_math_dataset=is_math_dataset)
+                out_f.write(json.dumps({
+                    "id": item["id"],
+                    "input": messages,
+                    "prediction": prediction,
+                    "ground_truth": item["ground_truth"],
+                    "category": item.get("categories", []),
+                    **scores,
+                }, ensure_ascii=False) + "\n")
+            out_f.flush()
+            logger.info(f"청크 저장 완료: {chunk_start + len(chunk)}/{len(items_todo)}")
+
+    # 전체 결과 로드 (기존 + 새로 처리한 것)
+    results = []
+    with open(out_path, "r", encoding="utf-8") as f:
+        for line in f:
+            try:
+                results.append(json.loads(line))
+            except Exception:
+                pass
     
     
     # 집계 + 로깅

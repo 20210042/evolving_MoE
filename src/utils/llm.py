@@ -223,10 +223,13 @@ class LLMService:
         top_p: float = 0.8,
         stop: Optional[List[str]] = None,
         reasoning_effort: str | None = None,
+        max_workers: int = 5,
     ) -> List[str]:
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
         assert self.model is not None
-        results = []
-        for messages in messages_batch:
+
+        def _call(idx: int, messages: Message) -> tuple[int, str]:
             msgs = [{"role": "user", "content": messages}] if isinstance(messages, str) else list(messages)
             kwargs: Dict[str, Any] = dict(
                 model=self.model_name,
@@ -240,7 +243,14 @@ class LLMService:
                 kwargs["temperature"] = temperature
                 kwargs["top_p"] = top_p
             response = self.model.chat.completions.create(**kwargs)
-            results.append(response.choices[0].message.content)
+            return idx, response.choices[0].message.content
+
+        results = [None] * len(messages_batch)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(_call, i, m): i for i, m in enumerate(messages_batch)}
+            for future in as_completed(futures):
+                idx, text = future.result()
+                results[idx] = text
         return results
 
     def generate(
