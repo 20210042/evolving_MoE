@@ -75,20 +75,18 @@ Return the improved code in the following format:
 # --- MATH PROMPTS (GSM8K Style) ---
 
 MATH_GEN_SYSTEM = "You are a helpful math assistant."
-MATH_GEN_USER = """Solve the following math problem. Show your work step-by-step.
+MATH_GEN_USER = """Solve the following math problem. Show your work step-by-step, then give the final answer in \\boxed{{}}.
 
 ### Example
 Question: Jason had 20 lollipops. He gave Denny some lollipops. Now Jason has 12 lollipops. How many lollipops did Jason give to Denny?
-Answer format:
-Final Answer: 8
-```
+Solution: Jason started with 20 and ended with 12, so he gave away 20 - 12 = 8.
+\\boxed{{8}}
 
 ### Task
 Question:
 {instruction}
 
-Answer format:
-Final Answer: [ANSWER]
+Show your reasoning, then put the final answer in \\boxed{{}}.
 """
 
 # Critic: Zero-Shot, Textual Feedback Only
