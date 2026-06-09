@@ -52,11 +52,13 @@ def scout_new_persona(
     enable_thinking: bool = True,
     exclusive_solves_map: Optional[Dict[str, List[str]]] = None,
     use_approach_persona: bool = False,
+    domain: Optional[str] = None,
 ) -> Dict[str, Any]:
     roster_str = _format_roster_table(roster)
 
     ds = (dataset_name or "").lower()
-    if ds in ("bigmath", "math"):
+    is_math = (domain == "math") if domain is not None else ds in ("bigmath", "math", "numina_cot")
+    if is_math:
         if exclusive_solves_map is not None and use_approach_persona:
             from prompts.meta import META_AGENT_MATH_PROMPT_V3
             prompt = META_AGENT_MATH_PROMPT_V3.substitute(

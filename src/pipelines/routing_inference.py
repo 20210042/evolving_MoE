@@ -159,6 +159,7 @@ class GMRoutingPipeline(BasePipeline):
             model_name=model_name,
             starter_code=None,
             approach=selected_player.get("approach"),
+            domain=self.domain,
         )
         raw = self.agent.chat(gen_msg, enable_thinking=self.gen_enable_thinking)
         code = raw if self.domain == "math" else (extract_code_block(raw) or raw)
@@ -214,6 +215,7 @@ class GMRoutingPipeline(BasePipeline):
                     model_name=model_name,
                     starter_code=None,
                     approach=player.get("approach") if player else None,
+                    domain=self.domain,
                 )
             )
 

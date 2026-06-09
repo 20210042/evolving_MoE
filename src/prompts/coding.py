@@ -9,6 +9,10 @@ from prompts import qwen3_lcb
 
 Message = Union[str, List[dict]]
 
+# domain="math"가 1차 기준. domain이 안 넘어오면 dataset 이름으로 폴백(아래 집합).
+# 새 수학 데이터셋은 여기 한 곳만 추가하면 됨.
+_MATH_DATASETS = ("bigmath", "math", "numina_cot")
+
 _LLAMA_CODE_HINT = (
     " Output ONLY a single fenced Markdown ```python ... ``` block with no text outside it."
 )
@@ -29,9 +33,11 @@ def build_baseline_prompt(
     dataset: str,
     model_name: str,
     starter_code: str | None = None,
+    domain: str | None = None,
 ) -> Message:
     ds = (dataset or "mbpp").lower()
-    if ds in ("bigmath", "math"):
+    is_math = (domain == "math") if domain is not None else ds in _MATH_DATASETS
+    if is_math:
         system = baseline_prompts.MATH_GEN_SYSTEM
         user = baseline_prompts.MATH_GEN_USER.format(instruction=instruction)
         return [{"role": "system", "content": system}, {"role": "user", "content": user}]
@@ -78,11 +84,13 @@ def build_expert_prompt(
     model_name: str,
     starter_code: str | None = None,
     approach: str | None = None,
+    domain: str | None = None,
 ) -> Message:
     """One-shot generation under a persona. system_prompt=정체성, approach(있으면)는
     user 턴에 프리앰블로 주입(Gemma가 user 지시를 더 잘 따름)."""
     ds = (dataset or "mbpp").lower()
-    if ds in ("bigmath", "math"):
+    is_math = (domain == "math") if domain is not None else ds in _MATH_DATASETS
+    if is_math:
         persona_sys = system_prompt or baseline_prompts.MATH_GEN_SYSTEM
         user = baseline_prompts.MATH_GEN_USER.format(instruction=instruction)
         if approach:

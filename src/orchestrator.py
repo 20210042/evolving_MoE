@@ -159,6 +159,7 @@ class GMEvolutionOrchestrator:
             pid = item["id"]
             instruction = item.get("instruction", "")
             ds = item.get("dataset") or self.dataset_name
+            dom = item.get("domain")
             starter = item.get("starter_code")
             for player in self.roster:
                 cid = player["id"]
@@ -171,6 +172,7 @@ class GMEvolutionOrchestrator:
                         model_name=model_name,
                         starter_code=starter,
                         approach=player.get("approach"),
+                        domain=dom,
                     )
                 )
                 pair_order.append((pid, cid))
@@ -356,6 +358,7 @@ class GMEvolutionOrchestrator:
             enable_thinking=self.enable_thinking,
             exclusive_solves_map=exclusive_solves_map,
             use_approach_persona=self.use_approach_persona,
+            domain=(batch_data[0].get("domain") if batch_data else None),
         )
         if not new_persona or "system_prompt" not in new_persona:
             logging.warning("Failed to scout new persona. Skipping.")
@@ -380,6 +383,7 @@ class GMEvolutionOrchestrator:
                         model_name=self.agent.llm.model_name,
                         starter_code=item.get("starter_code"),
                         approach=new_persona.get("approach"),
+                        domain=item.get("domain"),
                     )
                 )
             probe_out = self.agent.chat_batch(probe_msgs, enable_thinking=self.enable_thinking)

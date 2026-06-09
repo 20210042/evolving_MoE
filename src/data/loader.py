@@ -204,7 +204,7 @@ def load_livecodebench(release_version: str = "release_v5") -> List[Dict[str, An
 
 def load_from_jsonl(filepath: str, dataset_key: str) -> List[Dict[str, Any]]:
     data = []
-    domain = "math" if dataset_key.lower() in ("math", "bigmath") else "coding"
+    domain = "math" if dataset_key.lower() in ("math", "bigmath", "numina_cot") else "coding"
     with open(filepath, "r") as f:
         for line in f:
             item = json.loads(line)

@@ -36,7 +36,7 @@ class RawPipeline(BasePipeline):
         model_name = self.agent.llm.model_name
 
         raw_output = self.agent.chat(
-            build_baseline_prompt(instruction, dataset=ds, model_name=model_name),
+            build_baseline_prompt(instruction, dataset=ds, model_name=model_name, domain=self.domain),
         )
         code = raw_output if self.domain == "math" else (extract_code_block(raw_output) or raw_output)
 
@@ -54,7 +54,7 @@ class RawPipeline(BasePipeline):
         for item in items:
             instruction = self._instruction(item)
             ds = (item.get("dataset") or "mbpp").lower()
-            msgs.append(build_baseline_prompt(instruction, dataset=ds, model_name=model_name))
+            msgs.append(build_baseline_prompt(instruction, dataset=ds, model_name=model_name, domain=self.domain))
         outs = self.agent.chat_batch(msgs)
         results = []
         for item, raw in zip(items, outs):
@@ -108,7 +108,7 @@ class SelfRefinePipeline(BasePipeline):
         datasets = [(it.get("dataset") or "mbpp").lower() for it in items]
 
         init_msgs = [
-            build_baseline_prompt(instr, dataset=ds, model_name=model_name)
+            build_baseline_prompt(instr, dataset=ds, model_name=model_name, domain=self.domain)
             for instr, ds in zip(instructions, datasets)
         ]
         raw_init = self.agent.chat_batch(init_msgs)
