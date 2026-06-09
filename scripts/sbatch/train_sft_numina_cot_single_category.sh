@@ -1,5 +1,4 @@
 #!/bin/bash
-#SBATCH --job-name=sft_gemma4_reasoning_bigmath_all
 #SBATCH --gres=gpu:PRO6000:2
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=64G
@@ -18,25 +17,20 @@ conda activate MoE
 
 export PYTHONPATH="$REPO/src"
 
+CATEGORY_SLUG="${CATEGORY// /_}"
+OUTPUT_DIR="checkpoints/${RUN_NAME}"
 
-CATEGORY="${CATEGORY:-}"
-RUN_NAME="${RUN_NAME:-sft_bigmath_$(date +%Y%m%d_%H%M%S)}"
-OUTPUT_DIR="${OUTPUT_DIR:-checkpoints/${RUN_NAME}}"
-
-CATEGORY_FLAG=""
-if [ -n "${CATEGORY}" ]; then
-    CATEGORY_FLAG="--category ${CATEGORY}"
-fi
+echo "=== 카테고리: ${CATEGORY} / 출력: ${OUTPUT_DIR} ==="
 
 srun --chdir="$REPO" python "$REPO/src/train_sft.py" \
     --model_name_or_path "google/gemma-4-31B-it" \
     --dtype bfloat16 \
     --attn_implementation eager \
-    --train_dataset bigmath \
-    --eval_dataset bigmath \
+    --train_dataset numina_cot \
+    --eval_dataset numina_cot \
+    --categories "${CATEGORY}" \
     --data_ratio 1.0 \
     --seed 42 \
-    ${CATEGORY_FLAG} \
     --train_sft_with_lora true \
     --sft_lora_rank 16 \
     --sft_lora_alpha 32 \
@@ -60,7 +54,6 @@ srun --chdir="$REPO" python "$REPO/src/train_sft.py" \
     --report_to wandb \
     --wandb_project sft_dense \
     --push_to_hub True \
-    --hub_model_id Jongbin-kr/Llama3.1_inst_BIG-MATH
-    
+    --hub_model_id "Jongbin-kr/gemma4_NuminaCoT_${CATEGORY_SLUG}"
 
-echo "=== SFT 학습 완료. 체크포인트: ${OUTPUT_DIR} ==="
+echo "=== 완료: ${CATEGORY} → ${OUTPUT_DIR} ==="

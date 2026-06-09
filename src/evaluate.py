@@ -24,7 +24,7 @@ from utils.llm import LLMService
 
 logger = logging.getLogger(__name__)
 
-MATH_DATASETS = {"bigmath", "math"}     ## 수학 데이터셋이냐 코딩 데이터셋이냐에 따라 메트릭이 달라짐.
+MATH_DATASETS = {"bigmath", "math", "numina_cot"}     ## 수학 데이터셋이냐 코딩 데이터셋이냐에 따라 메트릭이 달라짐.
 
 @dataclass
 class ModelArguments:
@@ -205,7 +205,7 @@ def main():
     logger.info(f"처리할 항목: {len(items_todo)}개 / 전체: {len(items_list)}개")
 
     is_math = data_args.test_dataset.lower() in MATH_DATASETS
-    is_math_dataset = data_args.test_dataset.lower() in {"math", "bigmath"}
+    is_math_dataset = data_args.test_dataset.lower() in {"math", "bigmath", "numina_cot"}
 
     # 청크 단위로 예측 → 즉시 append
     chunk_size = 1000
@@ -233,7 +233,7 @@ def main():
                     "input": messages,
                     "prediction": prediction,
                     "ground_truth": item["ground_truth"],
-                    "category": item.get("categories", []),
+                    "category": item.get("category") or item.get("categories", []),
                     **scores,
                 }, ensure_ascii=False) + "\n")
             out_f.flush()
@@ -265,7 +265,8 @@ def main():
     cat_groups: dict = defaultdict(list)
     for r in results:
         cats = r.get("category", [])
-    
+        if isinstance(cats, str):
+            cats = [cats]
         for cat in cats:
             cat_groups[cat].append(r)
 

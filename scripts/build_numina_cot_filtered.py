@@ -26,9 +26,31 @@ CAT_SLUG = {
     "Calculus":      "calculus",
 }
 
-OUT_COLS = ["id", "problem", "solution", "category", "source", "messages"]
+OUT_COLS = ["id", "problem", "solution", "answer", "category", "source", "messages"]
 
 SYNTHETIC_SOURCES = {"synthetic_amc", "synthetic_math", "synthetic_aops", "synthetic"}
+
+
+def extract_boxed_answer(text: str) -> str:
+    """solution 텍스트에서 마지막 \\boxed{} 내용을 추출. 없으면 빈 문자열."""
+    boxed = []
+    i = 0
+    while i < len(text):
+        idx = text.find(r"\boxed{", i)
+        if idx == -1:
+            break
+        start = idx + len(r"\boxed{")
+        depth, j = 1, start
+        while j < len(text) and depth > 0:
+            if text[j] == "{":
+                depth += 1
+            elif text[j] == "}":
+                depth -= 1
+            j += 1
+        if depth == 0:
+            boxed.append(text[start : j - 1])
+        i = idx + 1
+    return boxed[-1].strip() if boxed else ""
 
 
 
@@ -66,9 +88,13 @@ for r in cot:
             no_match += 1
 
     if pt in CATEGORIES and r["source"] not in SYNTHETIC_SOURCES:
+        answer = extract_boxed_answer(r["solution"])
+        if not answer:
+            continue
         records.append({
             "problem":  r["problem"],
             "solution": r["solution"],
+            "answer":   answer,
             "category": pt,
             "source":   r["source"],
             "messages": r["messages"],
