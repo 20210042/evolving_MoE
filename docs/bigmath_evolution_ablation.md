@@ -298,6 +298,41 @@ all_zero_war = war_scores and all(v == 0 for v in war_scores.values())
 
 ---
 
+## 20210010 / 20210011 — NuminaMath 전환 + approach-persona ablation (2026-06-10)
+
+> **데이터셋 전환**: BigMath → **NuminaMath-CoT_filtered** (`numina_cot`, 협업자 main merge). gold가 일관 `\boxed{}`/숫자/객관식이라 BigMath의 형식 불일치(채점기 raw-LaTeX 버그) 문제가 구조적으로 줄어듦. gold 필드=`ground_truth`.
+> seed09(verbal-RL, exclusive_solves)를 베이스로, **persona 설계만** 비교하는 ablation.
+
+### 설정 (10 vs 11 — persona 설계만 다름)
+| | seed20210010 (control) | seed20210011 (treatment) |
+|---|---|---|
+| 공통 | \multicolumn{2}{c}{NuminaMath · 교정 scorer · exclusive_solves scout · Thinking OFF · 300×5 · tp=1} |
+| scout 출력 | V2: `{persona_name, system_prompt, strengths}` | **V3**: `{persona_name, system_prompt(정체성 1줄), approach}` (strengths 없음) |
+| 생성 프롬프트 | system=persona | system=identity, **approach→user 턴 주입** |
+| 라우터가 보는 것 | name + strengths | name + identity + **approach** |
+
+### 🐛 이 분기에서 잡은 버그 2개 (둘 다 결과를 한 번씩 무효화시킴)
+1. **math/coding 분기 버그** (`a012e49`): 생성·scout이 **dataset 이름**(`("bigmath","math")`)으로 분기 → `numina_cot`가 코딩으로 빠져 모델이 **Python 코드** 생성(\boxed 0%, ~7%). **domain 기반 분기**로 수정(7곳). seed11 V3도 이때문에 안 돌다가 수정 후 작동(approach 6/6).
+2. **eval stale-reuse 함정** (`b374dea`): `run_inference` resume 로직이 옛 무효 런의 출력(500/500)을 "이미 처리됨"으로 보고 **생성 skip → 옛 결과 재사용**. 진화는 정상, eval만 무효. 옛 출력 삭제 + 스크립트에 생성 전 `rm -f` 추가로 해결. (교훈: 절대 수치 믿기 전 raw 출력·\boxed 확인.)
+
+### 결과 (깨끗한 데이터, \boxed 100%)
+| 지표 | **seed10 (control, V2)** | **seed11 (approach-cue, V3)** |
+|------|----|----|
+| MoE Pass@1 평균 | **67.6%** (68.6/67.0/67.0/67.4/68.2) | 63.9% (63.6/64.2/63.6/63.4/64.8) |
+| LUCA 단독 | 66.0% | 66.6% |
+| **Test UB union** | **74.8%** (8명) | 72.8% (7명) |
+| specialist가 LUCA 너머 | **+44** | +31 |
+| 아무도 못 풂 | 25.2% | 27.2% |
+
+### 판정: approach-cue는 효과 없음 — 오히려 해로움
+- seed11이 **모든 지표에서 control보다 낮음** (MoE −3.7, UB −2.0, 고유기여 +44→+31).
+- 결정적: **seed11 MoE(63.9%) < 자기 LUCA(66.6%)** — approach-persona로 라우팅하는 게 generic LUCA보다 못함. control은 LUCA +1.6.
+- → 정체성+절차적 접근법을 user에 주입하면 전문가가 **더 경직**돼 성능 하락. **가설 반증.**
+- **메타**: control도 MoE 67.6 vs LUCA 66.0 = **+1.6pp뿐** — BigMath와 동일 패턴(prompt-level 전문화가 generic 대비 미미). NuminaMath에서도 전문화 천장 재확인.
+- **caveat**: 각 arm n=1(seed 1개) → noise 가능성 배제 못 함. 절대 수치는 협업자 **vanilla baseline**과 대조 필요. 협업자 전달용 로스터: `results/numina_cot/seed20210010/roster_final.json`.
+
+---
+
 ## Git 이력 (jh/evolution 브랜치)
 
 | 커밋 | 내용 |
@@ -314,4 +349,9 @@ all_zero_war = war_scores and all(v == 0 for v in war_scores.values())
 | `8730c9a` | seed20210007 설정 — 50K BigMath, tp=4, 1 epoch |
 | `8fe16f1` | seed20210008 — Thinking OFF ablation, tp=2 병렬화, eval 자동화 |
 | `26c6f8a` | seed20210009 — data-driven scout with exclusive solve history |
-| (uncommitted) | **eval 생성 thinking 파라미터화** (`gen_enable_thinking`) — seed08 thinking-OFF 재측정용 |
+| `a310b01` | **fix(eval)**: math_verify_score raw LaTeX false-negative 수정 (+16pp); `fix/math-verify-scorer` 브랜치 |
+| `397878d` | approach-persona(V3) 진화로직 + NuminaMath seed10/11 풀세트 래퍼 |
+| `0b4a0cf` | main(NuminaMath loader/eval) 머지 |
+| `a012e49` | **fix**: math/coding 분기를 dataset 이름 → domain 기반으로 (numina_cot 오분류 수정) |
+| `b374dea` | **fix(eval)**: 생성 전 `rm -f`로 stale 출력 재사용 방지 |
+| `ebf97e6` | math 생성 프롬프트 `\boxed{}` 전환 |
