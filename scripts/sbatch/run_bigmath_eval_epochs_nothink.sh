@@ -36,6 +36,8 @@ for EPOCH in $(seq 1 "${MAX_EPOCHS}"); do
     echo "=========================================================================="
 
     echo "=== [Epoch ${EPOCH}] Inference: ${DATASET} test ==="
+    # 재발방지: 옛 출력이 있으면 run_inference의 resume가 생성을 통째로 skip해 stale 결과를 재사용함 → 항상 새로 생성
+    rm -f "${RESULTS_DIR}/inference_test_epoch${EPOCH}.jsonl"
     python scripts/run_inference.py \
         --config "${EVAL_CONFIG}" \
         --dataset "${DATASET}" \

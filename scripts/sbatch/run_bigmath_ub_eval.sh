@@ -53,6 +53,8 @@ echo "=== agents: ${PIDS} ==="
 
 for PID in ${PIDS}; do
     echo "=== Running: ${PID} ==="
+    # 재발방지: 옛 출력 있으면 run_inference resume가 생성 skip → stale 재사용. 항상 새로 생성.
+    rm -f "${OUT}/inference_${PID}.jsonl"
     python scripts/run_inference.py \
         --config "${EVAL_CONFIG}" \
         --dataset "${DATASET}" --split test \
