@@ -1,10 +1,51 @@
 # MetaAgentEvolution — 인수인계 문서
 
-작성일: 2026-06-08 (갱신: 2026-06-09 — 채점기 버그 발견·수정, 진화 재실행)
+작성일: 2026-06-08 (갱신: 2026-06-10 — NuminaMath 통합 + math/coding 분기 버그 수정, 파일럿 재실행)
 
 ---
 
-## 0. 2026-06-09 작업 요약 (채점기 버그 + 진화 재실행 + NuminaMath 준비)
+## 0. 2026-06-10 작업 요약 (NuminaMath 파일럿 + domain 분기 버그)
+
+### NuminaMath 통합 (협업자 main merge)
+- 협업자가 `Jongbin-kr/NuminaMath-CoT_filtered` 데이터셋 + loader/eval 코드를 main에 merge. dataset 키 = **`numina_cot`**, gold 필드 = `ground_truth`, gold가 일관 `\boxed{}`/숫자/객관식.
+- main 머지 완료(`0b4a0cf`): 충돌 2파일 해소 — `MATH_GEN_USER`는 협업자 \boxed 버전 채택, loader는 합집합. 내 scorer 픽스(metrics.py)는 보존.
+
+### approach-persona(V3) 진화로직 추가 (commit `397878d`)
+- seed11용: scout가 `{persona_name, system_prompt(정체성 1줄), approach(방법)}` 생성(strengths 없음). 정체성→system, **approach→user 턴 주입**(Gemma가 user 지시를 더 잘 따름), 라우터는 identity+approach로 라우팅. 토글 `use_approach_persona`.
+
+### 🔴 math/coding 분기 버그 발견·수정 (commit `a012e49`)
+- **현상**: 1차 numina 파일럿(seed10/11)에서 모델이 수학을 안 풀고 **Python 코드**를 생성(\boxed 0/500). MoE ~7%로 무효.
+- **원인**: 생성·scout이 **dataset 이름**(`ds in ("bigmath","math")`)으로 math/coding 분기 → `numina_cot`가 매칭 안 돼 **코딩 프롬프트**로 빠짐. scout도 코딩 meta-prompt 사용 → seed11 V3(approach) 전혀 안 돎(로스터 approach 0/9).
+- **수정**: **domain 기반 분기**로 전환(7곳: coding.py 2함수, scout.py, orchestrator 3호출, routing 2호출, baselines 3호출, loader). `domain="math"` 1차 + dataset 폴백 집합(`_MATH_DATASETS`에 numina_cot 추가). 검증: numina+math→`\boxed` 프롬프트, seed11→V3(approach 파싱) 확인 완료.
+
+### 파일럿 재실행 상태
+- **1차 파일럿(코드 버그) = 무효, 폐기.**
+- seed10(control, 현행 persona) / seed11(approach-cue) 재제출 — **job 178287 / 178290**, evolution+eval+UB 풀세트, tp=1, PRO6000:1.
+- ⚠️ **현재 PD(GPU 대기)** — n03·n04 PRO6000 만석이라 미시작. 시작 시 **첫 스텝 출력에 \boxed·approach 나오는지 먼저 확인** 후 진행.
+- config: `configs/numina_train_seed10/11.yaml` (numina_cot, enable_thinking false, exclusive_solves; 11은 use_approach_persona). submit: `scripts/sbatch/submit_numina_seed20210010/11.sh`. 범용 러너 `run_math_evolution.sh`(EVOL_CONFIG), eval/UB는 `DATASET` 파라미터화(기본 bigmath).
+
+### 비교 설계 (10 vs 11)
+둘 다 NuminaMath + 교정 scorer + exclusive_solves + Thinking OFF, **persona 설계만 다름**(현행 vs approach-cue) → "approach-cue가 효과 있나" 격리.
+
+### 🟥 eval stale-reuse 함정 (수정됨)
+1차 재실행 시 eval/UB가 옛 무효 런(코드출력)의 `inference_*.jsonl`을 재사용 — `run_inference`의 resume 로직이 "이미 500/500 처리됨"으로 **생성을 통째 skip**. 진화 산출물은 정상이었고 eval만 무효. **수정**: 옛 출력 삭제 + eval/UB 스크립트에 생성 전 `rm -f` 추가(commit `b374dea`). 재실행하니 \boxed 100%·정상 수치.
+
+### 결과 (2026-06-10 완료, 깨끗한 데이터)
+| 지표 | **seed10 (control, V2)** | **seed11 (approach-cue, V3)** |
+|------|----|----|
+| MoE Pass@1 평균 | **67.6%** (68.6/67.0/67.0/67.4/68.2) | 63.9% (63.6/64.2/63.6/63.4/64.8) |
+| LUCA 단독 | 66.0% | 66.6% |
+| UB union | **74.8%** (8명) | 72.8% (7명) |
+| specialist가 LUCA 너머 | **+44** | +31 |
+| 아무도 못 풂 | 25.2% | 27.2% |
+
+**판정: approach-cue(11)는 효과 없음 — 오히려 해로움.** 모든 지표에서 control보다 낮고, 결정적으로 **seed11 MoE(63.9%)가 자기 LUCA(66.6%)보다도 낮음**(approach-persona 라우팅이 generic LUCA보다 못함). control은 LUCA +1.6. → 정체성+절차적 접근법을 user에 주입하면 전문가가 더 경직돼 성능 하락. **가설 반증.**
+
+메타: control도 MoE 67.6 vs LUCA 66.0 = **+1.6pp뿐** — BigMath와 같은 패턴(prompt-level 전문화가 generic 대비 미미). caveat: 각 arm n=1, 절대수치는 협업자 vanilla baseline과 대조 필요. 협업자 전달용 로스터: `results/numina_cot/seed20210010/roster_final.json` (LUCA+7).
+
+---
+
+## 0-A. 2026-06-09 작업 요약 (채점기 버그 + 진화 재실행 + NuminaMath 준비)
 
 > ⚠️ **결론 해석 보류**: 진화 WAR도 같은 버그 채점기로 계산됐으므로, 교정 채점기로 진화를 재실행(106/108)해 검증하기 전까지 "MoE가 baseline 못 넘는다 / math = 음성 대조군" 등 **해석은 확정하지 않는다.** 아래는 사실만.
 
