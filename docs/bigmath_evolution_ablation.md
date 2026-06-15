@@ -333,6 +333,83 @@ all_zero_war = war_scores and all(v == 0 for v in war_scores.values())
 
 ---
 
+## 20210012 — hole-aware swap 로직 (seed10 분기, 교수님 피드백 #3) (2026-06-15)
+
+> seed10(control)에서 **gate 로직만** 바꾼 깨끗한 A/B. persona·scout·데이터·하이퍼파라미터(λ=0.05) 모두 seed10과 동일.
+
+### 동기 (교수님 피드백 #3)
+swap 시 worst의 marginal loss로 생긴 "빵꾸"(worst만 풀던 niche)를 newface가 채울 수 있는지(worst∩newface)를 고려해야 함. (#1 generalist 시작점 비교=후순위, #2 2-phase=현행 동의로 변경 없음.)
+
+### 🔴 결함
+`hard_errors`(전원 못 푼 문제)와 `worst_unique`(worst만 푼 문제)는 **정의상 서로소** → newface는 `hard_errors`로만 probe되어 `new_pass ∩ worst_unique = ∅` **항상**. 즉 기존 gate는 swap이 worst의 niche를 날리는지 **측정조차 안 함**(독립 두 phase가 우연히 동시에 켜진 게 swap).
+
+### ✅ 수정 (`754ea40`)
+- probe 집합 → `hard_errors ∪ worst_unique` (newface를 worst niche에도 테스트).
+- swap 후보(phase1∧phase2)일 때 **niche 전량 회수면 swap, 아니면 add로 강등**(worst 유지). `gh_add`는 hard_errors만 intersect → **phase1(add) 독립 보존**(보수적 veto만 추가).
+- `evolution_log`에 `worst_unique_n/niche_recovered_n/swap_demoted_to_add` 기록.
+
+### ⚠️ magnitude — **(2026-06-16 정정)**
+실측 적용값 `scale=0.25, λ=0.05`(base.yaml; numina override 안 함, seed12 로그 역산으로 확정) → lambda_del≈0.013~0.018 → **worst는 고유 solve = 0일 때만 evict** → 보호 niche = **0** → hole-aware demote **구조적으로 발동 불가(INERT).** 이전 "niche≤1 / λ 낮추면 load-bearing"은 scale=0.5 가정한 **오류**. 발동시키려면 방향 반대로 **scale↑**(0.5→unique≤1, 1.0→≤2~3).
+
+### 검증 / 결과 (jobs 182646/7/8, 완료)
+- 단위테스트 6/6 PASS, numina smoke COMPLETED(크래시·오분류 없음, niche 로그 정상).
+
+| 지표 | **seed12** | seed10(참고) |
+|---|---|---|
+| MoE 평균/최고/최종 | 67.4 / 68.8 / 67.4 | 67.6 / 68.6 / 68.2 |
+| LUCA 단독 | 67.6 | 66.0 |
+| UB union | 75.8% (7명) | 74.8% (8명) |
+| specialist가 LUCA 너머 | +41 | +44 |
+
+- **⚠️ seed10↔12 절대비교 위험**: eval/UB가 `--seed`로 held-out 500을 뽑아 두 seed가 **서로 다른 500문제**. 증거: 동일 LUCA인데 단독 66.0 vs 67.6(+1.6pp 테스트셋 노이즈). MoE·UB 차이는 노이즈 밴드 안 = **사실상 동률.**
+- **hole-aware 0번 발동**: evolution_log 후보 **0/30**, swap 0, demote 0(add 6/noop 24, 로스터 2→7). 로직 휴면 → seed12 ≈ seed10 재추첨. **현 shared 면제 체제에선 gate 변경 무력**을 수치로 재확인.
+
+### 🔑 후속: eviction 안 도는 원인 분리 = shared 기여 면제 (단독 킬러)
+git+로그 교차분석으로 eviction 후보 발생을 seed별 집계:
+
+| seed | max_lives | all-zero 면제 | shared 면제 | 후보존재 | del+swap |
+|---|---|---|---|---|---|
+| 01 | 3 | ✗ | ✗ | 6/30 | 6 (cascade) |
+| 02 | 5 | ✗ | ✗ | 7/28 | 7 |
+| 03 | 5 | ✗ | ✗ | 2/30 | 2 |
+| **04** | 5 | ✓ | ✗ | **3/30** | **3** ← all-zero만: 정상 |
+| **05** | 5 | ✓ | ✓ | **0/30** | **0** ← shared 추가: 즉사 |
+| 06/08/09/10/12 | 5 | ✓ | ✓ | 0 | 0 |
+
+→ **shared 면제(`356813b`, seed05)가 단독 킬러. max_lives 무죄**(seed02/03/04가 5에서 정상 도태). 수학 고겹침에서 누구나 공유문제를 풀어 lives가 영구 만렙 → WAR 신호 단락.
+
+### → 20210013 = seed10 + shared 면제 OFF (도태 부활), commit `e4cc9e2`
+- **config 토글** `shared_contribution_exemption`(기본 True=기존동작 보존), seed13만 False(= 검증된 seed04 체제). all-zero 면제·max_lives 5 유지. lives 분기 시뮬 5/5 PASS.
+- **결과(2026-06-16)**: 도태 **부활**(후보 6/30, delete 5+swap 1, 로스터 2→5). 단 evict된 worst는 **전부 unique=0** → `swap_demoted_to_add` **0** (hole-aware 여전히 INERT — scale=0.25). MC-aware MoE ~77.3% / UB 81.4%(5명). vs seed12(7명, UB 83.4%) → **도태로 lean하지만 UB ~1.4pp 손해**.
+
+---
+
+## 20210014 / 20210015 — scout V1(atomicity) × shared on/off (2×2 완성) (2026-06-16)
+
+> **동기**: seed10/12/13은 모두 **V2 scout**(atomicity 규칙 없음) → persona가 `&` 묶음형(예: "Geometry **&** Trig"). BigMath ablation에선 **V1(atomicity, seed08) > V2(seed09)** (UB +20 vs +14)였으나 **numina에선 V1 미검증**. V3(seed11, approach)는 이름만 깔끔·속은 묶음·성능 패(반증). → numina에 **V1 복원**해 2×2 완성.
+
+### scout 버전 정체 (코드 확인)
+| | atomicity 규칙 | exclusive_solves | approach 분리 | persona |
+|---|---|---|---|---|
+| V1 | ✓ | ✗ | ✗ | 단일 도메인(깔끔, 'and' 0%) |
+| V2(seed09~13) | ✗ | ✓ | ✗ | "&" 묶음 |
+| V3(seed11) | ✗ | ✓ | ✓ | 이름만 깔끔, 속은 묶음 |
+- 어떤 버전도 **도메인명 prior 안 줌**(도메인은 모델이 hard_errors서 선택). V1의 유일 prior = **구조적 atomicity**(도메인 무관).
+
+### 2×2 설계
+| | shared ON | shared OFF |
+|---|---|---|
+| **V2** | seed12 (UB 83.4, 7명) | seed13 (UB 81.4, 5명) |
+| **V1** | **seed14** | **seed15** |
+- seed14/15: numina + V1 + 백본 31B(MoE 아님) + Thinking OFF + max_lives 5. shared만 ON/OFF. config/submit `numina_train_seed14/15.yaml`. 제출 183264 / 183267(R).
+- 세로축 = atomicity 효과, 가로축 = 도태 효과. **모든 수치는 MC-aware 채점 기준으로 비교.**
+
+### 🔴 MC 채점 아티팩트 (+~11pp) — 모든 numina 수치에 적용
+- numina test 객관식 30%의 gold가 **보기문자↔값 혼재** → 박싱 포맷만 안 맞으면 FAIL. seed12 **67.4→78.0%(+10.6pp)**, 회복 53건 전수 정당(FP 0).
+- 수정: scorer.py(우리, `6f4ac55`) + metrics.py/evaluate.py(협업자, `939f670` push). **추가 전용**(기존 PASS 불변).
+
+---
+
 ## Git 이력 (jh/evolution 브랜치)
 
 | 커밋 | 내용 |
@@ -355,3 +432,8 @@ all_zero_war = war_scores and all(v == 0 for v in war_scores.values())
 | `a012e49` | **fix**: math/coding 분기를 dataset 이름 → domain 기반으로 (numina_cot 오분류 수정) |
 | `b374dea` | **fix(eval)**: 생성 전 `rm -f`로 stale 출력 재사용 방지 |
 | `ebf97e6` | math 생성 프롬프트 `\boxed{}` 전환 |
+| `754ea40` | **feat(gate)**: hole-aware swap — worst niche를 newface가 회수 못 하면 swap→add 강등 (교수님 피드백 #3); seed20210012 A/B |
+| `e4cc9e2` | **feat(gate)**: shared 기여 면제 토글(`shared_contribution_exemption`, 기본 True) + seed20210013 (면제 OFF=도태 부활) |
+| `6f4ac55` | **fix(scorer)**: MC-aware math scoring — 객관식 보기↔값 동치 인정 (numina gold 포맷 +~11pp). 추가 전용 |
+| `939f670` | **fix(eval)**: 협업자 경로(metrics.py+evaluate.py) MC-aware `math_verify_mc_score` (fix/math-verify-scorer, **origin push**) |
+| *(config)* | seed20210014/15 — numina scout V1(atomicity) × shared on/off (2×2 완성), 백본 31B |

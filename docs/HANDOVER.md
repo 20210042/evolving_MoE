@@ -1,10 +1,112 @@
 # MetaAgentEvolution — 인수인계 문서
 
-작성일: 2026-06-08 (갱신: 2026-06-10 — NuminaMath 통합 + math/coding 분기 버그 수정, 파일럿 재실행)
+작성일: 2026-06-08 (갱신: 2026-06-16 — MC 채점 아티팩트 수정, eviction/hole-aware 진단 정정, scout V1/V2/V3 정리, 2×2 설계)
 
 ---
 
-## 0. 2026-06-10 작업 요약 (NuminaMath 파일럿 + domain 분기 버그)
+## 0. 2026-06-16 작업 요약 (채점 아티팩트 + scout 버전 + 2×2 설계)
+
+> 이번 세션의 핵심: ① numina 채점에 큰 아티팩트 발견·수정 ② hole-aware/eviction에 대한 이전 서술 **정정** ③ scout 프롬프트 V1/V2/V3 정체 규명 ④ 깨끗한 2×2 실험 설계 착수.
+
+### 🔴 발견 1 — MC 채점 아티팩트 (+~11pp), 수정 완료
+- numina test의 **객관식 30%**(1862/6215)에서 **gold 포맷이 보기문자("B")와 값("a+b=3")으로 섞여** 있음(보기문자 806 / 값 1015). 모델이 한 포맷으로 박싱하면 **절반은 실력과 무관하게 FAIL**.
+- 규모: seed12 eval **67.4→78.0% (+10.6pp)**, 회복 53건 **전수 감사 정당(FP 0)**. 전 에포크 +10.6~11.6pp 일관. (이전에 말한 "+6pp"는 과소집계였음.)
+- **수정(추가 전용, 비객관식 byte-identical)**:
+  - 우리: `scorer.py` score_one에 MC-aware 분기 — commit **`6f4ac55`** (jh/evolution).
+  - 협업자: `metrics.py` `mc_aware_math_score` + `evaluate.py` `math_verify_mc_score` 메트릭 — commit **`939f670`** (fix/math-verify-scorer, **origin push**).
+- ⚠️ **함의**: 기존 numina 수치(seed10~13, ~67%)는 ~11pp 눌려 있던 것. 백본 비교(MoE) 시 박싱 성향 차로 오염 위험 → 비교 전 MC-aware 필수.
+
+### 🟧 정정 — eviction / hole-aware (이전 문서 오류 바로잡음)
+- **적용 gate값 = scale 0.25, λ 0.05** (base.yaml; numina config가 override 안 함). 실측 로그(seed12 add 스텝 역산)로 scale=0.25 확정.
+- 이 regime: **worst는 고유 solve=0일 때만 evict** → **hole-aware demote는 구조적으로 발동 불가(INERT).** 이전 문서의 "niche ≤1", "λ 낮추면 load-bearing", "seed13→hole-aware load-bearing"은 **전부 틀림**. (방향 반대: 발동시키려면 **scale↑**.)
+- **eviction이 안 돌던 진짜 원인 = shared 기여 면제(`356813b`, seed05).** 데이터로 분리:
+
+  | seed | max_lives | all-zero 면제 | shared 면제 | 후보 | del+swap |
+  |---|---|---|---|---|---|
+  | 02/03 | 5 | ✗ | ✗ | 7/2 | 7/2 |
+  | 04 | 5 | ✓ | ✗ | 3 | 3 |
+  | **05~12** | 5 | ✓ | ✓ | **0** | **0** |
+  | **13** | 5 | ✓ | **✗(OFF)** | **6** | **6** |
+  → **max_lives 무죄, shared 면제가 단독 킬러.** seed13(shared OFF)에서 도태 부활(로스터 5명).
+
+### seed12 vs seed13 (MC-aware, 둘 다 V2 scout)
+| | seed12 (shared ON, 7명) | seed13 (shared OFF, 5명) |
+|---|---|---|
+| MoE 평균 | ~78.4% | ~77.3% |
+| LUCA 단독 | 78.2%(노이즈 기준) | 77.6% |
+| UB union | **83.4%** (+26) | 81.4% (+19) |
+→ 도태(13)는 lean하지만 **UB ~1.4pp 손해**(노이즈 보정 후). MoE 동률. **큰 로스터가 커버리지 유리.**
+
+### 🟦 발견 2 — scout 프롬프트 V1/V2/V3 정체 (왜 "&" 범벅인가)
+- numina(seed10/12/13)는 **V2** scout 사용. **V2엔 atomicity 규칙도 'and' 금지도 없음** → `&` 묶음 전문가가 무제약으로 나옴.
+- 버전 정체: **V1**(atomicity 有, 단일도메인) / **V2**(규칙 제거, exclusive_solves, "&"묶음) / **V3**(approach-persona, 정체성1문장+절차; 이름만 깔끔, 속은 여전히 묶음).
+- 어떤 버전도 **도메인명 prior는 안 줌**(도메인은 모델이 hard_errors 보고 선택). 차이는 **구조 prior(atomicity)뿐**.
+- ablation 종합: **BigMath V1(seed08) > V2(seed09)** (UB +20 vs +14). **numina V2(seed10) > V3(seed11)** (MoE 67.6 vs 63.9, V3 반증). **단 V1은 numina에서 미검증** → 이번에 보충.
+
+### 🆕 2×2 설계 착수 — scout(V1/V2) × shared(ON/OFF)
+| | shared ON | shared OFF |
+|---|---|---|
+| **V2** | seed12 ✅ | seed13 ✅ |
+| **V1** | **seed14** (183264, R) | **seed15** (183267, R) |
+- seed14/15 = numina **V1**(atomicity), 백본 31B(MoE 아님), Thinking OFF, max_lives 5. config `numina_train_seed14/15.yaml`, submit 동명. (use_exclusive_solves 없음 → V1 라우팅.)
+- 검증포인트: 첫 스텝 로그에서 V1(atomicity) 적용 + persona '&' 안 붙는지.
+
+### 🟩 별개 트랙 — MoE 백본(gemma-4-26B-A4B-it)
+- 다운로드(49GB) + **load-smoke 통과**: vLLM 0.21.0이 `Gemma4ForConditionalGeneration` 로드·생성 OK(48.5GB/tp=1), 출력 31B와 동일 깨끗(`\boxed`). 백본 기술 적합성 확인. (정확도는 별도 eval 필요. seed14/15와 무관.)
+
+### 커밋 (이번 세션, jh/evolution 별도 명시 없으면 그 브랜치)
+`754ea40` hole-aware swap · `e4cc9e2` shared 면제 토글+seed13 · `6f4ac55` MC 채점기 · (fix/math-verify-scorer) `939f670` MC eval(push).
+
+---
+
+## 0-A. 2026-06-15 작업 요약 (hole-aware swap — 교수님 피드백 #3)
+
+### 교수님 피드백 3불렛
+1. **(후순위)** init_roster의 generalist 여러 시작점을 비교 → 서로 다른 출발점이 결국 같은(LLM이 선호하는) 방향으로 수렴함을 보이면 좋겠다.
+2. **(현행 동의)** add/delete를 2-phase로 한 큐에 정하는 설계는 말이 됨(= delete를 독립 동작으로 떼지 않는 게 맞음) → **변경 없음**.
+3. **(최우선)** swap 시 worst의 marginal loss로 생긴 "빵꾸"(worst만 풀던 niche)를 newface가 채울 수 있는지(worst∩newface 교집합)를 고려해야 함.
+
+### 🔴 결함 (코드로 확인) — gate가 swap의 niche 회수를 측정조차 안 함
+- `hard_errors` = 로스터 전원(worst 포함)이 못 푼 문제. newface는 오직 `hard_errors`로만 probe됨 → `new_pass ⊆ hard_errors`.
+- `worst_unique`(worst만 푼 문제)는 worst가 **푼** 것이라 `hard_errors`와 **정의상 서로소** → `new_pass ∩ worst_unique = ∅` **항상**.
+- ∴ 기존 `select_action`은 swap이 일어나도 newface가 worst의 빵꾸를 메우는지 **테스트하지 않음**. swap은 독립 두 phase가 우연히 동시에 켜진 것일 뿐.
+
+### ✅ 수정 (commit `754ea40`) — hole-aware swap + add 강등
+- **orchestrator**: probe 집합을 `hard_errors ∪ worst_unique`로 확장(newface를 worst niche에도 테스트).
+- **action_selector**: `recovered = new_pass ∩ worst_unique`. swap 후보(phase1∧phase2)일 때 **niche 전량 회수면 swap, 아니면 add로 강등**(worst 유지 → niche 절대 안 잃음). `ActionDecision`에 `worst_unique_count/recovered_count/demoted_swap`, gate 로그·evolution_log에 기록.
+- **2-phase 독립 보존**: `gh_add`는 여전히 `hard_errors`만 intersect → phase1(add) 판정 불변. niche-recovery는 swap에만 거는 보수적 veto(add 차단 안 함, delete 유발 안 함).
+
+### ⚠️ magnitude — **(아래 06-16에서 정정됨)**
+~~λ를 낮추면 load-bearing~~ → **틀림.** 실측 적용값은 `action_gate.scale=0.25, λ=0.05`(base.yaml). 이 regime에선 lambda_del≈0.013~0.018이라 **worst는 고유 solve = 0일 때만 evict** → 보호 niche = **0**(≤1 아님) → **hole-aware demote는 구조적으로 발동 불가(INERT).** 발동시키려면 **scale을 올려야**(0.5→unique≤1, 1.0→≤2~3) — 낮추는 게 아님. 자세히는 06-16 참조.
+
+### seed12 = seed10 + "로직만" (깨끗한 A/B) — 결과
+- hole-aware swap은 config 플래그 없이 코드 전역 적용 → seed10과 하이퍼파라미터 100% 동일한 `seed20210012`. config `numina_train_seed12.yaml`, submit `submit_numina_seed20210012.sh`. (jobs 182646/7/8)
+
+| 지표 | **seed12** | seed10(참고) |
+|---|---|---|
+| MoE Ep1–5 | 67.6/67.0/66.2/68.8/67.4 | 68.6/67.0/67.0/67.4/68.2 |
+| MoE 평균/최고/최종 | 67.4 / 68.8 / 67.4 | 67.6 / 68.6 / 68.2 |
+| LUCA 단독 | 67.6 | 66.0 |
+| UB union | 75.8% (7명) | 74.8% (8명) |
+| specialist가 LUCA 너머 | +41 | +44 |
+
+- **⚠️ seed10↔12 절대비교 위험 — 평가셋이 다름**: eval/UB가 `--seed`로 held-out 500을 뽑아 seed10/12가 서로 다른 500문제. 증거: **동일 LUCA인데 단독 66.0 vs 67.6**(+1.6pp 순수 테스트셋 노이즈). → MoE(−0.2)·UB(+1.0) 차이는 전부 노이즈 밴드 안 = **사실상 동률.**
+- **그리고 그게 당연 — hole-aware가 0번 발동**: seed12 evolution_log **후보 0/30, swap 0, demote 0**(add 6/noop 24, 로스터 2→7). 로직은 휴면, seed12 ≈ seed10 재추첨. → "현 shared 면제 체제에선 gate 변경이 무력"이 수치로 재확인.
+
+### 🔑 후속 진단: eviction이 안 도는 진짜 원인 = shared 기여 면제 (데이터로 분리)
+- seed10/12 모두 **worst 후보 0건** → `pick_worst`가 항상 None → delete/swap 계산 자체가 시작 안 됨(로스터 단조증가).
+- git+로그 교차분석으로 범인 분리: **shared 면제(`356813b`, seed05)가 단독 킬러.** seed02/03(면제 없음, max_lives 5)은 도태 7·2건, **seed04(all-zero 면제만)도 max_lives 5에서 3건 정상 도태**, but **shared 면제가 추가된 seed05부터 seed12까지 후보 0건**. → **max_lives는 무죄, shared 면제가 WAR 신호를 단락**시킴(수학 고겹침에서 누구나 공유문제는 풀어 lives 영구만렙).
+
+### seed13 = seed10 + shared 면제 OFF (도태 부활) — commit `e4cc9e2`, 제출됨(182813/4/5)
+- **config 토글** `shared_contribution_exemption`(기본 True=기존동작 보존). seed13만 False → WAR=0 에이전트가 공유풀이해도 lives 감소(= 검증된 seed04 체제). all-zero 면제·max_lives 5 유지.
+- **결과(06-16 확인)**: 도태 **부활**(후보 6/30, delete 5+swap 1, 로스터 2→5). 단 evict된 worst는 **전부 unique=0** → `swap_demoted_to_add` **0**(hole-aware 여전히 INERT — scale=0.25이라 niche 보유자는 애초에 evict 안 됨). 즉 ~~hole-aware load-bearing~~은 **틀린 기대**였음(scale↑가 별도로 필요).
+
+### 검증 (hole-aware/토글)
+- hole-aware **단위 6/6 PASS**, numina **smoke COMPLETED**(크래시·오분류 없음, niche 로그 정상). 토글 **lives 분기 시뮬 5/5 PASS**(기본 True byte-identical).
+
+---
+
+## 0-B. 2026-06-10 작업 요약 (NuminaMath 파일럿 + domain 분기 버그)
 
 ### NuminaMath 통합 (협업자 main merge)
 - 협업자가 `Jongbin-kr/NuminaMath-CoT_filtered` 데이터셋 + loader/eval 코드를 main에 merge. dataset 키 = **`numina_cot`**, gold 필드 = `ground_truth`, gold가 일관 `\boxed{}`/숫자/객관식.
