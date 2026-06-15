@@ -59,6 +59,7 @@ class GMEvolutionOrchestrator:
         enable_thinking: bool = True,
         use_exclusive_solves: bool = False,
         use_approach_persona: bool = False,
+        shared_contribution_exemption: bool = True,
     ):
         self.agent = agent
         self.roster_path = roster_path
@@ -66,6 +67,12 @@ class GMEvolutionOrchestrator:
         self.enable_thinking = enable_thinking
         self.use_exclusive_solves = use_exclusive_solves
         self.use_approach_persona = use_approach_persona
+        # When True (default = legacy): an agent that solved ANY problem (even shared)
+        # keeps its life even with WAR=0. When False: only an exclusive contribution
+        # (WAR>0) or an all-zero batch protects the life → redundant agents decay and
+        # become eviction-eligible. Data: shared exemption alone froze eviction to 0
+        # candidates across seed05–12; turning it off restores the seed04 regime.
+        self.shared_contribution_exemption = shared_contribution_exemption
         self.max_lives = max_lives
         for p in self.roster:
             p.setdefault("total_war", 0)
@@ -287,8 +294,8 @@ class GMEvolutionOrchestrator:
                     p["lives"] = self.max_lives
                 elif all_zero_war:
                     pass  # batch-level collective failure — no individual penalty
-                elif agent_solved_any:
-                    pass  # solved shared problems — not an individual failure
+                elif self.shared_contribution_exemption and agent_solved_any:
+                    pass  # solved shared problems — not an individual failure (toggleable)
                 else:
                     p["lives"] = max(0, p.get("lives", self.max_lives) - 1)
 
