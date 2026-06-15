@@ -371,7 +371,22 @@ class GMEvolutionOrchestrator:
         by_id = {b["id"]: b for b in batch_data}
         new_pass_ids: Set[str] = set()
 
-        probe_items = [by_id[q] for q in probe_hard if q in by_id]
+        # Hole-aware swap (prof feedback #3): also probe the newface on the worst
+        # agent's NICHE (problems only the worst solved). If a swap evicts the worst,
+        # that niche becomes a hole; select_action only allows the swap if the newface
+        # recovers it. These ids are disjoint from probe_hard (worst solved them), so
+        # adding them to the probe doesn't change gh_add (which intersects probe_hard).
+        worst_unique_ids: List[str] = []
+        if worst_agent:
+            worst_solves = set(squad_results.get(worst_agent, set()))
+            other_solves: Set[str] = set()
+            for rid, solves in squad_results.items():
+                if rid != worst_agent:
+                    other_solves.update(solves)
+            worst_unique_ids = [q for q in (worst_solves - other_solves) if q in by_id]
+
+        probe_ids = probe_hard + [q for q in worst_unique_ids if q not in hard_errors_texts]
+        probe_items = [by_id[q] for q in probe_ids if q in by_id]
         if probe_items:
             probe_msgs = []
             for item in probe_items:
@@ -406,12 +421,15 @@ class GMEvolutionOrchestrator:
         )
 
         logging.info(
-            "Action gate: %s | U=%s | MCL(worst)≈%.3f | new_pass=%s/%s",
+            "Action gate: %s | U=%s | MCL(worst)≈%.3f | new_pass=%s/%s | niche_recover=%s/%s%s",
             decision.action,
             decision.utility,
             decision.mcl_worst,
             len(new_pass_ids),
             len(probe_hard),
+            decision.recovered_count,
+            decision.worst_unique_count,
+            " | SWAP→ADD demote: niche not recovered" if decision.demoted_swap else "",
         )
 
         if decision.action == "noop":
@@ -506,6 +524,9 @@ class GMEvolutionOrchestrator:
             "marginal_hard_gain_add": decision.marginal_hard_gain_add,
             "marginal_hard_gain_swap_extra": 0.0,
             "mcl_worst_est": decision.mcl_worst,
+            "worst_unique_n": decision.worst_unique_count,
+            "niche_recovered_n": decision.recovered_count,
+            "swap_demoted_to_add": decision.demoted_swap,
             "decision": decision.action,
             "roster_after": [p.get("id") for p in self.roster],
         }

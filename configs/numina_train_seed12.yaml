@@ -1,0 +1,20 @@
+# seed20210012: = seed10(control) + hole-aware swap 로직만 변경.
+#   NuminaMath, verbal-RL scout(exclusive_solves), 현행 persona(identity+strengths), Thinking OFF.
+#   하이퍼파라미터는 seed10과 100% 동일 — 유일한 차이는 코드의 swap niche-recovery veto
+#   (worst의 고유 niche를 newface가 회수 못 하면 swap→add 강등). config 플래그 없음(코드 전역 적용).
+dataset: "numina_cot"
+split: "train"
+train_size: 300
+epochs: 5
+batch_size: 50
+max_lives: 5
+enable_thinking: false
+use_exclusive_solves: true
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 128
+  gpu_memory_utilization: 0.90
+  enforce_eager: false
