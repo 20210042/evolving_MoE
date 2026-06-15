@@ -206,3 +206,54 @@ def math_verify_score(prediction: str, reference: str) -> float:
     return 1.0 if (_mv_verify(ref, pred) or _mv_verify(pred, ref)) else 0.0
 
 
+# --- 객관식(MC) 고려 채점 -------------------------------------------------------
+# NuminaMath 객관식은 gold가 보기 문자("B")와 값("a+b = 3")으로 섞여 있어, 모델이
+# 한 포맷으로 박싱하면 절반은 실력과 무관하게 FAIL한다. mc_aware_math_score()는
+# math_verify_score 위에 얹어서 객관식이면 모델 boxed 부분이 정답 보기의 문자 또는
+# 값과 맞아도 정답 인정. 객관식 아니면 math_verify_score와 동일.
+_MC_OPT_RE = re.compile(r"(?:^|\n|\s)\(?([A-D])[\):.]\s*(.+?)(?=(?:\n|\s)\(?[A-D][\):.]|\Z)", re.S)
+
+
+def _parse_mc_options(instruction: str) -> dict:
+    opts: dict = {}
+    for m in _MC_OPT_RE.finditer(instruction or ""):
+        opts.setdefault(m.group(1), m.group(2).strip()[:80])
+    return opts
+
+
+def _mc_correct_letter(gold: str, opts: dict):
+    g = (gold or "").strip()
+    for pat in (r"^\(?([A-D])[\):.\s]", r"^\\?text\{?\s*\(?([A-D])", r"^([A-D])$"):
+        m = re.match(pat, g)
+        if m:
+            return m.group(1)
+    for L, v in opts.items():  # gold가 값 → 값이 일치하는 보기 찾기
+        try:
+            if math_verify_score(v, gold):
+                return L
+        except Exception:
+            pass
+    return None
+
+
+def mc_aware_math_score(prediction: str, reference: str, instruction: str = "") -> float:
+    """math_verify_score + 객관식 보기↔값 동치 인정 (추가 전용)."""
+    if math_verify_score(prediction, reference):
+        return 1.0
+    opts = _parse_mc_options(instruction)
+    if len(opts) < 3:  # 객관식 아님 → math_verify_score와 동일
+        return 0.0
+    cl = _mc_correct_letter(str(reference or ""), opts)
+    if not cl:
+        return 0.0
+    p = (prediction or "").strip()
+    if re.fullmatch(r"\(?([A-D])\)?", p) and re.sub(r"[^A-D]", "", p) == cl:
+        return 1.0  # 모델이 정답 보기 문자 박싱
+    try:
+        if math_verify_score(p, opts.get(cl, "")):
+            return 1.0  # 모델이 정답 보기 값 박싱
+    except Exception:
+        pass
+    return 0.0
+
+
