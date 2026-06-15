@@ -2,12 +2,62 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict
 
 from evaluation.code_exec import evaluate_code_score, extract_helper_code
 from evaluation.lcb_score import score_lcb_item
 from evaluation.metrics import math_verify_score
 from utils.helpers import extract_math_answer
+
+
+# --- Multiple-choice aware matching (NuminaMath) ---------------------------
+# NuminaMath MC items have inconsistent gold format (option letter "B" vs the
+# value "a+b = 3"), so a model that boxes one format fails the ~half whose gold
+# uses the other — a scoring artifact (~6pp), not a model error. This helper is
+# ADDITIVE: it only turns some MC failures into passes when the boxed answer
+# matches the *correct* option by letter OR by value. Non-MC items are untouched.
+_MC_OPT_RE = re.compile(r"(?:^|\n|\s)\(?([A-D])[\):.]\s*(.+?)(?=(?:\n|\s)\(?[A-D][\):.]|\Z)", re.S)
+
+
+def _parse_mc_options(instruction: str) -> Dict[str, str]:
+    opts: Dict[str, str] = {}
+    for m in _MC_OPT_RE.finditer(instruction or ""):
+        opts.setdefault(m.group(1), m.group(2).strip()[:80])
+    return opts
+
+
+def _mc_correct_letter(gold: str, opts: Dict[str, str]) -> str | None:
+    g = (gold or "").strip()
+    for pat in (r"^\(?([A-D])[\):.\s]", r"^\\?text\{?\s*\(?([A-D])", r"^([A-D])$"):
+        m = re.match(pat, g)
+        if m:
+            return m.group(1)
+    for L, v in opts.items():  # gold is a value → find the option whose value matches
+        try:
+            if math_verify_score(v, gold):
+                return L
+        except Exception:
+            pass
+    return None
+
+
+def _mc_letter_value_match(pred: str, gold: str, instruction: str) -> bool:
+    opts = _parse_mc_options(instruction)
+    if len(opts) < 3:  # not a multiple-choice item → no change
+        return False
+    cl = _mc_correct_letter(str(gold or ""), opts)
+    if not cl:
+        return False
+    p = (pred or "").strip()
+    if re.fullmatch(r"\(?([A-D])\)?", p) and re.sub(r"[^A-D]", "", p) == cl:
+        return True  # model boxed the correct option letter
+    try:
+        if math_verify_score(p, opts.get(cl, "")):
+            return True  # model boxed the correct option's value
+    except Exception:
+        pass
+    return False
 
 
 def score_one(
@@ -47,7 +97,12 @@ def score_one(
 
     if domain == "math":
         extracted = extract_math_answer(prediction_code)
-        return 100.0 if math_verify_score(extracted, ground_truth) else 0.0
+        if math_verify_score(extracted, ground_truth):
+            return 100.0
+        # MC-aware: accept letter↔value equivalence for multiple-choice items
+        if _mc_letter_value_match(extracted, ground_truth, item.get("instruction", "")):
+            return 100.0
+        return 0.0
 
     test_code = item.get("test_code") or item.get("test") or ""
     if isinstance(item.get("test_list"), list):
