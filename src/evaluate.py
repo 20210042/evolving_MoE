@@ -16,7 +16,7 @@ import wandb
 from transformers import HfArgumentParser
 
 from data import get_dataset
-from evaluation.metrics import exact_match_score, token_f1_score, numerical_match_score, math_verify_score
+from evaluation.metrics import exact_match_score, token_f1_score, numerical_match_score, math_verify_score, mc_aware_math_score
 from evaluation.scorer import score_one
 from prompts.math import build_generation_prompt as build_math_prompt
 from utils.helpers import extract_math_answer, set_all_seeds
@@ -118,6 +118,8 @@ def evaluate_item(item: dict, prediction: str, is_math_dataset: bool=True) -> di
             "token_f1_score": token_f1_score(extracted, item["ground_truth"]),
             "numerical_match_score": numerical_match_score(extracted, item["ground_truth"]),
             "math_verify_score": math_verify_score(extracted, item["ground_truth"]),
+            # MC-aware: 객관식 보기↔값 복수정답(??)
+            "math_verify_mc_score": mc_aware_math_score(extracted, item["ground_truth"], item.get("instruction", "")),
         }
 
     else:
