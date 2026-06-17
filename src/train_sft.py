@@ -93,6 +93,7 @@ class ExtraArguments:
 def build_hf_dataset(
     name: str,
     split: str,
+    tokenizer: AutoTokenizer,
     data_ratio: float = 1.0,
     seed: Optional[int] = None,
     categories: Optional[str] = None,
@@ -100,15 +101,21 @@ def build_hf_dataset(
     items = get_dataset(name, split=split, categories=categories, data_ratio=data_ratio, seed=seed)
     is_math = name.lower() in {"bigmath", "math", "numina_cot"}
 
-    return Dataset.from_list([
-        {
-            "prompt": build_math_prompt(item["instruction"]) if is_math
-                      else [{"role": "user", "content": item["instruction"]}],
-            # numina_cot처럼 solution(full CoT)이 있으면 그걸 completion으로, 없으면 ground_truth 사용
-            "completion": [{"role": "assistant", "content": item.get("solution", item["ground_truth"])}],
-        }
-        for item in items
-    ])
+    rows = []
+    for item in items:
+        prompt_messages = (
+            build_math_prompt(item["instruction"])
+            if is_math
+            else [{"role": "user", "content": item["instruction"]}]
+        )
+        
+        # solution이 있으면 solution, 없으면 ground_truth 사용
+        completion_text = str(item.get("solution", item["ground_truth"])) 
+        completion_messages = [{"role": "assistant", "content": completion_text}]
+        
+        rows.append({"prompt": prompt_messages, "completion": completion_messages,})
+
+    return Dataset.from_list(rows)
 
 
 def main():
@@ -145,11 +152,20 @@ def main():
     
     
     
+    # 토크나이저 로드
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_args.model_name_or_path,
+        trust_remote_code=model_args.trust_remote_code,
+    )
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
     # 데이터 로드
     logger.info(f"학습 데이터셋 로딩: {data_args.train_dataset}")
     train_dataset = build_hf_dataset(
         data_args.train_dataset,
         split="train",
+        tokenizer=tokenizer,
         data_ratio=data_args.data_ratio,
         seed=sft_config.seed,
         categories=data_args.categories,
@@ -161,6 +177,7 @@ def main():
     eval_dataset = build_hf_dataset(
         data_args.eval_dataset,
         split="validation",
+        tokenizer=tokenizer,
         seed=sft_config.seed,
         categories=data_args.categories,
     )
@@ -168,16 +185,9 @@ def main():
 
 
 
-    # 모델 및 토크나이저 로드
+    # 모델 로드
     dtype_map = {"bfloat16": torch.bfloat16, "float16": torch.float16, "float32": torch.float32}
     torch_dtype = dtype_map.get(model_args.dtype, torch.bfloat16)
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_args.model_name_or_path,
-        trust_remote_code=model_args.trust_remote_code,
-    )
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(
         model_args.model_name_or_path,
