@@ -236,24 +236,24 @@ def _mc_correct_letter(gold: str, opts: dict):
     return None
 
 
-def mc_aware_math_score(prediction: str, reference: str, instruction: str = "") -> float:
+def mc_score(prediction: str, reference: str, instruction: str = "") -> float:
     """math_verify_score + 객관식 보기↔값 동치 인정 (추가 전용)."""
-    if math_verify_score(prediction, reference):
-        return 1.0
+    
     opts = _parse_mc_options(instruction)
     if len(opts) < 3:  # 객관식 아님 → math_verify_score와 동일
         return 0.0
+    
     cl = _mc_correct_letter(str(reference or ""), opts)
     if not cl:
         return 0.0
+    
     p = (prediction or "").strip()
     if re.fullmatch(r"\(?([A-D])\)?", p) and re.sub(r"[^A-D]", "", p) == cl:
         return 1.0  # 모델이 정답 보기 문자 박싱
     try:
         if math_verify_score(p, opts.get(cl, "")):
             return 1.0  # 모델이 정답 보기 값 박싱
+        
     except Exception:
         pass
     return 0.0
-
-

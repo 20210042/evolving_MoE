@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -16,7 +17,7 @@ import wandb
 from transformers import HfArgumentParser
 
 from data import get_dataset
-from evaluation.metrics import exact_match_score, token_f1_score, numerical_match_score, math_verify_score, mc_aware_math_score
+from evaluation.metrics import exact_match_score, token_f1_score, numerical_match_score, math_verify_score, mc_score
 from evaluation.scorer import score_one
 from prompts.math import build_generation_prompt as build_math_prompt
 from utils.helpers import extract_math_answer, set_all_seeds
@@ -112,19 +113,54 @@ class ExtraArguments:
 def evaluate_item(item: dict, prediction: str, is_math_dataset: bool=True) -> dict:
     if is_math_dataset:
         extracted = extract_math_answer(prediction)
+        problem_text = item.get("instruction", "")
+        ground_truth = item["ground_truth"]
+        
+        em = exact_match_score(extracted, ground_truth)
+        numerical = numerical_match_score(extracted, ground_truth)
+        math_verify = math_verify_score(extracted, ground_truth)
+        multiple_choice = mc_score(extracted, ground_truth, problem_text)
+        combined = 1.0 if max(em, numerical, math_verify, multiple_choice) >= 1.0 else 0.0
+        token_f1 = token_f1_score(extracted, ground_truth)
+        
         scores = {
             "extracted_answer": extracted,
-            "exact_match_score": exact_match_score(extracted, item["ground_truth"]),
-            "token_f1_score": token_f1_score(extracted, item["ground_truth"]),
-            "numerical_match_score": numerical_match_score(extracted, item["ground_truth"]),
-            "math_verify_score": math_verify_score(extracted, item["ground_truth"]),
-            # MC-aware: 객관식 보기↔값 복수정답(??)
-            "math_verify_mc_score": mc_aware_math_score(extracted, item["ground_truth"], item.get("instruction", "")),
+            "em_score": em,
+            "token_f1_score": token_f1,
+            "numerical_match_score": numerical,
+            "math_verify_score": math_verify,
+            "multiple_choice_score": multiple_choice,
+            "combined_score": combined,
         }
 
     else:
         scores = {"pass_score": score_one(item, prediction)}
     return scores
+
+
+def _safe_filename_component(value: str) -> str:
+    value = str(value or "").strip().rstrip("/")
+    if "/" in value:
+        value = value.rsplit("/", 1)[-1]
+    value = re.sub(r"[^A-Za-z0-9._-]+", "_", value)
+    value = value.strip("._-")
+    return value or "unknown"
+
+
+def _job_id_for_output() -> str:
+    return (
+        os.environ.get("SLURM_JOB_ID")
+        or os.environ.get("JOB_ID")
+        or f"local{os.getpid()}"
+    )
+
+
+def build_output_path(output_dir: str, dataset_name: str, model_name: str, lora_path: str | None = None) -> str:
+    model_component = _safe_filename_component(lora_path or model_name)
+    dataset_component = _safe_filename_component(dataset_name)
+    job_id = _safe_filename_component(_job_id_for_output())
+    filename = f"{dataset_component}_{model_component}_{job_id}.jsonl"
+    return os.path.join(output_dir, filename)
 
 
 
@@ -150,7 +186,7 @@ def main():
     set_all_seeds(seed=extra_args.seed)
     
     # wandb
-    wandb.init(project=extra_args.wandb_project, name=extra_args.wandb_run_name)
+    wandb_run = wandb.init(project=extra_args.wandb_project, name=extra_args.wandb_run_name)
     
     
     
@@ -178,6 +214,7 @@ def main():
     logger.info(f"  max_tokens : {extra_args.max_new_tokens}")
     logger.info(f"  temperature: {extra_args.temperature if extra_args.inference_mode != 'api' else 'N/A (api)'}")
     logger.info(f"  출력 디렉토리: {extra_args.output_dir}")
+    logger.info(f"  job id     : {_job_id_for_output()}")
     logger.info("=" * 60)
     logger.info(f"모델 로딩: {model_args.model_name_or_path} (mode={extra_args.inference_mode})")
     llm = LLMService(
@@ -190,7 +227,13 @@ def main():
     
     # 출력 파일 경로 설정
     os.makedirs(extra_args.output_dir, exist_ok=True)
-    out_path = os.path.join(extra_args.output_dir, f"{data_args.test_dataset}_results.jsonl")
+    out_path = build_output_path(
+        extra_args.output_dir,
+        data_args.test_dataset,
+        model_args.model_name_or_path,
+        model_args.finetuned_lora_path,
+    )
+    logger.info(f"결과 파일: {out_path}")
 
     # 이미 처리된 ID 로드 (재시작 시 이어서 진행)
     done_ids: set = set()
@@ -255,12 +298,27 @@ def main():
     def _avg(rows: list, key: str) -> float:
         return sum(r[key] for r in rows) / len(rows)
 
+    def _wandb_key(name: str) -> str:
+        return str(name).strip().lower().replace(" ", "_")
+
+    def _metric_table(run_name: str, num_examples: int, scores: dict) -> wandb.Table:
+        return wandb.Table(
+            data=[[run_name, num_examples, *[scores[k] for k in score_keys]]],
+            columns=["run", "num_examples", *score_keys],
+        )
+
     score_keys = [k for k in results[0] if k.endswith("_score")]
         
 
     # 전체 평균
     overall = {k: _avg(results, k) for k in score_keys}
-    log_dict = {"num_examples": len(results), **{f"overall/{k}": v for k, v in overall.items()}}
+    summary_dict = {
+        "overall/num_examples": len(results),
+        **{f"overall/{k}": v for k, v in overall.items()},
+    }
+    table_dict = {
+        "overall/metrics_table": _metric_table(extra_args.wandb_run_name, len(results), overall),
+    }
     logger.info(f"[전체] {len(results)}개  " + "  ".join(f"{k}={v:.4f}" for k, v in overall.items()))
 
     # 카테고리별 평균
@@ -277,10 +335,14 @@ def main():
         for cat in sorted(cat_groups):
             rows = cat_groups[cat]
             cat_avg = {k: _avg(rows, k) for k in score_keys}
-            log_dict.update({f"{cat}/{k}": v for k, v in cat_avg.items()})
+            cat_key = _wandb_key(cat)
+            summary_dict[f"{cat_key}/num_examples"] = len(rows)
+            summary_dict.update({f"{cat_key}/{k}": v for k, v in cat_avg.items()})
+            table_dict[f"{cat_key}/metrics_table"] = _metric_table(extra_args.wandb_run_name, len(rows), cat_avg)
             logger.info(f"  [{cat}] {len(rows)}개  " + "  ".join(f"{k}={v:.4f}" for k, v in cat_avg.items()))
 
-    wandb.log(log_dict)
+    wandb_run.summary.update(summary_dict)
+    wandb.log(table_dict)
     logger.info(f"결과 저장: {out_path}")
 
 
