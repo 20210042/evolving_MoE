@@ -108,22 +108,12 @@ def build_hf_dataset(
             if is_math
             else [{"role": "user", "content": item["instruction"]}]
         )
-        prompt_text = tokenizer.apply_chat_template(
-            prompt_messages,
-            add_generation_prompt=True,
-            tokenize=False,
-        )
-        completion_text = str(item.get("solution", item["ground_truth"]))
-        if tokenizer.eos_token and not completion_text.endswith(tokenizer.eos_token):
-            completion_text += tokenizer.eos_token
-
-        rows.append(
-            {
-                "prompt": prompt_text,
-                # 문자열 prompt+completion으로 두면 TRL의 completion mask prefix 가정이 깨지지 않는다.
-                "completion": completion_text,
-            }
-        )
+        
+        # solution이 있으면 solution, 없으면 ground_truth 사용
+        completion_text = str(item.get("solution", item["ground_truth"])) 
+        completion_messages = [{"role": "assistant", "content": completion_text}]
+        
+        rows.append({"prompt": prompt_messages, "completion": completion_messages,})
 
     return Dataset.from_list(rows)
 
