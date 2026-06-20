@@ -36,8 +36,11 @@ def main() -> None:
         "--pipeline",
         type=str,
         default="evolved",
-        choices=["evolved", "raw", "self-refine"],
-        help="evolved=GMRoutingPipeline (roster required), raw=1-pass, self-refine=2-turn",
+        choices=["evolved", "raw", "self-refine", "binning"],
+        help=(
+            "evolved=GMRoutingPipeline (roster required), raw=1-pass, "
+            "self-refine=2-turn, binning=all roster experts solve every problem (no routing)"
+        ),
     )
     parser.add_argument(
         "--roster_path",
@@ -63,8 +66,8 @@ def main() -> None:
     parser.add_argument("--max_items", type=int, default=None, help="Cap eval set size (for fast epoch evals)")
     args = parser.parse_args()
 
-    if args.pipeline == "evolved" and args.roster_path is None:
-        parser.error("--roster_path is required when --pipeline=evolved")
+    if args.pipeline in ("evolved", "binning") and args.roster_path is None:
+        parser.error(f"--roster_path is required when --pipeline={args.pipeline}")
 
     base_cfg_path = ROOT / "configs" / "base.yaml"
     cfg = {}
@@ -153,6 +156,19 @@ def main() -> None:
         from pipelines.baselines import SelfRefinePipeline
         pipeline = SelfRefinePipeline(agent, domain=domain, max_refine_iters=max_refine_iters)
         logging.info("Pipeline: Self-Refine (%d iters, no persona)", max_refine_iters)
+    elif args.pipeline == "binning":
+        from pipelines.binning_inference import BinningPipeline
+        pipeline = BinningPipeline(
+            agent,
+            roster_path=args.roster_path,
+            domain=domain,
+            gen_enable_thinking=bool(cfg.get("enable_thinking", True)),
+        )
+        logging.info(
+            "Pipeline: Binning (all roster experts, no routing; roster=%s, infer_batch_size=%d)",
+            args.roster_path,
+            infer_batch_size,
+        )
     else:
         pipeline = GMRoutingPipeline(
             agent,

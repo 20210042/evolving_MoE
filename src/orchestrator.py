@@ -7,6 +7,7 @@ import logging
 import os
 import random
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from action_selector import ActionDecision, ActionGateConfig, select_action
@@ -20,6 +21,11 @@ from utils.helpers import extract_code_block
 from war import compute_war_scores, pick_worst_agent
 
 _SCORE_WORKERS = min(4, os.cpu_count() or 1)
+# Wall-clock guard for parallel scoring. A single pathological math_verify comparison
+# can hang a worker past the library's own timeout; without this the run freezes
+# forever (as_completed waits on the dead future). Budget per pair + a floor.
+_SCORE_PER_PAIR_TIMEOUT = float(os.environ.get("SCORE_PER_PAIR_TIMEOUT", "5.0"))
+_SCORE_MIN_TIMEOUT = float(os.environ.get("SCORE_MIN_TIMEOUT", "180.0"))
 
 
 def _score_pair(
@@ -60,6 +66,7 @@ class GMEvolutionOrchestrator:
         use_exclusive_solves: bool = False,
         use_approach_persona: bool = False,
         shared_contribution_exemption: bool = True,
+        failure_mode_scout: bool = False,
     ):
         self.agent = agent
         self.roster_path = roster_path
@@ -73,6 +80,10 @@ class GMEvolutionOrchestrator:
         # become eviction-eligible. Data: shared exemption alone froze eviction to 0
         # candidates across seed05–12; turning it off restores the seed04 regime.
         self.shared_contribution_exemption = shared_contribution_exemption
+        # failure-mode scout: attach one random failed attempt to each hard error so
+        # the scout types the recurring mistake instead of the topic (seed17+).
+        self.failure_mode_scout = failure_mode_scout
+        self._fm_rng = random.Random(seed)
         self.max_lives = max_lives
         for p in self.roster:
             p.setdefault("total_war", 0)
@@ -142,11 +153,31 @@ class GMEvolutionOrchestrator:
                 results[(pid, cid)] = sc
             return results
 
-        with ProcessPoolExecutor(max_workers=workers) as pool:
-            futures = {pool.submit(_score_pair, a): (a[0]["id"], a[5]) for a in score_args}
-            for fut in as_completed(futures):
+        # Hard wall-clock cap: if a worker hangs (e.g. math_verify comparison stuck in
+        # sympy past its own timeout), kill it and default the unfinished pairs to 0.0
+        # (== the math_verify timeout outcome) instead of freezing the whole run.
+        timeout_s = max(_SCORE_MIN_TIMEOUT, _SCORE_PER_PAIR_TIMEOUT * len(score_args) / workers)
+        pool = ProcessPoolExecutor(max_workers=workers)
+        futures = {pool.submit(_score_pair, a): (a[0]["id"], a[5]) for a in score_args}
+        try:
+            for fut in as_completed(futures, timeout=timeout_s):
                 pid, cid, sc = fut.result()
                 results[(pid, cid)] = sc
+        except FuturesTimeoutError:
+            unfinished = [futures[f] for f in futures if not f.done()]
+            logging.error(
+                "Scoring wall-clock timeout (%.0fs): %d/%d pairs unfinished -> scored 0.0 "
+                "(likely hung math_verify comparison)",
+                timeout_s, len(unfinished), len(futures),
+            )
+        finally:
+            # never block on a hung worker: force-kill live processes, don't wait.
+            for proc in list(getattr(pool, "_processes", {}).values()):
+                if proc.is_alive():
+                    proc.kill()
+            pool.shutdown(wait=False, cancel_futures=True)
+        for pair in futures.values():
+            results.setdefault(pair, 0.0)
         return results
 
     def run_batch(
@@ -213,6 +244,17 @@ class GMEvolutionOrchestrator:
             if not any_solved:
                 clean_desc = item.get("prompt_text") or instruction
                 if item.get("domain") == "math":
+                    if self.failure_mode_scout:
+                        attempts = [
+                            codes[(problem_id, p["id"])]
+                            for p in self.roster
+                            if (problem_id, p["id"]) in codes
+                        ]
+                        if attempts:
+                            clean_desc = (
+                                f"{clean_desc}\n--- A failed attempt ---\n"
+                                f"{self._fm_rng.choice(attempts)}"
+                            )
                     hard_errors_texts[problem_id] = clean_desc
                 else:
                     tests_str = "\n".join(item.get("test_list", []))
@@ -366,6 +408,7 @@ class GMEvolutionOrchestrator:
             exclusive_solves_map=exclusive_solves_map,
             use_approach_persona=self.use_approach_persona,
             domain=(batch_data[0].get("domain") if batch_data else None),
+            failure_mode=self.failure_mode_scout,
         )
         if not new_persona or "system_prompt" not in new_persona:
             logging.warning("Failed to scout new persona. Skipping.")

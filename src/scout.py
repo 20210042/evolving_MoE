@@ -53,13 +53,23 @@ def scout_new_persona(
     exclusive_solves_map: Optional[Dict[str, List[str]]] = None,
     use_approach_persona: bool = False,
     domain: Optional[str] = None,
+    failure_mode: bool = False,
 ) -> Dict[str, Any]:
     roster_str = _format_roster_table(roster)
 
     ds = (dataset_name or "").lower()
     is_math = (domain == "math") if domain is not None else ds in ("bigmath", "math", "numina_cot")
+    # failure mode includes a full failed attempt per hard error → larger cap so
+    # solutions aren't sliced; plain modes keep the original 4k char budget.
+    cap = 40000 if failure_mode else 4000
     if is_math:
-        if exclusive_solves_map is not None and use_approach_persona:
+        if failure_mode:
+            from prompts.meta import META_AGENT_MATH_PROMPT_FAILURE
+            prompt = META_AGENT_MATH_PROMPT_FAILURE.substitute(
+                hard_errors=hard_errors_text[:cap],
+                current_roster=roster_str,
+            )
+        elif exclusive_solves_map is not None and use_approach_persona:
             from prompts.meta import META_AGENT_MATH_PROMPT_V3
             prompt = META_AGENT_MATH_PROMPT_V3.substitute(
                 hard_errors=hard_errors_text[:4000],

@@ -179,6 +179,7 @@ def main() -> None:
         use_exclusive_solves=bool(cfg.get("use_exclusive_solves", False)),
         use_approach_persona=bool(cfg.get("use_approach_persona", False)),
         shared_contribution_exemption=bool(cfg.get("shared_contribution_exemption", True)),
+        failure_mode_scout=bool(cfg.get("failure_mode_scout", False)),
     )
 
     step_count = 0

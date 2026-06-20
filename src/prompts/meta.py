@@ -96,6 +96,36 @@ Output in JSON. Keep system_prompt under 3 sentences:
 """
 )
 
+# Seed 20210017+: failure-mode scout. hard_errors include one failed attempt per
+# problem; scout types the recurring *mistake* (not the topic) and mints an expert
+# that avoids it. Lean: same rules as V1, strengths dropped.
+META_AGENT_MATH_PROMPT_FAILURE = Template(
+    """You are the Head Scouter for an AI Mathematics Team.
+
+The whole roster failed these problems. Each is shown with one failed attempt:
+
+=== HARD ERRORS (problem + a failed attempt) ===
+$hard_errors
+
+=== CURRENT ROSTER ===
+$current_roster
+
+--- YOUR TASK ---
+What recurring mistake do these attempts share? Define one expert that avoids it.
+
+Rules:
+1. NON-REDUNDANCY (CRITICAL): Must be genuinely different from every current roster member.
+2. ATOMICITY (CRITICAL): One expert, one focused identity — not a combination of multiple.
+3. persona_name must NOT contain the word 'and'.
+
+Output in JSON. Keep system_prompt under 3 sentences:
+{
+    "persona_name": "...",
+    "system_prompt": "..."
+}
+"""
+)
+
 # Seed 20210009+: full minimal-intervention version.
 # NON-REDUNDANCY and ATOMICITY rules removed — replaced by per-agent exclusive solve history.
 # Scout sees what each agent actually solves alone; no text-level constraints.
