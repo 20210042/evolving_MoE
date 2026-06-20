@@ -132,6 +132,7 @@ def main():
     # WandB
     sft_config.report_to = ["wandb"]
     os.environ.setdefault("WANDB_PROJECT", extra_args.wandb_project)
+    os.environ.setdefault("WANDB_ENTITY", "jongbin-kr-skiml_moe")
     if sft_config.run_name:
         os.environ.setdefault("WANDB_RUN_NAME", sft_config.run_name)
     
@@ -197,14 +198,23 @@ def main():
     )
 
     if model_args.finetuned_lora_path:
-        logger.info(f"파인튜닝된 LoRA 병합: {model_args.finetuned_lora_path}")
-        model = PeftModel.from_pretrained(model, model_args.finetuned_lora_path)
-        model = model.merge_and_unload()
-        logger.info("LoRA 병합 완료.")
+        if extra_args.train_sft_with_lora:
+            logger.info(f"기존 LoRA 이어 학습: {model_args.finetuned_lora_path}")
+            model = PeftModel.from_pretrained(
+                model,
+                model_args.finetuned_lora_path,
+                is_trainable=True,
+            )
+            logger.info("기존 LoRA를 trainable adapter로 로드 완료.")
+        else:
+            logger.info(f"파인튜닝된 LoRA 병합: {model_args.finetuned_lora_path}")
+            model = PeftModel.from_pretrained(model, model_args.finetuned_lora_path)
+            model = model.merge_and_unload()
+            logger.info("LoRA 병합 완료.")
     
     # SFT LoRA 설정
     sft_peft_config = None
-    if extra_args.train_sft_with_lora:
+    if extra_args.train_sft_with_lora and not model_args.finetuned_lora_path:
         sft_peft_config = LoraConfig(
             r=extra_args.sft_lora_rank,
             lora_alpha=extra_args.sft_lora_alpha,
@@ -231,7 +241,11 @@ def main():
     logger.info("=" * 60)
     logger.info("SFT 학습 시작")
     logger.info(f"  모델: {model_args.model_name_or_path}")
-    logger.info(f"  LoRA: {extra_args.train_sft_with_lora}, rank={extra_args.sft_lora_rank}, alpha={extra_args.sft_lora_alpha}")
+    logger.info(
+        f"  LoRA: {extra_args.train_sft_with_lora}, "
+        f"finetuned_path={model_args.finetuned_lora_path or '없음'}, "
+        f"rank={extra_args.sft_lora_rank}, alpha={extra_args.sft_lora_alpha}"
+    )
     logger.info(f"  학습 데이터셋: {data_args.train_dataset}, 비율: {data_args.data_ratio}, 예제 수: {len(train_dataset)}")
     logger.info(f"  에폭: {sft_config.num_train_epochs}, LR: {sft_config.learning_rate}")
     logger.info(f"  배치: {sft_config.per_device_train_batch_size}, GA: {sft_config.gradient_accumulation_steps}")
