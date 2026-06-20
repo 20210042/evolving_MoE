@@ -16,7 +16,8 @@ failure_mode_scout: true               # ← seed17 핵심: 실패유형 scout
 # (use_exclusive_solves 없음 → scout는 failure-mode 분기 사용)
 
 llm:
-  max_model_len: 16384
+  max_model_len: 32768   # failure-mode scout는 하드에러+오답을 한 프롬프트에 모아 길어짐.
+                         # 모델 native=262144 지원. 16384이면 scout 호출이 컨텍스트 초과로 죽음(검증됨).
   max_tokens: 8192
 
 vllm:
