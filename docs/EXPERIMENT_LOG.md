@@ -567,3 +567,21 @@ seed16 최종 5명 로스터가 numina_cot **train 전체(62,185)를 각자 독�
 - **seed16 대비 바뀐 변수 딱 2개**: ①실패유형 scout ②batch 100→25(실패 클러스터 응집; 토큰 실측상 오답 1개 붙이면 batch100=16.9k tok 초과, 25만 여유). 동일 init 로스터(`configs/roster_init.json`) → 깨끗한 A/B.
 - config [configs/numina_train_seed17.yaml](../configs/numina_train_seed17.yaml), 제출 [scripts/sbatch/submit_numina_seed20210017.sh](../scripts/sbatch/submit_numina_seed20210017.sh)(main + `afternotok` resume 의존성 = 타임아웃 시에만 이어감).
 - **검증 가설**: 분해 축을 topic→failure로 바꾸면 단독유일(현 2.6%)/상보성이 늘어나는가. seed16과 A/B.
+
+### 12-4. seed16 vs seed17 비교 매트릭스 (A4B, held-out test 500, 동일 LUCA 시작)
+
+진화 완료(잡 185974 TIMEOUT→185975 resume, ~52h, step 2488). seed17 최종 로스터 5명 = **전부 실패유형 페르소나**(ProceduralExecutionVerifier·TypographicalErrorDetective·BoundaryConditionSpecialist·ConstraintIntegrityValidator·ContextualIntentRecoverer) ↔ seed16 = 주제(Combinatorial Probability·Integral Calculus·Polynomial·Number Theory·Analytic Proof). eval 잡 UB 188988 / routed 188989.
+
+| 지표 | LUCA | seed16 (주제) | seed17 (실패유형) | Δ(17−16) |
+|---|---|---|---|---|
+| routed pass@1 (최종 로스터) | 78.0 | **78.2** | 76.8 | −1.4 |
+| best single (solo) | — | 77.4 | 77.4 | 0 |
+| **UB union** | — | 81.0 | **82.2** | **+1.2** |
+| 상보성 (UB − best single) | — | +3.6 | **+4.8** | +1.2 |
+| 단독유일 (n_solved=1) | — | 1.4% | **2.2%** | +0.8 |
+| 전원교집합 (n_solved=5) | — | 70.8% | 70.6% | −0.2 |
+| 0명 = 하드천장 | — | 19% | **17.8%** | −1.2 |
+| 최종 로스터 수 | 1 | 5 (주제) | 5 (실패유형) | — |
+| 로스터 수 추이 | — | 3↔9 진동 | 1~8 진동(평균4.1) | 약간 작고 타이트 |
+
+**판정**: 실패유형 분해가 **UB·상보성·단독유일·하드천장 4지표 모두 더 우수**(덜 중복·더 상보적, 아무도 못 풀던 문제도 일부 깨짐) → "topic→failure로 분해 품질↑" 가설 **방향성 확인**. 단 **routed pass@1은 오히려 ↓(76.8 < LUCA 78.0)** — 선택(route-to-one) 패러다임이 UB 헤드룸을 못 거둠. **효과는 작고(+1.2pp UB) n=1**이라 노이즈 가능성 있으나 4부지표가 일관된 방향. **결론: 더 나은 분해를 만들지만 정확도(routed)로는 안 이어진다 — 가치는 UB 헤드룸, 추출(ensemble/verify 또는 weight-학습)이 숙제.**

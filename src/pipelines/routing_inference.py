@@ -58,7 +58,12 @@ class GMRoutingPipeline(BasePipeline):
                 base["identity"] = p.get("system_prompt", "")
                 base["approach"] = p.get("approach", "")
             else:
-                base["strengths"] = p.get("strengths", "Specialized coding expert")
+                # strengths 있으면 그대로(주제형 byte-identical). failure-mode 페르소나는
+                # strengths가 없어 generic 기본값으로 떨어지면 라우터가 이름만 보고 눈 가림 →
+                # system_prompt(실패유형 설명)로 fallback해 매칭 단서를 준다. (키는 유지)
+                base["strengths"] = (
+                    p.get("strengths") or p.get("system_prompt") or "Specialized coding expert"
+                )
             return base
 
         return json.dumps([summary(p) for p in self.roster], indent=2)
