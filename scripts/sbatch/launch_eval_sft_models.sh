@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Launch one SLURM job per model/LoRA so evaluations can run in parallel.
 # Usage:
-#   bash scripts/sbatch/eval_sft_models.sh
+#   bash scripts/sbatch/launch_eval_sft_models.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "${SCRIPT_DIR}/../.." && pwd)"
@@ -17,19 +17,17 @@ MAX_MODEL_LEN="${MAX_MODEL_LEN:-32768}"
 MAX_NEW_TOKENS="${MAX_NEW_TOKENS:-16384}"
 TEMPERATURE="${TEMPERATURE:-0.0}"
 WANDB_PROJECT="${WANDB_PROJECT:-eval_numina_cot}"
+WANDB_ENTITY="${WANDB_ENTITY:-jongbin-kr-skiml_moe}"
 SEED="${SEED:-42}"
-OUTPUT_DIR="${OUTPUT_DIR:-results}"
+OUTPUT_DIR="${OUTPUT_DIR:-results/llama3_numina_cot_more}"
 ENABLE_THINKING="${ENABLE_THINKING:-false}"
 
-# Empty string means vanilla base model.
 LORA_PATHS=(
-    ""
-    "Jongbin-kr/llama3_NuminaCoT_all"
-    "Jongbin-kr/llama3_NuminaCoT_calculus"
-    "Jongbin-kr/llama3_NuminaCoT_combinatorics"
-    "Jongbin-kr/llama3_NuminaCoT_number_theory"
-    "Jongbin-kr/llama3_NuminaCoT_geometry"
-    "Jongbin-kr/llama3_NuminaCoT_algebra"
+    "Jongbin-kr/llama3_NuminaCoT_more_calculus"
+    "Jongbin-kr/llama3_NuminaCoT_more_combinatorics"
+    "Jongbin-kr/llama3_NuminaCoT_more_number_theory"
+    "Jongbin-kr/llama3_NuminaCoT_more_geometry"
+    "Jongbin-kr/llama3_NuminaCoT_more_algebra"
 )
 
 if [ ! -f "${WORKER}" ]; then
@@ -50,6 +48,6 @@ for LORA_PATH in "${LORA_PATHS[@]}"; do
     echo "Submitting ${JOB_NAME}"
     sbatch \
         --job-name="${JOB_NAME}" \
-        --export=ALL,REPO="${REPO}",MODEL_NAME="${MODEL_NAME}",LORA_PATH="${LORA_EXPORT}",RUN_NAME="${RUN_NAME}",TEST_DATASET="${TEST_DATASET}",DATA_RATIO="${DATA_RATIO}",INFERENCE_MODE="${INFERENCE_MODE}",MAX_MODEL_LEN="${MAX_MODEL_LEN}",MAX_NEW_TOKENS="${MAX_NEW_TOKENS}",TEMPERATURE="${TEMPERATURE}",OUTPUT_DIR="${OUTPUT_DIR}",WANDB_PROJECT="${WANDB_PROJECT}",SEED="${SEED}",ENABLE_THINKING="${ENABLE_THINKING}" \
+        --export=ALL,REPO="${REPO}",MODEL_NAME="${MODEL_NAME}",LORA_PATH="${LORA_EXPORT}",RUN_NAME="${RUN_NAME}",TEST_DATASET="${TEST_DATASET}",DATA_RATIO="${DATA_RATIO}",INFERENCE_MODE="${INFERENCE_MODE}",MAX_MODEL_LEN="${MAX_MODEL_LEN}",MAX_NEW_TOKENS="${MAX_NEW_TOKENS}",TEMPERATURE="${TEMPERATURE}",OUTPUT_DIR="${OUTPUT_DIR}",WANDB_PROJECT="${WANDB_PROJECT}",WANDB_ENTITY="${WANDB_ENTITY}",SEED="${SEED}",ENABLE_THINKING="${ENABLE_THINKING}" \
         "${WORKER}"
 done
