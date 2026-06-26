@@ -207,37 +207,169 @@ def math_verify_score(prediction: str, reference: str) -> float:
 
 
 # --- 객관식(MC) 고려 채점 -------------------------------------------------------
-# NuminaMath 객관식은 gold가 보기 문자("B")와 값("a+b = 3")으로 섞여 있어, 모델이
-# 한 포맷으로 박싱하면 절반은 실력과 무관하게 FAIL한다. mc_aware_math_score()는
-# math_verify_score 위에 얹어서 객관식이면 모델 boxed 부분이 정답 보기의 문자 또는
-# 값과 맞아도 정답 인정. 객관식 아니면 math_verify_score와 동일.
-_MC_OPT_RE = re.compile(r"(?:^|\n|\s)\(?([A-D])[\):.]\s*(.+?)(?=(?:\n|\s)\(?[A-D][\):.]|\Z)", re.S)
+# NuminaMath 객관식은 gold가 보기 문자("B", "\textbf{(C)}")와 실제 값("a+b = 3",
+# "\pi")으로 섞여 있다. 모델도 보기 문자만 쓰거나, 값만 쓰거나, "C: value"처럼
+# 둘을 같이 쓰기 때문에 한 포맷만 비교하면 맞는 답을 놓치기 쉽다.
+#
+# mc_score()의 원칙:
+# 1. 문제 본문에서 A-E 선택지와 각 선택지 값을 파싱한다.
+# 2. gold가 보기 문자/문자+값이면 정답 문자를 바로 얻고, gold가 값만 있으면
+#    선택지 값들과 비교해서 정답 문자를 추론한다.
+# 3. prediction이 "C"처럼 문자만 있으면 정답 문자와 같을 때 인정한다.
+# 4. prediction이 "C: value"처럼 문자와 값을 같이 갖고 있으면, 문자가 맞아야 하며
+#    value도 정답 선택지 값 또는 gold value와 모순되지 않아야 인정한다. 이 조건은
+#    "C"는 맞지만 뒤에 붙인 값이 틀린 false positive를 막기 위한 AND 조건이다.
+# 5. prediction이 값만 있으면 정답 선택지 값 또는 gold와 동치일 때 인정한다.
+#
+# 값 비교는 빠른 exact/텍스트 정규화 비교를 먼저 하고, 마지막에 math_verify_score()를
+# 사용한다. 이렇게 해서 LaTeX spacing, \textbf{(C)}, \boxed{}, π/\pi 같은 포맷 차이는
+# 넓게 허용하되, 명백히 다른 선택지나 다른 값은 보수적으로 오답 처리한다.
+
+
+
+
+# 선택지 marker만 잡기 위한 정규식 조각.
+# 일반 문장의 "A ..."를 보기로 오인하지 않도록 "A:", "A)", "(A)",
+# "\textbf{(A)}"처럼 명확한 marker만 허용한다.
+_MC_MARKER_RE = (
+    r"(?:"
+    r"\\(?:textbf|mathbf|mathrm|text)\{\s*\(?([A-E])\)?\s*\}"
+    r"|\(([A-E])\)"
+    r"|([A-E])[\):.]"
+    r")"
+)
+
+# instruction 전체에서 객관식 선택지와 값을 순서대로 추출한다.
+# 예: "A: $1$ B: $2$" 또는 "\textbf{(A)}\ 1\qquad\textbf{(B)}\ 2".
+# 마지막 캡처 그룹이 해당 선택지의 value이고, 다음 marker 전까지 non-greedy로 잡는다.
+_MC_OPT_RE = re.compile(
+    r"(?:^|\n|\s|\\qquad|\\quad)"
+    r"(?:\$?\s*)?"
+    + _MC_MARKER_RE
+    + r"(?:\$?\s*)?"
+    + r"\\?\s*"
+    + r"(.+?)"
+    + r"(?="
+    + r"(?:\n|\s|\\qquad|\\quad)"
+    + r"(?:\$?\s*)?"
+    + _MC_MARKER_RE
+    + r"(?:\$?\s*)?"
+    + r"\\?\s*"
+    + r"|\Z)",
+    re.S,
+)
 
 
 def _parse_mc_options(instruction: str) -> dict:
+    """문제 본문에서 객관식 선택지를 {letter: value} 형태로 파싱한다."""
     opts: dict = {}
     for m in _MC_OPT_RE.finditer(instruction or ""):
-        opts.setdefault(m.group(1), m.group(2).strip()[:80])
+        letter = next(g for g in m.groups()[:3] if g)
+        value = m.group(4).strip()
+        value = re.sub(r"^\\+\s*", "", value).strip()
+        value = value.strip("$").strip()
+        opts.setdefault(letter, value)
     return opts
 
 
 def _mc_correct_letter(gold: str, opts: dict):
+    """gold answer가 가리키는 정답 보기 문자를 찾는다.
+
+    gold가 "C" 또는 "C: value"면 C를 바로 반환한다. gold가 value-only이면
+    각 선택지 value와 비교해서 어떤 보기가 gold와 동치인지 찾는다.
+    """
     g = (gold or "").strip()
-    for pat in (r"^\(?([A-D])[\):.\s]", r"^\\?text\{?\s*\(?([A-D])", r"^([A-D])$"):
-        m = re.match(pat, g)
-        if m:
-            return m.group(1)
+    letter, _ = _split_mc_letter_value(g)
+    if letter:
+        return letter
     for L, v in opts.items():  # gold가 값 → 값이 일치하는 보기 찾기
         try:
-            if math_verify_score(v, gold):
+            if _answers_equivalent(v, gold):
                 return L
         except Exception:
             pass
     return None
 
 
+def _strip_mc_wrapper(text: str) -> str:
+    """비교 전에 바깥쪽 $...$ 또는 \boxed{...} wrapper를 제거한다."""
+    s = str(text or "").strip()
+    s = re.sub(r"^\$+|\$+$", "", s).strip()
+
+    boxed = re.fullmatch(r"\\boxed\{(.+)\}", s)
+    if boxed:
+        s = boxed.group(1).strip()
+    return s
+
+
+def _split_mc_letter_value(text: str) -> tuple[str | None, str]:
+    """답변을 (보기 문자, 나머지 값)으로 분리한다.
+
+    "C", "(C)", "C: 3", "\\textbf{(C)}\\ 3" 등을 처리한다.
+    보기 문자가 없으면 (None, 원문)을 반환해서 value-only 답으로 취급한다.
+    """
+    s = _strip_mc_wrapper(text)
+    marker = re.match(
+        r"^\s*"
+        r"(?:\\(?:textbf|mathbf|mathrm|text|operatorname)\{\s*)?"
+        r"\(?([A-E])\)?"
+        r"(?:\s*\})?"
+        r"\s*(?:[:.)])?\s*"
+        r"(.*)$",
+        s,
+        re.S,
+    )
+    if not marker:
+        return None, s
+
+    tail = marker.group(2).strip()
+    tail = re.sub(r"^\\+\s*", "", tail).strip()
+    return marker.group(1), tail
+
+
+def _normalize_for_text_compare(text: str) -> str:
+    """LaTeX/공백 표기 차이를 줄인 가벼운 문자열 비교용 정규화.
+
+    math_verify를 호출하기 전에 빠르게 동치 판정을 하기 위한 보조 비교다.
+    수학적 simplify는 하지 않고, \\textbf{}, \\left/\\right, \\quad, π/\\pi 등
+    흔한 포맷 차이만 제거한다.
+    """
+    s = _strip_mc_wrapper(text)
+    s = re.sub(r"\\(?:textbf|mathbf|mathrm|text|operatorname)\{([^{}]*)\}", r"\1", s)
+    s = re.sub(r"\\(?:left|right)", "", s)
+    s = re.sub(r"\\(?:quad|qquad|[,;:!])", " ", s)
+    s = s.replace("\\ ", " ")
+    s = s.replace("π", "pi").replace("\\pi", "pi")
+    s = s.replace("{", "").replace("}", "")
+    s = re.sub(r"\s+", "", s.lower())
+    return s.strip()
+
+
+def _answers_equivalent(prediction: str, reference: str) -> bool:
+    """두 답변 문자열이 같은 답으로 볼 수 있는지 단계적으로 비교한다.
+
+    1) 기존 exact_match_score, 2) MC 전용 텍스트 정규화 비교, 3) math_verify
+    순서로 시도한다. math_verify는 느리거나 timeout이 날 수 있어 마지막에 둔다.
+    """
+    if not str(prediction or "").strip() or not str(reference or "").strip():
+        return False
+    if exact_match_score(prediction, reference):
+        return True
+    if _normalize_for_text_compare(prediction) == _normalize_for_text_compare(reference):
+        return True
+    try:
+        return bool(math_verify_score(prediction, reference))
+    except Exception:
+        return False
+
+
 def mc_score(prediction: str, reference: str, instruction: str = "") -> float:
-    """math_verify_score + 객관식 보기↔값 동치 인정 (추가 전용)."""
+    """객관식 보기 문자와 보기 값을 함께 고려해서 정답 여부를 판단한다.
+
+    답이 ``C``처럼 보기 문자만 있으면 문자 일치로 인정한다. ``C: value``처럼
+    문자와 값이 같이 있으면 문자가 맞고, 값도 정답 보기/정답과 모순되지 않아야
+    인정한다. 답이 값만 있으면 정답 보기 값 또는 gold와 동치일 때 인정한다.
+    """
     
     opts = _parse_mc_options(instruction)
     if len(opts) < 3:  # 객관식 아님 → math_verify_score와 동일
@@ -247,13 +379,19 @@ def mc_score(prediction: str, reference: str, instruction: str = "") -> float:
     if not cl:
         return 0.0
     
-    p = (prediction or "").strip()
-    if re.fullmatch(r"\(?([A-D])\)?", p) and re.sub(r"[^A-D]", "", p) == cl:
-        return 1.0  # 모델이 정답 보기 문자 박싱
-    try:
-        if math_verify_score(p, opts.get(cl, "")):
-            return 1.0  # 모델이 정답 보기 값 박싱
-        
-    except Exception:
-        pass
+    pred_letter, pred_value = _split_mc_letter_value(prediction)
+    gold_value = _split_mc_letter_value(reference)[1]
+    correct_value = opts.get(cl, "")
+
+    if pred_letter:
+        if pred_letter != cl:
+            return 0.0
+        if not pred_value:
+            return 1.0
+        if _answers_equivalent(pred_value, correct_value) or _answers_equivalent(pred_value, gold_value):
+            return 1.0
+        return 0.0
+
+    if _answers_equivalent(prediction, correct_value) or _answers_equivalent(prediction, reference):
+        return 1.0
     return 0.0
