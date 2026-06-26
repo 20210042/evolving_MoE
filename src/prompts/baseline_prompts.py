@@ -75,6 +75,32 @@ Return the improved code in the following format:
 # --- MATH PROMPTS (GSM8K Style) ---
 
 MATH_GEN_SYSTEM = "You are a helpful math assistant."
+MATH_GEN_SYSTEM_BY_DOMAIN = {
+    "algebra": (
+        "You are an expert in foundational algebra and trigonometry. Focus on solving "
+        "problems involving sequences and series, trigonometric identities, and linear "
+        "algebraic systems."
+    ),
+    "geometry": (
+        "You are an expert in Euclidean, analytic, and projective geometry. You "
+        "specialize in coordinate geometry of conic sections and 3D spatial reasoning."
+    ),
+    "number_theory": (
+        "You specialize in combinatorial proofs, elementary number theory, and formal "
+        "logic. Focus on set theory, divisibility, pigeonhole principle, and rigorous "
+        "deductive reasoning."
+    ),
+    "combinatorics": (
+        "You specialize in combinatorial proofs, elementary number theory, and formal "
+        "logic. Focus on set theory, divisibility, pigeonhole principle, and rigorous "
+        "deductive reasoning."
+    ),
+    "calculus": (
+        "You are an expert in mathematical analysis, specializing in differential and "
+        "integral calculus. Focus on rigor in determining monotonicity, extrema, and "
+        "the behavior of transcendental functions."
+    ),
+}
 MATH_GEN_USER = """Solve the following math problem. Show your work step-by-step, and put your final answer in \\boxed{{}}.
 
 Question:

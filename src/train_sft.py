@@ -99,12 +99,17 @@ def build_hf_dataset(
     categories: Optional[str] = None,
 ) -> Dataset:
     items = get_dataset(name, split=split, categories=categories, data_ratio=data_ratio, seed=seed)
-    is_math = name.lower() in {"bigmath", "math", "numina_cot"}
+    dataset_name = name.lower()
+    is_math = dataset_name in {"bigmath", "math", "numina_cot"}
+    use_numina_category_prompt = (dataset_name == "numina_cot")
 
     rows = []
     for item in items:
         prompt_messages = (
-            build_math_prompt(item["instruction"])
+            build_math_prompt(
+                item["instruction"],
+                metadata=item if use_numina_category_prompt else None,
+            )
             if is_math
             else [{"role": "user", "content": item["instruction"]}]
         )

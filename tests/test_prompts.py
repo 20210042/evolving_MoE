@@ -1,6 +1,8 @@
 """Unit tests for prompt family routing (no vLLM)."""
 
 from prompts import coding
+from prompts import baseline_prompts
+from prompts.math import build_generation_prompt, resolve_math_system_prompt
 
 
 def test_get_prompt_family_qwen():
@@ -31,3 +33,25 @@ def test_llama_baseline_messages():
     assert isinstance(msgs, list)
     assert msgs[0]["role"] == "system"
     assert "```python" in msgs[0]["content"]
+
+
+def test_math_prompt_uses_default_system_without_domain_metadata():
+    msgs = build_generation_prompt("x")
+    assert msgs[0]["role"] == "system"
+    assert msgs[0]["content"] == baseline_prompts.MATH_GEN_SYSTEM
+
+
+def test_math_prompt_uses_numina_category_specific_system():
+    msgs = build_generation_prompt("x", metadata={"category": "Geometry"})
+    assert msgs[0]["role"] == "system"
+    assert "Euclidean, analytic, and projective geometry" in msgs[0]["content"]
+
+
+def test_math_prompt_resolves_numina_number_theory_category():
+    system_prompt = resolve_math_system_prompt({"category": "Number Theory"})
+    assert "elementary number theory" in system_prompt
+
+
+def test_math_prompt_resolves_numina_combinatorics_category():
+    system_prompt = resolve_math_system_prompt({"category": "Combinatorics"})
+    assert "combinatorial proofs" in system_prompt
