@@ -32,6 +32,7 @@ OUTPUT_DIR="${OUTPUT_DIR:-results}"
 WANDB_PROJECT="${WANDB_PROJECT:-eval_numina_cot}"
 SEED="${SEED:-42}"
 ENABLE_THINKING="${ENABLE_THINKING:-false}"
+USE_CATEGORY_PROMPT="${USE_CATEGORY_PROMPT:-false}"
 
 LORA_FLAG=()
 if [ "${LORA_PATH}" != "__NONE__" ] && [ -n "${LORA_PATH}" ]; then
@@ -43,10 +44,16 @@ if [ "${ENABLE_THINKING}" = "true" ] || [ "${ENABLE_THINKING}" = "1" ]; then
     THINKING_FLAG=(--enable_thinking)
 fi
 
+CATEGORY_PROMPT_FLAG=()
+if [ "${USE_CATEGORY_PROMPT}" = "true" ] || [ "${USE_CATEGORY_PROMPT}" = "1" ]; then
+    CATEGORY_PROMPT_FLAG=(--use_category_prompt)
+fi
+
 echo "=== 평가 시작: ${RUN_NAME} ==="
 echo "MODEL_NAME=${MODEL_NAME}"
 echo "LORA_PATH=${LORA_PATH}"
 echo "TEST_DATASET=${TEST_DATASET}"
+echo "USE_CATEGORY_PROMPT=${USE_CATEGORY_PROMPT}"
 echo "SLURM_JOB_ID=${SLURM_JOB_ID:-unknown}"
 
 srun --chdir="$REPO" python "$REPO/src/evaluate.py" \
@@ -62,6 +69,7 @@ srun --chdir="$REPO" python "$REPO/src/evaluate.py" \
     --wandb_run_name "${RUN_NAME}" \
     --wandb_project "${WANDB_PROJECT}" \
     "${THINKING_FLAG[@]}" \
+    "${CATEGORY_PROMPT_FLAG[@]}" \
     --seed "${SEED}"
 
 echo "=== 평가 완료: ${RUN_NAME} → ${OUTPUT_DIR} ==="

@@ -29,9 +29,9 @@ fi
 
 CATEGORY_SLUG="${CATEGORY,,}"
 CATEGORY_SLUG="${CATEGORY_SLUG// /_}"
-RUN_NAME="${RUN_NAME:-sft_llama3_numina_cot_${CATEGORY_SLUG}}"
+RUN_NAME="${RUN_NAME:-sft_llama3_numina_cot_persona_${CATEGORY_SLUG}}"
 OUTPUT_DIR="${OUTPUT_DIR:-checkpoints/${RUN_NAME}}"
-HUB_MODEL_ID="${HUB_MODEL_ID:-Jongbin-kr/llama3_NuminaCoT_${CATEGORY_SLUG}}"
+HUB_MODEL_ID="${HUB_MODEL_ID:-Jongbin-kr/llama3_NuminaCoT_persona_${CATEGORY_SLUG}}"
 DEEPSPEED_CONFIG="$REPO/configs/deepspeed_zero3.json"
 NPROC_PER_NODE="${NPROC_PER_NODE:-${SLURM_GPUS_ON_NODE:-2}}"
 GRADIENT_ACCUMULATION_STEPS="${GRADIENT_ACCUMULATION_STEPS:-4}"
@@ -57,7 +57,7 @@ srun --ntasks=1 --gpus-per-task="${NPROC_PER_NODE}" --chdir="$REPO" \
     --sft_lora_dropout 0.05 \
     --output_dir "${OUTPUT_DIR}" \
     --run_name "${RUN_NAME}" \
-    --num_train_epochs 3 \
+    --num_train_epochs 7 \
     --per_device_train_batch_size 2 \
     --per_device_eval_batch_size 2 \
     --gradient_accumulation_steps "${GRADIENT_ACCUMULATION_STEPS}" \
@@ -67,9 +67,9 @@ srun --ntasks=1 --gpus-per-task="${NPROC_PER_NODE}" --chdir="$REPO" \
     --deepspeed "${DEEPSPEED_CONFIG}" \
     --logging_steps 10 \
     --eval_strategy steps \
-    --eval_steps 1000 \
+    --eval_steps 100 \
     --save_strategy steps \
-    --save_steps 1000 \
+    --save_steps 100 \
     --save_total_limit 3 \
     --load_best_model_at_end true \
     --metric_for_best_model eval_loss \

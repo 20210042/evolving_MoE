@@ -6,9 +6,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TRAIN_SCRIPT="${TRAIN_SCRIPT:-${SCRIPT_DIR}/train_sft_by_category.sh}"
 
 CATEGORIES=(
-    "Algebra"
-    "Geometry"
-    "Number Theory"
+    # "Algebra"
+    # "Geometry"
+    # "Number Theory"
     "Combinatorics"
     "Calculus"
 )
