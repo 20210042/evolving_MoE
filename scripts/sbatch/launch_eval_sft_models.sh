@@ -19,15 +19,23 @@ TEMPERATURE="${TEMPERATURE:-0.0}"
 WANDB_PROJECT="${WANDB_PROJECT:-eval_numina_cot}"
 WANDB_ENTITY="${WANDB_ENTITY:-jongbin-kr-skiml_moe}"
 SEED="${SEED:-42}"
-OUTPUT_DIR="${OUTPUT_DIR:-results/llama3_numina_cot_more}"
 ENABLE_THINKING="${ENABLE_THINKING:-false}"
+USE_CATEGORY_PROMPT="${USE_CATEGORY_PROMPT:-false}"
+
+if [ -z "${OUTPUT_DIR:-}" ]; then
+    if [ "${USE_CATEGORY_PROMPT}" = "true" ] || [ "${USE_CATEGORY_PROMPT}" = "1" ]; then
+        OUTPUT_DIR="results/llama3_numina_cot_persona_category_prompt"
+    else
+        OUTPUT_DIR="results/llama3_numina_cot_persona"
+    fi
+fi
 
 LORA_PATHS=(
-    "Jongbin-kr/llama3_NuminaCoT_more_calculus"
-    "Jongbin-kr/llama3_NuminaCoT_more_combinatorics"
-    "Jongbin-kr/llama3_NuminaCoT_more_number_theory"
-    "Jongbin-kr/llama3_NuminaCoT_more_geometry"
-    "Jongbin-kr/llama3_NuminaCoT_more_algebra"
+    "Jongbin-kr/llama3_NuminaCoT_persona_calculus"
+    "Jongbin-kr/llama3_NuminaCoT_persona_combinatorics"
+    "Jongbin-kr/llama3_NuminaCoT_persona_number_theory"
+    "Jongbin-kr/llama3_NuminaCoT_persona_geometry"
+    "Jongbin-kr/llama3_NuminaCoT_persona_algebra"
 )
 
 if [ ! -f "${WORKER}" ]; then
@@ -48,6 +56,6 @@ for LORA_PATH in "${LORA_PATHS[@]}"; do
     echo "Submitting ${JOB_NAME}"
     sbatch \
         --job-name="${JOB_NAME}" \
-        --export=ALL,REPO="${REPO}",MODEL_NAME="${MODEL_NAME}",LORA_PATH="${LORA_EXPORT}",RUN_NAME="${RUN_NAME}",TEST_DATASET="${TEST_DATASET}",DATA_RATIO="${DATA_RATIO}",INFERENCE_MODE="${INFERENCE_MODE}",MAX_MODEL_LEN="${MAX_MODEL_LEN}",MAX_NEW_TOKENS="${MAX_NEW_TOKENS}",TEMPERATURE="${TEMPERATURE}",OUTPUT_DIR="${OUTPUT_DIR}",WANDB_PROJECT="${WANDB_PROJECT}",WANDB_ENTITY="${WANDB_ENTITY}",SEED="${SEED}",ENABLE_THINKING="${ENABLE_THINKING}" \
+        --export=ALL,REPO="${REPO}",MODEL_NAME="${MODEL_NAME}",LORA_PATH="${LORA_EXPORT}",RUN_NAME="${RUN_NAME}",TEST_DATASET="${TEST_DATASET}",DATA_RATIO="${DATA_RATIO}",INFERENCE_MODE="${INFERENCE_MODE}",MAX_MODEL_LEN="${MAX_MODEL_LEN}",MAX_NEW_TOKENS="${MAX_NEW_TOKENS}",TEMPERATURE="${TEMPERATURE}",OUTPUT_DIR="${OUTPUT_DIR}",WANDB_PROJECT="${WANDB_PROJECT}",WANDB_ENTITY="${WANDB_ENTITY}",SEED="${SEED}",ENABLE_THINKING="${ENABLE_THINKING}",USE_CATEGORY_PROMPT="${USE_CATEGORY_PROMPT}" \
         "${WORKER}"
 done

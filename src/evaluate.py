@@ -106,6 +106,10 @@ class ExtraArguments:
         default=False,
         metadata={"help": "reasoning 활성화. vllm/hf: chat template enable_thinking=True, api: reasoning_effort=medium."},
     )
+    use_category_prompt: bool = field(
+        default=False,
+        metadata={"help": "numina_cot 평가 시 category별 math persona system prompt를 사용할지 여부."},
+    )
 
 
 
@@ -251,6 +255,11 @@ def main():
 
     is_math = data_args.test_dataset.lower() in MATH_DATASETS
     is_math_dataset = data_args.test_dataset.lower() in {"math", "bigmath", "numina_cot"}
+    use_numina_category_prompt = (
+        extra_args.use_category_prompt
+        and data_args.test_dataset.lower() == "numina_cot"
+    )
+    logger.info(f"카테고리별 system prompt 사용: {use_numina_category_prompt}")
 
     # 청크 단위로 예측 → 즉시 append
     chunk_size = 1000
@@ -258,7 +267,10 @@ def main():
         for chunk_start in range(0, len(items_todo), chunk_size):
             chunk = items_todo[chunk_start : chunk_start + chunk_size]
             messages_chunk = [
-                build_math_prompt(item["instruction"]) if is_math
+                build_math_prompt(
+                    item["instruction"],
+                    metadata=item if use_numina_category_prompt else None,
+                ) if is_math
                 else [{"role": "user", "content": item["instruction"]}]
                 for item in chunk
             ]
