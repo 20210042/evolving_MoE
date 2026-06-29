@@ -1,0 +1,31 @@
+# Handoff note: Conda environment for the ACC algorithm SFT/evaluation path.
+# It pins the large-model training/inference stack used by `run_algorithm.sh`, including vLLM,
+# Transformers, TRL, PEFT, datasets, WandB, pytest, and math-verify for legacy math compatibility.
+
+name: evolving_moe
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10.20
+  - pip
+  - pip:
+      # inference (Gemma-4 backbone)
+      - vllm==0.21.0
+      - torch==2.11.0
+      - transformers==5.9.0
+      - accelerate==1.10.1
+      # training
+      - peft==0.19.1
+      - trl==0.29.1
+      # data
+      - datasets==4.4.1
+      - pandas==2.3.0
+      - numpy==2.2.6
+      # utils
+      - pyyaml==6.0.3
+      - wandb==0.23.0
+      # dev
+      - pytest==8.4.2
+      # evaluate
+      - math-verify==0.9.0

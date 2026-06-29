@@ -1,0 +1,58 @@
+{
+  "available_expanded_examples_by_critic": {
+    "Constructive Implementation": 11613,
+    "Greedy Strategy": 6075,
+    "Quantitative Reasoning": 8019,
+    "State-Space Reasoning": 6572,
+    "Structured Data": 6999
+  },
+  "balanced_examples_per_critic": 6075,
+  "category_distribution_by_split": {
+    "test": {
+      "Constructive Implementation": 608,
+      "Greedy Strategy": 608,
+      "Quantitative Reasoning": 608,
+      "State-Space Reasoning": 608,
+      "Structured Data": 608
+    },
+    "train": {
+      "Constructive Implementation": 4860,
+      "Greedy Strategy": 4860,
+      "Quantitative Reasoning": 4860,
+      "State-Space Reasoning": 4860,
+      "Structured Data": 4860
+    },
+    "validation": {
+      "Constructive Implementation": 607,
+      "Greedy Strategy": 607,
+      "Quantitative Reasoning": 607,
+      "State-Space Reasoning": 607,
+      "Structured Data": 607
+    }
+  },
+  "critics": [
+    "Constructive Implementation",
+    "Quantitative Reasoning",
+    "State-Space Reasoning",
+    "Structured Data",
+    "Greedy Strategy"
+  ],
+  "dataset_name": "acc_algorithm",
+  "note": "Rows with multiple critic_categories are expanded into one example per critic. Within each critic, train/validation/test problem IDs are disjoint.",
+  "output_dir": "/home/minjikim/minji_link/evolving_MoE/data/acc_algorithm",
+  "seed": 42,
+  "skipped": {
+    "missing_required_fields": 6360
+  },
+  "source_csv": "/home/minjikim/minji_link/code/benchmark/data/labelling/04_execution_ready_final_labels_local.csv",
+  "split_counts_per_critic": {
+    "test": 608,
+    "train": 4860,
+    "validation": 607
+  },
+  "total_rows_by_split": {
+    "test": 3040,
+    "train": 24300,
+    "validation": 3035
+  }
+}

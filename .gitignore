@@ -1,1 +1,8 @@
 __pycache__/
+# Large ACC algorithm artifacts
+evolving_MoE_algorithm/checkpoints/
+evolving_MoE_algorithm/results/
+evolving_MoE_algorithm/logs/
+evolving_MoE_algorithm/data/acc_algorithm/*.jsonl
+evolving_MoE_algorithm/**/__pycache__/
+evolving_MoE_algorithm/**/.pytest_cache/

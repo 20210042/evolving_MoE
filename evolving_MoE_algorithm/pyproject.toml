@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meta-agent-evolution"
+version = "0.1.0"
+description = "Evolving roster (GM) pipeline for multi-persona code agents"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "vllm>=0.11.0",
+    "torch>=2.0.0",
+    "transformers>=4.40.0",
+    "accelerate>=1.0.0",
+    "datasets>=2.14.0",
+    "numpy>=1.26.0",
+    "pandas>=2.0.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
