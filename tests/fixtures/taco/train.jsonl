@@ -1,0 +1,1 @@
+{"id":"taco_sum","question":"Given two integers, return their sum from the solve function.","input_output":{"fn_name":"solve","inputs":[[1,2],[4,5]],"outputs":[3,9]},"solutions":["def solve(a, b):\n    return a + b\n"],"difficulty":"easy","tags":["math","implementation"],"split":"train"}

@@ -1,32 +1,31 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "meta-agent-evolution"
+name = "algorithmic-coding-critic-data"
 version = "0.1.0"
-description = "Evolving roster (GM) pipeline for multi-persona code agents"
-readme = "README.md"
+description = "Data integration pipeline for algorithmic coding critic benchmarks."
 requires-python = ">=3.10"
 dependencies = [
-    "vllm>=0.11.0",
-    "torch>=2.0.0",
-    "transformers>=4.40.0",
-    "accelerate>=1.0.0",
-    "datasets>=2.14.0",
-    "numpy>=1.26.0",
-    "pandas>=2.0.0",
-    "pyyaml>=6.0",
+  "pydantic>=2.0",
+  "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=7.0",
+benchmark-formats = [
+  "datasets",
+  "pyarrow",
+  "riegeli",
+  "tensorflow-datasets",
+]
+test = [
+  "pytest",
 ]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
 pythonpath = ["src"]
+testpaths = ["tests"]

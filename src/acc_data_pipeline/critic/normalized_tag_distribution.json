@@ -1,0 +1,4571 @@
+{
+  "general_auxiliary_tag_counts": {
+    "Algorithms": 3827,
+    "Fundamentals": 1326
+  },
+  "input": "data/processed/04_execution_ready.jsonl",
+  "normalized_tag_counts": {
+    "0_1_bfs": 1,
+    "0_1_knapsack": 3,
+    "1d_arrays": 70,
+    "2_sat": 22,
+    "2d_array": 5,
+    "2d_arrays": 29,
+    "3d_arrays": 1,
+    "aangairbender": 1,
+    "aashu_k": 1,
+    "abdullah768": 1,
+    "abhi_inav": 2,
+    "activity_selection": 2,
+    "ad_hoc": 775,
+    "adhoc": 1,
+    "aditya10": 1,
+    "admin": 2,
+    "admin2": 6,
+    "admin3": 1,
+    "advanced_algorithms": 108,
+    "advanced_data_structure": 28,
+    "advanced_data_structures": 80,
+    "advanced_dp": 27,
+    "advanced_graph_algos": 22,
+    "advanced_greedy": 1,
+    "advanced_tree_structures": 56,
+    "aho_corasick": 2,
+    "akashbhalotia": 1,
+    "akshatgirdhar8": 2,
+    "alei": 2,
+    "alexvaleanu": 1,
+    "algebra": 38,
+    "algorithms_bit_manipulation": 26,
+    "algorithms_constructive_algorithms": 8,
+    "algorithms_debugging": 3,
+    "algorithms_dynamic_programming": 79,
+    "algorithms_game_theory": 30,
+    "algorithms_graph_theory": 52,
+    "algorithms_greedy": 24,
+    "algorithms_implementation": 61,
+    "algorithms_np_complete": 1,
+    "algorithms_recursion": 10,
+    "algorithms_search": 25,
+    "algorithms_sorting": 14,
+    "algorithms_strings": 43,
+    "algorithms_warmup": 9,
+    "all_pairs": 1,
+    "allllekssssa": 1,
+    "aloochaat1998": 1,
+    "alphabets": 1,
+    "aman1108": 1,
+    "amitpandeykgp": 1,
+    "amortized_analysis": 564,
+    "amsgame2": 1,
+    "anagram": 2,
+    "anhdq_adm": 1,
+    "anil_adm": 3,
+    "anmolrishi": 1,
+    "anshg0711": 1,
+    "anton_adm": 2,
+    "antoniuk1": 1,
+    "anudeep2011": 1,
+    "ap": 11,
+    "april11": 1,
+    "april12": 1,
+    "april13": 1,
+    "april16": 1,
+    "april19": 1,
+    "april21": 2,
+    "arayi": 1,
+    "arbitrary_precision": 11,
+    "arithmetic": 79,
+    "arjunarul_adm": 1,
+    "array": 327,
+    "arrays": 1196,
+    "arunsharma": 1,
+    "aryanag_adm": 3,
+    "ascii_art": 38,
+    "aswinashok44": 1,
+    "aug15": 2,
+    "aug20": 1,
+    "aug21": 1,
+    "auxiliary_tree": 1,
+    "avi224": 2,
+    "avl_tree": 1,
+    "backtracking": 74,
+    "base": 2,
+    "basic": 1,
+    "basic_programming": 1,
+    "basic_programming_concepts": 254,
+    "basicprogramming": 85,
+    "beatty_sequence": 1,
+    "bellmanford": 1,
+    "berezin": 3,
+    "bezout_s_identity": 1,
+    "bfs": 87,
+    "bhavyarustgi10": 1,
+    "biconnected_components": 1,
+    "big_integer": 8,
+    "bigbag": 1,
+    "binary": 38,
+    "binary_exponentiation": 10,
+    "binary_indexed_tree": 3,
+    "binary_lifting": 5,
+    "binary_representation": 13,
+    "binary_search": 967,
+    "binary_search_on_answer": 12,
+    "binary_search_tree": 59,
+    "binary_search_trees": 1,
+    "binary_tree": 10,
+    "binary_trees": 2,
+    "binarysearch": 37,
+    "binarysearchtree": 4,
+    "binarytree": 2,
+    "binomial_theorem": 4,
+    "bipartite": 5,
+    "bipartite_graphs": 6,
+    "bipartitegraph": 2,
+    "bipin2": 1,
+    "bit": 14,
+    "bit22019": 1,
+    "bit_magic": 119,
+    "bit_manipulation": 833,
+    "bitmanipulation": 16,
+    "bitmask": 25,
+    "bitmasking": 18,
+    "bitmasks": 376,
+    "bits": 16,
+    "bitwise_and": 1,
+    "bitwise_operation": 108,
+    "bitwise_xor": 1,
+    "bottom_up": 20,
+    "brainteaser": 4,
+    "breadth_first_search": 27,
+    "brute_force": 166,
+    "bruteforce": 22,
+    "bst": 3,
+    "bucket_sort": 3,
+    "burnside_lemma": 1,
+    "bytr2020": 1,
+    "cakewalk": 26,
+    "calculus": 4,
+    "carmichael_function": 1,
+    "cartesian_coordinate_system": 10,
+    "case_work": 83,
+    "catalan_numbers": 2,
+    "cauchy_schwarz_inequality": 1,
+    "ccrc2021": 1,
+    "cenadar": 2,
+    "cg": 17,
+    "challenge": 2,
+    "challenge_problem": 19,
+    "chemthan": 2,
+    "chess": 13,
+    "chigu": 1,
+    "chinese_remainder_theorem": 17,
+    "ciphers": 16,
+    "circular_linked_list": 6,
+    "coloring": 6,
+    "combinatorial": 23,
+    "combinatorics": 753,
+    "complete_search": 3,
+    "completed": 1,
+    "computational_geometry": 17,
+    "conditional_statements": 141,
+    "connected_components": 8,
+    "connectivity": 1,
+    "constructive": 1699,
+    "constructive_algo": 3,
+    "contribution_trick": 5,
+    "convex_hull": 7,
+    "convolution": 2,
+    "cook06": 1,
+    "cook08": 1,
+    "cook10": 1,
+    "cook100": 1,
+    "cook101": 1,
+    "cook103": 1,
+    "cook108": 1,
+    "cook111": 1,
+    "cook113": 1,
+    "cook116": 1,
+    "cook118": 1,
+    "cook130": 1,
+    "cook132": 1,
+    "cook137": 6,
+    "cook14": 3,
+    "cook141": 8,
+    "cook143": 4,
+    "cook20": 1,
+    "cook21": 2,
+    "cook38": 1,
+    "cook42": 1,
+    "cook45": 1,
+    "cook46": 1,
+    "cook47": 1,
+    "cook70": 1,
+    "cook75": 1,
+    "cook82": 1,
+    "cook90": 1,
+    "cook94": 1,
+    "cook98": 1,
+    "cook_off": 5,
+    "coordinate_compression": 4,
+    "counting": 30,
+    "counting_sort": 2,
+    "coverings": 2,
+    "cpp": 19,
+    "cpp_control_flow": 1,
+    "cpp_strings": 2,
+    "cross_product": 1,
+    "cryptography": 21,
+    "csns2021": 2,
+    "cut": 1,
+    "cycle": 1,
+    "cycle_graph": 1,
+    "cycles": 7,
+    "cyclic_rotation": 2,
+    "daanish_adm": 3,
+    "dag": 3,
+    "dag_algos": 5,
+    "daniel_1999": 1,
+    "darkshadows": 3,
+    "data_science": 8,
+    "data_structure": 1,
+    "data_structures": 4531,
+    "data_structures_advanced": 42,
+    "data_structures_arrays": 5,
+    "data_structures_balanced_trees": 2,
+    "data_structures_disjoint_set": 3,
+    "data_structures_heap": 4,
+    "data_structures_queues": 5,
+    "data_structures_stacks": 9,
+    "data_structures_trees": 5,
+    "data_structures_trie": 2,
+    "data_types": 7,
+    "datastructures": 81,
+    "date_time": 21,
+    "david_adm": 3,
+    "dazlersan1": 1,
+    "deadwing97": 3,
+    "debugging": 26,
+    "dec19": 2,
+    "depth_first_search": 19,
+    "deque": 11,
+    "derangements": 1,
+    "design_pattern": 11,
+    "determinant": 2,
+    "dfs": 138,
+    "dfs_order": 3,
+    "difference_array": 1,
+    "difference_arrays": 7,
+    "differentiation": 1,
+    "digit_dp": 6,
+    "dijkstra": 9,
+    "dijkstra_s_algorithm": 8,
+    "dilworth_theorem": 2,
+    "directed_acyclic_graphs": 2,
+    "directed_graph": 1,
+    "directed_graphs": 15,
+    "dirichlet_convolution": 1,
+    "discrete_logarithm": 1,
+    "discrete_mathematics": 2,
+    "discrete_maths": 1,
+    "disjoint_set": 4,
+    "disjoint_set_union": 12,
+    "disjoint_sets": 2,
+    "disjointset": 10,
+    "distribution": 1,
+    "divide_and_conquer": 242,
+    "divideandconquer": 2,
+    "divisibility": 12,
+    "division": 8,
+    "divisors": 39,
+    "dolabmoon": 1,
+    "doubly_linked_list": 7,
+    "dp_approach": 33,
+    "dp_bitmask": 11,
+    "dp_greedy": 30,
+    "dp_on_sequences": 7,
+    "dp_on_trees": 7,
+    "drswad": 1,
+    "dsu": 249,
+    "dsu_on_trees": 2,
+    "dynamic_programming": 2454,
+    "dynamicprogramming": 140,
+    "easy": 55,
+    "easy_medium": 28,
+    "enumeration": 8,
+    "erfaniaa": 1,
+    "error_detection": 2,
+    "esoteric_languages": 8,
+    "euclid_s_algorithm": 6,
+    "euler_theorem": 2,
+    "euler_totient_function": 5,
+    "euler_tour": 3,
+    "eulerian_tour": 1,
+    "expectation": 3,
+    "expected_value": 29,
+    "exponentiation": 12,
+    "expression_parsing": 33,
+    "extendedeuclid": 1,
+    "exun2021": 7,
+    "ezio_26": 2,
+    "factorial": 15,
+    "factorials": 7,
+    "factorization": 6,
+    "fairy_winx": 1,
+    "fast_fourier_transform": 1,
+    "feb12": 1,
+    "feb13": 1,
+    "feb20": 1,
+    "fenwick_tree": 1,
+    "fenwick_trees": 20,
+    "fenwicktree": 6,
+    "fermat_s_little_theorem": 6,
+    "fft": 75,
+    "fibonacci": 18,
+    "fibonacci_series": 3,
+    "filtering": 6,
+    "flood_fill": 1,
+    "flow": 6,
+    "flow_networks": 6,
+    "flows": 108,
+    "flows_and_cuts": 156,
+    "floyd_warshall": 1,
+    "floyd_warshall_s_algorithm": 2,
+    "floydwarshall": 2,
+    "ford_fulkerson_algorithm": 1,
+    "formal_language": 1,
+    "foyaz05": 1,
+    "fractions": 3,
+    "frequency_arrays": 52,
+    "functional_equations": 1,
+    "functional_programming": 6,
+    "functions": 1,
+    "furko_adm": 1,
+    "game": 9,
+    "game_theory": 309,
+    "games": 200,
+    "gametheory": 12,
+    "garners_algorithm": 1,
+    "gaussian_elimination": 3,
+    "gcd": 70,
+    "general": 4965,
+    "generating_functions": 2,
+    "geometric": 18,
+    "geometry": 506,
+    "gomory_hu_tree": 1,
+    "gp": 7,
+    "graph": 1596,
+    "graph_algos": 122,
+    "graph_isomorphism_problem": 1,
+    "graph_matchings": 62,
+    "graph_theory": 2,
+    "graphs": 91,
+    "graphtheory": 47,
+    "gray_code": 1,
+    "greatest_common_divisor": 3,
+    "greedy": 2567,
+    "grid": 1,
+    "group_theory": 2,
+    "groupings": 21,
+    "grundy_numbers": 1,
+    "gvaibhav21": 3,
+    "hackcyborg": 1,
+    "hackenbush": 1,
+    "hackslash_123": 1,
+    "hadamard_matrix": 1,
+    "hamiltonian_cycle": 2,
+    "hamming_distance": 2,
+    "hard": 4,
+    "harshil21": 1,
+    "hash": 142,
+    "hash_function": 7,
+    "hash_table": 102,
+    "hashing": 191,
+    "hashmap": 4,
+    "hashmaps": 22,
+    "heap": 36,
+    "heap_priority_queue": 20,
+    "heaps": 8,
+    "heavylightdecomposition": 1,
+    "hemanthram": 1,
+    "heuristics": 2,
+    "hiroto_adm": 1,
+    "hld": 3,
+    "hloya_ygrt": 1,
+    "hopcroft_karp_algorithm": 1,
+    "icl2017": 2,
+    "icl2018": 3,
+    "image_processing": 1,
+    "impartial_game": 1,
+    "implementation": 2741,
+    "inbuilt_functions": 16,
+    "inclusion_exclusion_principle": 11,
+    "inequalities": 4,
+    "infy20": 2,
+    "inov_adm": 2,
+    "inso2018": 3,
+    "insomnia18": 3,
+    "integer_division": 20,
+    "integer_factorisation": 54,
+    "integration": 1,
+    "interactive": 115,
+    "interpolation": 2,
+    "interpreters": 8,
+    "inversions": 1,
+    "isha_adm": 1,
+    "iterators": 2,
+    "ivanz_adm": 1,
+    "izaron": 1,
+    "jan15": 1,
+    "jan16": 1,
+    "jan21": 1,
+    "jan221": 4,
+    "jan222": 4,
+    "java": 14,
+    "java_collections": 2,
+    "jeevan_adm": 2,
+    "jeevanjyot": 8,
+    "jnarutoj": 1,
+    "json": 1,
+    "july12": 1,
+    "july13": 1,
+    "july16": 1,
+    "july17": 1,
+    "july19": 1,
+    "june12": 1,
+    "june13": 1,
+    "june14": 1,
+    "june15": 1,
+    "june17": 1,
+    "june18": 1,
+    "june222": 2,
+    "kadane": 3,
+    "kadane_algorithm": 5,
+    "kalpitk": 1,
+    "katana_handler": 1,
+    "khad_adm": 1,
+    "kingofnumbers": 7,
+    "kirchhoffs_matrix_tree_theorem": 2,
+    "kmaaszraa": 3,
+    "kmp": 3,
+    "kmp_algorithm": 7,
+    "knapsack": 8,
+    "kostya_by": 2,
+    "kruskal": 1,
+    "kruskal_s_algorithm": 2,
+    "kuhn": 1,
+    "kushalgoel": 1,
+    "lagrange_interpolation": 2,
+    "language_features": 2,
+    "lavish315": 1,
+    "lavish_adm": 3,
+    "lazy_propagation": 4,
+    "lcm": 15,
+    "lcs": 1,
+    "lexicographic_order": 3,
+    "likecs": 6,
+    "line_sweep": 2,
+    "linear_algebra": 10,
+    "linear_programming": 1,
+    "lines": 1,
+    "linked_list": 94,
+    "linked_lists": 1,
+    "lists": 80,
+    "locapr18": 2,
+    "log_exp_pow": 3,
+    "logarithm": 5,
+    "logic": 63,
+    "logic_maths": 1,
+    "logical": 1,
+    "logical_thinking": 17,
+    "logicalthinking": 1,
+    "long_challenge": 2,
+    "longest_common_substring": 1,
+    "longest_inc_subsequence": 1,
+    "longest_increasing_subsequence": 5,
+    "looping": 2,
+    "loops": 48,
+    "lowest_common_ancestor": 10,
+    "ltime101": 1,
+    "ltime112": 1,
+    "ltime16": 1,
+    "ltime27": 1,
+    "ltime28": 1,
+    "ltime32": 1,
+    "ltime38": 1,
+    "ltime51": 1,
+    "ltime53": 1,
+    "ltime63": 1,
+    "ltime64": 1,
+    "ltime65": 1,
+    "ltime66": 1,
+    "ltime68": 1,
+    "ltime70": 1,
+    "ltime71": 1,
+    "ltime73": 1,
+    "ltime74": 2,
+    "ltime75": 1,
+    "ltime78": 1,
+    "ltime98": 1,
+    "ltime99": 1,
+    "lucas_theorem": 4,
+    "m0stik": 1,
+    "ma5termind": 1,
+    "machine_learning": 3,
+    "madhav_1999": 1,
+    "mamedov": 1,
+    "manachers_algorithm": 3,
+    "mani_adm": 2,
+    "map": 47,
+    "maps": 37,
+    "march12": 1,
+    "march16": 1,
+    "march19": 2,
+    "march21": 1,
+    "matching": 3,
+    "math": 4747,
+    "mathematics_algebra": 33,
+    "mathematics_combinatorics": 50,
+    "mathematics_fundamentals": 32,
+    "mathematics_geometry": 29,
+    "mathematics_number_theory": 70,
+    "mathematics_probability": 21,
+    "maths": 49,
+    "matrices": 360,
+    "matrix": 161,
+    "matrix_exponentiation": 9,
+    "matrix_multiplication": 8,
+    "matrix_pow": 1,
+    "matrixexponentiation": 13,
+    "maximum_bipartite_matching": 3,
+    "maximum_flow": 1,
+    "may12": 1,
+    "may13": 1,
+    "may15": 1,
+    "may16": 2,
+    "may18": 1,
+    "may20": 1,
+    "mazihang2022": 1,
+    "medium": 6,
+    "medium_hard": 2,
+    "meet_in_middle": 1,
+    "meet_in_the_middle": 40,
+    "melfice": 2,
+    "memoization": 25,
+    "merge_sort": 8,
+    "mexomerf": 1,
+    "mgch": 2,
+    "min_cut_max_flow": 1,
+    "minimum_cut": 1,
+    "minimum_spanning_trees": 8,
+    "minimumspanningtree": 8,
+    "misc": 30,
+    "mo_s_algorithm": 1,
+    "mobius_function": 2,
+    "mobius_inversion": 2,
+    "modular_arith": 2,
+    "modular_arithmetic": 145,
+    "modular_exponentiation": 29,
+    "modulararithmetic": 5,
+    "modularexponentiation": 6,
+    "modulo": 3,
+    "modulo_multiplicative_inverse": 12,
+    "monotonic_queue": 4,
+    "monotonic_stack": 19,
+    "monthly_contest": 1,
+    "mradul_adm": 2,
+    "mrkerim": 1,
+    "mst": 3,
+    "multi_source_bfs": 1,
+    "multiset": 14,
+    "munch_01": 2,
+    "networks": 4,
+    "next_greater_element": 2,
+    "nikhil_adm": 2,
+    "nim_game": 5,
+    "nots0fast": 1,
+    "notsoloud": 2,
+    "nov18": 1,
+    "nov19": 1,
+    "ntt": 1,
+    "number_system": 13,
+    "number_theoretic_transfmtn": 1,
+    "number_theory": 1106,
+    "numbers": 46,
+    "numbertheory": 48,
+    "numpy": 2,
+    "object_oriented_programming": 1,
+    "observation": 309,
+    "oct13": 1,
+    "oct15": 1,
+    "oct16": 2,
+    "oct17": 1,
+    "oct18": 1,
+    "offline_queries": 8,
+    "ojasbansal": 1,
+    "omelyanenko": 2,
+    "online_queries": 12,
+    "oop": 1,
+    "operators": 7,
+    "optimization": 4,
+    "optimization_problems": 5,
+    "ordered_set": 5,
+    "paley_construction": 1,
+    "palindrome": 27,
+    "palindromes": 2,
+    "panik": 1,
+    "parsing": 20,
+    "partitions": 2,
+    "paths_and_circuits": 2,
+    "pattern": 1,
+    "pattern_printing": 18,
+    "pattern_searching": 9,
+    "patterns": 5,
+    "pavel1996": 1,
+    "pelt2019": 2,
+    "performance": 49,
+    "permutation": 19,
+    "permutation_cycles": 1,
+    "permutations": 18,
+    "permutations_combinations": 18,
+    "persistent_segment_trees": 4,
+    "persistent_structures": 4,
+    "physics": 8,
+    "pigeonhole_principle": 9,
+    "planar_graph": 1,
+    "pointers": 1,
+    "policy_based_data_structures": 1,
+    "poly_divisible_numbers": 1,
+    "polygons": 12,
+    "polynomial": 8,
+    "polynomials_and_generating_functions": 81,
+    "prakhar17252": 1,
+    "prasant21": 1,
+    "prateekg603": 1,
+    "pre_computation": 1,
+    "pre_processing": 24,
+    "precomputation": 1,
+    "prefix_sum": 107,
+    "preprocessing": 26,
+    "present_sir": 1,
+    "prim_s_algorithm": 1,
+    "primality_checking": 5,
+    "prime_divisors": 24,
+    "prime_number": 52,
+    "primefactorization": 8,
+    "primes": 12,
+    "primitive_root": 2,
+    "printing_patterns": 1,
+    "priority_queue": 26,
+    "priorityqueue": 6,
+    "priyanshi": 1,
+    "prnjl_rai": 1,
+    "probabilities": 165,
+    "probability": 261,
+    "probability_and_statistics": 4,
+    "proconjunior": 1,
+    "proof": 1,
+    "properties": 4,
+    "pruning": 1,
+    "puzzles": 215,
+    "python_basic_data_types": 5,
+    "python_built_ins": 6,
+    "python_classes": 1,
+    "python_closures_and_decorators": 2,
+    "python_collections": 8,
+    "python_date_and_time": 2,
+    "python_errors_and_exceptions": 2,
+    "python_introduction": 6,
+    "python_itertools": 7,
+    "python_math": 7,
+    "python_numpy": 12,
+    "python_python_functionals": 2,
+    "python_regex_and_parsing": 17,
+    "python_sets": 13,
+    "python_strings": 13,
+    "python_xml": 2,
+    "quadratic_residue": 1,
+    "quantifiers": 1,
+    "queries": 34,
+    "queue": 46,
+    "queues": 39,
+    "quickselect": 1,
+    "rabin_karp_algorithm": 1,
+    "rabin_miller_test": 1,
+    "radix_sort": 1,
+    "rag_hav13": 1,
+    "rajat1603": 1,
+    "randomized_algorithms": 3,
+    "range_minimum_queries": 3,
+    "range_queries": 280,
+    "range_sum": 1,
+    "range_sum_queries": 1,
+    "ratingoverflow": 1,
+    "reachability": 2,
+    "real_life": 3,
+    "recurrence_relation": 4,
+    "recursion": 161,
+    "refactoring": 8,
+    "regular_expression": 5,
+    "regular_expressions": 121,
+    "restricted": 7,
+    "reverse": 1,
+    "riddles": 1,
+    "rishup_nitdgp": 2,
+    "rolling_hash": 7,
+    "roman_adm": 1,
+    "romawhite": 1,
+    "rotating_caliper": 1,
+    "satej_adm": 1,
+    "scanline_algorithm": 1,
+    "scc": 1,
+    "schedules": 7,
+    "scheduling": 2,
+    "search_bruteforce": 1853,
+    "searching": 160,
+    "security": 9,
+    "segment_tree": 15,
+    "segment_trees": 51,
+    "segment_trees_revisited": 94,
+    "segmented_sieve": 6,
+    "segmenttrees": 21,
+    "sept15": 3,
+    "sept18": 2,
+    "sept20": 1,
+    "sequences_and_progression": 23,
+    "sereja_adm": 2,
+    "sergey_adm": 2,
+    "series": 31,
+    "set": 16,
+    "set_theory": 23,
+    "sets": 46,
+    "sgbtech96": 1,
+    "shaanknight": 1,
+    "shift": 1,
+    "shivamg_isc": 1,
+    "shortest_path": 13,
+    "shortest_paths": 225,
+    "sidhant007": 1,
+    "sieve": 45,
+    "sieve_of_eratosthenes": 35,
+    "simple": 22,
+    "simple_algos": 109,
+    "simple_math": 7,
+    "simulation": 24,
+    "sliding_window": 70,
+    "smit_adm": 1,
+    "sorting": 2172,
+    "sos_dp": 2,
+    "soumyadeep_21": 3,
+    "spanning_trees": 308,
+    "sparse_table": 4,
+    "special": 310,
+    "sperner_s_theorem": 1,
+    "splay_tree": 2,
+    "sprague_grundy": 1,
+    "sprague_grundy_theorem": 8,
+    "sqrt_decomposition": 5,
+    "sqrt_n_primality_check": 3,
+    "square_root_algorithms": 19,
+    "square_root_decomposition": 11,
+    "squares": 2,
+    "srikkanth_adm": 2,
+    "sssp": 9,
+    "stack": 124,
+    "stacks": 22,
+    "start13": 1,
+    "start14": 1,
+    "start22": 5,
+    "start23": 2,
+    "start3": 1,
+    "start36": 7,
+    "start37": 9,
+    "start45": 4,
+    "start50": 4,
+    "start6": 1,
+    "state_machines": 3,
+    "statistics": 9,
+    "stl": 38,
+    "string": 2122,
+    "string_algos": 4,
+    "string_manipulation": 1,
+    "string_matching": 15,
+    "string_parsing": 1,
+    "string_suffix_structures": 71,
+    "stringalgorithms": 26,
+    "strong_connectivity": 25,
+    "strongly_connected_components": 3,
+    "subarray": 6,
+    "subsequence": 12,
+    "subset": 6,
+    "subset_enumeration": 1,
+    "substring": 3,
+    "suffix_array": 1,
+    "suffix_sum": 13,
+    "suffix_tree": 2,
+    "suffixarrays": 1,
+    "suryaprak_adm": 1,
+    "sweep_line_algorithm": 3,
+    "sweep_line_algorithms": 17,
+    "sylvesters_criterion": 2,
+    "tanmay28": 1,
+    "taran_1407": 13,
+    "tejas_adm": 3,
+    "ternary_search": 47,
+    "theoneyouwant": 1,
+    "time": 6,
+    "tmwilliamlin": 2,
+    "top_down": 6,
+    "topological_sort": 3,
+    "topological_sorting": 4,
+    "topsort": 1,
+    "transformations": 10,
+    "traversal": 13,
+    "traversals": 82,
+    "treap": 1,
+    "tree": 182,
+    "tree_algorithms": 837,
+    "tree_algos": 9,
+    "tree_data_structure": 8,
+    "tree_ds": 1,
+    "tree_queries": 21,
+    "trees": 635,
+    "triangles": 3,
+    "trie": 29,
+    "tries": 10,
+    "tries_with_xor": 3,
+    "trigonometry": 5,
+    "trygub_adm": 4,
+    "tutorials": 6,
+    "two_pointer": 2,
+    "two_pointer_algorithm": 39,
+    "two_pointers": 464,
+    "unicode": 3,
+    "union_find": 15,
+    "unordered_sets": 2,
+    "utkarsh_25dec": 1,
+    "utkarsh_adm": 13,
+    "vamsi_adm": 1,
+    "varunkhare1234": 2,
+    "vertex_cover": 1,
+    "veryeasy": 6,
+    "vichitr": 1,
+    "vijju123": 1,
+    "vinay_adm": 1,
+    "vishal_nnd0": 1,
+    "vishesh_s": 8,
+    "vitalij_adm": 2,
+    "vladprog": 1,
+    "watcher": 2,
+    "williamson": 1,
+    "witaliy_adm": 2,
+    "wwwwodddd": 1,
+    "xor": 2,
+    "yash5507": 1,
+    "yjgarg": 1,
+    "z_algorithm": 5,
+    "zappelectro": 3,
+    "zeckendorf_theorem": 1
+  },
+  "raw_tag_counts": {
+    "*special": 207,
+    "0-1 BFS": 1,
+    "0-1 Knapsack": 3,
+    "1D Arrays": 70,
+    "2 SAT": 2,
+    "2-sat": 20,
+    "2D Arrays": 29,
+    "2d array": 5,
+    "3D+ Arrays": 1,
+    "AP": 11,
+    "ASCII Art": 38,
+    "AVL-Tree": 1,
+    "Activity Selection": 2,
+    "Ad-Hoc": 139,
+    "Ad-hoc": 775,
+    "Advanced Algorithms": 108,
+    "Advanced DP": 27,
+    "Advanced Data Structure": 28,
+    "Advanced Data Structures": 80,
+    "Advanced Graph Algos": 22,
+    "Advanced Greedy": 1,
+    "Advanced Tree Structures": 56,
+    "Aho Corasick": 2,
+    "Algebra": 38,
+    "Algorithms": 3827,
+    "Algorithms - Bit Manipulation": 26,
+    "Algorithms - Constructive Algorithms": 8,
+    "Algorithms - Debugging": 3,
+    "Algorithms - Dynamic Programming": 79,
+    "Algorithms - Game Theory": 30,
+    "Algorithms - Graph Theory": 52,
+    "Algorithms - Greedy": 24,
+    "Algorithms - Implementation": 61,
+    "Algorithms - NP Complete": 1,
+    "Algorithms - Recursion": 10,
+    "Algorithms - Search": 25,
+    "Algorithms - Sorting": 14,
+    "Algorithms - Strings": 43,
+    "Algorithms - Warmup": 9,
+    "Amortized analysis": 564,
+    "Arbitrary Precision": 11,
+    "Arithmetic": 79,
+    "Array": 322,
+    "Arrays": 1196,
+    "Auxiliary Tree": 1,
+    "BFS": 80,
+    "BIT": 14,
+    "Backtracking": 66,
+    "Basic Maths": 520,
+    "Basic Programming Concepts": 254,
+    "Basic-Programming": 1,
+    "BasicProgramming": 85,
+    "Beatty sequence": 1,
+    "BellmanFord": 1,
+    "Bezout's Identity": 1,
+    "Biconnected Components": 1,
+    "Big Integer": 7,
+    "Binary": 38,
+    "Binary Exponentiation": 10,
+    "Binary Indexed Tree": 3,
+    "Binary Representation": 13,
+    "Binary Search": 195,
+    "Binary Search Tree": 59,
+    "Binary Search Trees": 1,
+    "Binary Search on Answer": 12,
+    "Binary Tree": 10,
+    "Binary Trees": 2,
+    "Binary lifting": 4,
+    "BinarySearch": 37,
+    "BinarySearchTree": 4,
+    "BinaryTree": 2,
+    "Binomial Theorem": 4,
+    "Bipartite": 3,
+    "Bipartite Graphs": 6,
+    "BipartiteGraph": 2,
+    "Bit Magic": 119,
+    "Bit Manipulation": 198,
+    "Bit manipulation": 832,
+    "Bitmanipulation": 16,
+    "Bitmask": 25,
+    "Bitmasking": 18,
+    "Bits": 16,
+    "Bitwise Operation": 102,
+    "Bottom-up": 20,
+    "Brainteaser": 4,
+    "Breadth-First Search": 27,
+    "Brute Force": 157,
+    "BruteForce": 22,
+    "Bucket Sort": 3,
+    "Burnside Lemma": 1,
+    "CPP": 19,
+    "CPP-Control-Flow": 1,
+    "Calculus": 4,
+    "Cartesian Coordinate System": 10,
+    "Case work": 83,
+    "Catalan Numbers": 2,
+    "Cauchy Schwarz Inequality": 1,
+    "Challenge": 1,
+    "Challenge Problem": 19,
+    "Chess": 12,
+    "Chinese Remainder Theorem": 2,
+    "Ciphers": 16,
+    "Coloring": 6,
+    "Combinatorial": 23,
+    "Combinatorics": 753,
+    "Complete Search": 3,
+    "Complete search": 1853,
+    "Completed": 1,
+    "Computational Geometry": 17,
+    "Conditional Statements": 141,
+    "Connected Components": 8,
+    "Connectivity": 1,
+    "Constructive": 426,
+    "Constructive algorithms": 1699,
+    "Contribution Trick": 5,
+    "Convex Hull": 6,
+    "Convolution": 2,
+    "Coordinate Compression": 3,
+    "Counting": 28,
+    "Counting Sort": 2,
+    "Coverings": 2,
+    "Cross Product": 1,
+    "Cryptography": 21,
+    "Cycles": 7,
+    "Cyclic Rotation": 2,
+    "DAG Algos": 5,
+    "DFS": 138,
+    "DFS Order": 3,
+    "DP Approach": 33,
+    "DP Bitmask": 11,
+    "DP on Trees": 7,
+    "DP on sequences": 7,
+    "DSU on Trees": 2,
+    "Data Science": 8,
+    "Data Structures": 2227,
+    "Data Structures - Advanced": 42,
+    "Data Structures - Arrays": 5,
+    "Data Structures - Balanced Trees": 2,
+    "Data Structures - Disjoint Set": 3,
+    "Data Structures - Heap": 4,
+    "Data Structures - Queues": 5,
+    "Data Structures - Stacks": 9,
+    "Data Structures - Trees": 5,
+    "Data Structures - Trie": 2,
+    "Data Types": 7,
+    "Data structures": 4531,
+    "Data-Structures": 1,
+    "DataStructures": 81,
+    "Date Time": 20,
+    "Date-Time": 1,
+    "Debugging": 26,
+    "Depth-First Search": 18,
+    "Deque": 11,
+    "Derangements": 1,
+    "Design-Pattern": 11,
+    "Determinant": 2,
+    "Difference Arrays": 7,
+    "Differentiation": 1,
+    "Digit DP": 5,
+    "Dijkstra": 4,
+    "Dijkstra's Algorithm": 8,
+    "Dilworth Theorem": 2,
+    "Directed Acyclic Graphs": 2,
+    "Directed Graphs": 6,
+    "Directed graphs": 15,
+    "Dirichlet Convolution": 1,
+    "Discrete Logarithm": 1,
+    "Discrete Mathematics": 2,
+    "Discrete Maths": 1,
+    "Disjoint Set": 4,
+    "Disjoint Set Union": 12,
+    "DisjointSet": 10,
+    "Distribution": 1,
+    "Divide and Conquer": 38,
+    "Divide and conquer": 242,
+    "DivideAndConquer": 2,
+    "Divisibility": 12,
+    "Division": 8,
+    "Divisors": 38,
+    "Dynamic Programming": 606,
+    "Dynamic programming": 2454,
+    "DynamicProgramming": 140,
+    "Enumeration": 8,
+    "Error Detection": 2,
+    "Esoteric Languages": 8,
+    "Euclid's Algorithm": 6,
+    "Euler Theorem": 1,
+    "Euler Totient Function": 4,
+    "Euler Tour": 3,
+    "Expectation": 3,
+    "Expected Value": 28,
+    "Exponentiation": 12,
+    "ExtendedEuclid": 1,
+    "FFT": 10,
+    "Factorials": 7,
+    "Factorization": 3,
+    "Fenwick Trees": 20,
+    "FenwickTree": 6,
+    "Fermat's Little Theorem": 6,
+    "Fibonacci": 18,
+    "Fibonacci Series": 3,
+    "Filtering": 6,
+    "Flood Fill": 1,
+    "Flow": 2,
+    "Flow Networks": 6,
+    "Flows and cuts": 156,
+    "Floyd Warshall's Algorithm": 2,
+    "FloydWarshall": 2,
+    "Ford-Fulkerson Algorithm": 1,
+    "Formal Language": 1,
+    "Fractions": 3,
+    "Frequency Arrays": 52,
+    "Functional Equations": 1,
+    "Functional Programming": 6,
+    "Functions": 1,
+    "Fundamentals": 1326,
+    "GCD": 69,
+    "GP": 7,
+    "Game Theory": 63,
+    "Game theory": 308,
+    "GameTheory": 12,
+    "Games": 45,
+    "Gaussian Elimination": 3,
+    "Generating Functions": 2,
+    "Geometric": 18,
+    "Geometry": 506,
+    "Gomory-Hu Tree": 1,
+    "Graph": 106,
+    "Graph Algos": 122,
+    "Graph Isomorphism Problem": 1,
+    "Graph Theory": 2,
+    "Graph algorithms": 1211,
+    "Graph traversal": 899,
+    "GraphTheory": 47,
+    "Graphs": 91,
+    "Gray code": 1,
+    "Greedy": 397,
+    "Greedy algorithms": 2567,
+    "Group Theory": 2,
+    "Groupings": 21,
+    "HLD": 3,
+    "Hackenbush": 1,
+    "Hamiltonian Cycle": 1,
+    "Hamming Distance": 2,
+    "Hash": 142,
+    "Hash Function": 7,
+    "Hash Table": 102,
+    "HashMap": 4,
+    "Hashing": 40,
+    "Hashmaps": 22,
+    "Heap": 35,
+    "Heap (Priority Queue)": 20,
+    "Heaps": 8,
+    "Heavylightdecomposition": 1,
+    "Heuristics": 2,
+    "Hopcroft Karp Algorithm": 1,
+    "Image Processing": 1,
+    "Impartial Game": 1,
+    "Implementation": 2741,
+    "Inbuilt functions": 16,
+    "Inclusion Exclusion Principle": 11,
+    "Inequalities": 4,
+    "Integer Division": 20,
+    "Integer Factorisation": 54,
+    "Integration": 1,
+    "Interpolation": 2,
+    "Interpreters": 8,
+    "Iterators": 2,
+    "JSON": 1,
+    "Java": 14,
+    "Java-Collections": 2,
+    "KMP": 3,
+    "KMP Algorithm": 7,
+    "Kadane": 3,
+    "Kadane Algorithm": 5,
+    "Kirchhoffs Matrix Tree Theorem": 2,
+    "Knapsack": 5,
+    "Kruskal": 1,
+    "Kruskal's Algorithm": 2,
+    "LCM": 15,
+    "LCS": 1,
+    "Lagrange Interpolation": 2,
+    "Language Features": 2,
+    "Lazy Propagation": 4,
+    "Lexicographic Order": 3,
+    "Line Sweep": 1,
+    "Line-sweep": 1,
+    "Linear Algebra": 10,
+    "Linear Programming": 1,
+    "Lines": 1,
+    "Linked List": 94,
+    "Linked Lists": 1,
+    "Lists": 80,
+    "Logarithm": 5,
+    "Logic": 63,
+    "Longest Common Substring": 1,
+    "Longest Increasing Subsequence": 5,
+    "Loops": 48,
+    "Lowest Common Ancestor": 10,
+    "Lucas Theorem": 4,
+    "Machine Learning": 3,
+    "Manachers Algorithm": 3,
+    "Map": 29,
+    "Maps": 37,
+    "Matching": 3,
+    "Math": 348,
+    "Mathematical": 588,
+    "Mathematics": 4747,
+    "Mathematics - Algebra": 33,
+    "Mathematics - Combinatorics": 50,
+    "Mathematics - Fundamentals": 32,
+    "Mathematics - Geometry": 29,
+    "Mathematics - Number Theory": 70,
+    "Mathematics - Probability": 21,
+    "Matrices": 360,
+    "Matrix": 161,
+    "Matrix Exponentiation": 8,
+    "Matrix Multiplication": 8,
+    "MatrixExponentiation": 13,
+    "Maximum Bipartite Matching": 3,
+    "Maximum Flow": 1,
+    "Meet in the middle": 4,
+    "Memoization": 25,
+    "Merge Sort": 8,
+    "Min Cut Max flow": 1,
+    "Minimum Spanning Trees": 8,
+    "MinimumSpanningTree": 8,
+    "Misc": 30,
+    "Mo's Algorithm": 1,
+    "Mobius Function": 2,
+    "Mobius Inversion": 2,
+    "Modular Arithmetic": 139,
+    "Modular Exponentiation": 29,
+    "Modulararithmetic": 5,
+    "Modularexponentiation": 6,
+    "Modulo Multiplicative Inverse": 12,
+    "Monotonic Queue": 4,
+    "Monotonic Stack": 15,
+    "Monotonic stack": 4,
+    "Monthly-Contest": 1,
+    "Multi source BFS": 1,
+    "Multiset": 14,
+    "NTT": 1,
+    "Networks": 4,
+    "Next Greater Element": 2,
+    "NumPy": 2,
+    "Number System": 13,
+    "Number Theory": 217,
+    "Number theory": 1106,
+    "NumberTheory": 48,
+    "Numbers": 46,
+    "OOP": 1,
+    "Object-oriented Programming": 1,
+    "Observation": 296,
+    "Offline Queries": 8,
+    "Online Queries": 12,
+    "Operators": 7,
+    "Optimization Problems": 5,
+    "Ordered Set": 5,
+    "Parsing": 20,
+    "Partitions": 2,
+    "Paths and circuits": 2,
+    "Pattern Searching": 9,
+    "Patterns": 5,
+    "Performance": 49,
+    "Permutation Cycles": 1,
+    "Permutations": 18,
+    "Permutations & Combinations": 18,
+    "Persistent Segment Trees": 4,
+    "Persistent Structures": 4,
+    "Physics": 8,
+    "Pigeonhole Principle": 9,
+    "Planar Graph": 1,
+    "Pointers": 1,
+    "Policy Based Data Structures": 1,
+    "Poly Divisible Numbers": 1,
+    "Polygons": 12,
+    "Polynomial": 6,
+    "Polynomials and generating functions": 81,
+    "Pre processing": 24,
+    "Precomputation": 1,
+    "Prefix Sum": 86,
+    "Preprocessing": 26,
+    "Prim's Algorithm": 1,
+    "Primality Checking": 5,
+    "Prime Divisors": 24,
+    "Prime Number": 52,
+    "PrimeFactorization": 8,
+    "Primes": 9,
+    "Primitive Root": 2,
+    "Printing Patterns": 1,
+    "Priority Queue": 19,
+    "Priority-Queue": 1,
+    "PriorityQueue": 6,
+    "Probability": 261,
+    "Probability and Statistics": 4,
+    "Puzzles": 215,
+    "Python - Basic Data Types": 5,
+    "Python - Built-Ins": 6,
+    "Python - Classes": 1,
+    "Python - Closures and Decorators": 2,
+    "Python - Collections": 8,
+    "Python - Date and Time": 2,
+    "Python - Errors and Exceptions": 2,
+    "Python - Introduction": 6,
+    "Python - Itertools": 7,
+    "Python - Math": 7,
+    "Python - Numpy": 12,
+    "Python - Python Functionals": 2,
+    "Python - Regex and Parsing": 17,
+    "Python - Sets": 13,
+    "Python - Strings": 13,
+    "Python - XML": 2,
+    "Quadratic Residue": 1,
+    "Quantifiers": 1,
+    "Queries": 34,
+    "Queue": 42,
+    "Queues": 39,
+    "Quickselect": 1,
+    "Rabin Karp Algorithm": 1,
+    "Rabin Miller Test": 1,
+    "Radix Sort": 1,
+    "Randomized Algorithms": 3,
+    "Range Minimum Queries": 3,
+    "Range Queries": 12,
+    "Range Sum Queries": 1,
+    "Range queries": 273,
+    "Recurrence Relation": 4,
+    "Recursion": 159,
+    "Refactoring": 8,
+    "Regular Expression": 5,
+    "Regular Expressions": 121,
+    "Restricted": 7,
+    "Reverse": 1,
+    "Riddles": 1,
+    "Rolling Hash": 7,
+    "Rotating Caliper": 1,
+    "SOS DP": 2,
+    "STL": 38,
+    "Scanline Algorithm": 1,
+    "Scheduling": 2,
+    "Searching": 160,
+    "Security": 9,
+    "Segment Tree": 2,
+    "Segment Trees": 51,
+    "Segment trees revisited": 94,
+    "Segment-Tree": 11,
+    "SegmentTrees": 21,
+    "Segmented Sieve": 6,
+    "Sequences and Progression": 23,
+    "Set": 1,
+    "Set Theory": 23,
+    "Sets": 46,
+    "Shortest Path": 9,
+    "Shortest Paths": 10,
+    "Shortest paths": 225,
+    "Shortest-path": 4,
+    "Sieve": 15,
+    "Sieve of Eratosthenes": 35,
+    "Simple Algos": 109,
+    "Simple-math": 7,
+    "Simulation": 23,
+    "Sliding Window": 38,
+    "Sorting": 2172,
+    "Spanning trees": 308,
+    "Sparse Table": 4,
+    "Special": 103,
+    "Sperner's Theorem": 1,
+    "Splay Tree": 2,
+    "Sprague Grundy Theorem": 8,
+    "Sqrt Decomposition": 2,
+    "Sqrt N Primality Check": 3,
+    "Sqrt-Decomposition": 3,
+    "Square Root Decomposition": 11,
+    "Square root algorithms": 19,
+    "Squares": 2,
+    "Stack": 120,
+    "Stacks": 22,
+    "State Machines": 3,
+    "Statistics": 9,
+    "String": 346,
+    "String Algos": 4,
+    "String Matching": 15,
+    "String Parsing": 1,
+    "String algorithms": 2122,
+    "String-Manipulation": 1,
+    "StringAlgorithms": 26,
+    "Strings": 775,
+    "Strong connectivity": 25,
+    "Strongly Connected Components": 3,
+    "Subarray": 6,
+    "Subsequence": 11,
+    "Subset Enumeration": 1,
+    "Substring": 3,
+    "Suffix Array": 1,
+    "Suffix Sum": 13,
+    "SuffixArrays": 1,
+    "Sweep line Algorithm": 3,
+    "Sweep line algorithms": 17,
+    "Sylvesters Criterion": 1,
+    "Ternary Search": 2,
+    "Top-down": 6,
+    "Topological Sort": 3,
+    "Topological Sorting": 4,
+    "Transformations": 10,
+    "Traversal": 13,
+    "Traversals": 82,
+    "Treap": 1,
+    "Tree": 181,
+    "Tree Algos": 9,
+    "Tree Data Structure": 8,
+    "Tree algorithms": 837,
+    "Tree queries": 21,
+    "Trees": 60,
+    "Triangles": 3,
+    "Trie": 29,
+    "Tries": 10,
+    "Tries with XOR": 3,
+    "Trigonometry": 5,
+    "Tutorials": 6,
+    "Two Pointers": 43,
+    "Two pointers": 32,
+    "Two-pointer": 2,
+    "Unicode": 3,
+    "Union Find": 10,
+    "Unordered Sets": 2,
+    "Vertex Cover": 1,
+    "VeryEasy": 6,
+    "Z Algorithm": 2,
+    "Z-algorithm": 3,
+    "aangairbender": 1,
+    "aashu_k": 1,
+    "abdullah768": 1,
+    "abhi_inav": 2,
+    "ad-hoc": 361,
+    "adhoc": 1,
+    "aditya10_": 1,
+    "admin": 2,
+    "admin2": 6,
+    "admin3": 1,
+    "akashbhalotia": 1,
+    "akshatgirdhar8": 2,
+    "alei": 2,
+    "alexvaleanu": 1,
+    "all pairs": 1,
+    "allllekssssa": 1,
+    "aloochaat1998": 1,
+    "alphabets": 1,
+    "aman1108": 1,
+    "amitpandeykgp": 1,
+    "amsgame2": 1,
+    "anagram": 2,
+    "anhdq_adm": 1,
+    "anil_adm": 3,
+    "anmolrishi": 1,
+    "anshg0711": 1,
+    "anton_adm": 2,
+    "antoniuk1": 1,
+    "anudeep2011": 1,
+    "april11": 1,
+    "april12": 1,
+    "april13": 1,
+    "april16": 1,
+    "april19": 1,
+    "april21": 2,
+    "arayi": 1,
+    "arjunarul_adm": 1,
+    "array": 5,
+    "arunsharma_": 1,
+    "aryanag_adm": 3,
+    "aswinashok44": 1,
+    "aug15": 2,
+    "aug20": 1,
+    "aug21": 1,
+    "avi224": 2,
+    "backtracking": 8,
+    "base": 2,
+    "basic": 1,
+    "berezin": 3,
+    "bfs": 7,
+    "bhavyarustgi10": 1,
+    "big-integer": 1,
+    "bigbag": 1,
+    "binary search": 766,
+    "binary-lifting": 1,
+    "binary-search": 6,
+    "bipartite": 2,
+    "bipin2": 1,
+    "bit manipulation": 1,
+    "bit-manipulation": 3,
+    "bit22019": 1,
+    "bitmasks": 376,
+    "bitwise-and": 1,
+    "bitwise-operation": 6,
+    "bitwise-xor": 1,
+    "brute force": 1231,
+    "brute-force": 9,
+    "bst": 3,
+    "bytr2020": 1,
+    "cakewalk": 26,
+    "carmichael-function": 1,
+    "ccrc2021": 1,
+    "cenadar": 2,
+    "cg": 17,
+    "challenge": 1,
+    "chemthan": 2,
+    "chess": 1,
+    "chigu": 1,
+    "chinese remainder theorem": 14,
+    "chinese-remainder-theorem": 1,
+    "circular linked list": 2,
+    "circular-linked-list": 6,
+    "combinatorics": 461,
+    "constructive": 2,
+    "constructive algo": 3,
+    "constructive algorithms": 1258,
+    "convex-hull": 1,
+    "cook-off": 5,
+    "cook06": 1,
+    "cook08": 1,
+    "cook10": 1,
+    "cook100": 1,
+    "cook101": 1,
+    "cook103": 1,
+    "cook108": 1,
+    "cook111": 1,
+    "cook113": 1,
+    "cook116": 1,
+    "cook118": 1,
+    "cook130": 1,
+    "cook132": 1,
+    "cook137": 6,
+    "cook14": 3,
+    "cook141": 8,
+    "cook143": 4,
+    "cook20": 1,
+    "cook21": 2,
+    "cook38": 1,
+    "cook42": 1,
+    "cook45": 1,
+    "cook46": 1,
+    "cook47": 1,
+    "cook70": 1,
+    "cook75": 1,
+    "cook82": 1,
+    "cook90": 1,
+    "cook94": 1,
+    "cook98": 1,
+    "coordinate-compression": 1,
+    "counting": 2,
+    "cpp-strings": 2,
+    "csns2021": 2,
+    "cut": 1,
+    "cycle": 1,
+    "cycle_graph": 1,
+    "daanish_adm": 3,
+    "dag": 3,
+    "daniel_1999": 1,
+    "darkshadows": 3,
+    "data structures": 1246,
+    "data-structure": 1,
+    "david_adm": 3,
+    "dazlersan1": 1,
+    "deadwing97": 3,
+    "dec19": 2,
+    "depth-first-search": 1,
+    "dfs and similar": 667,
+    "difference-array": 1,
+    "digit-dp": 1,
+    "dijkstra": 5,
+    "directed-graph": 1,
+    "disjoint sets": 2,
+    "divide and conquer": 202,
+    "divisors": 1,
+    "dolabmoon": 1,
+    "doubly-linked-list": 7,
+    "dp": 1565,
+    "dp & greedy": 30,
+    "drswad": 1,
+    "dsu": 249,
+    "dynamic-programming": 22,
+    "easy": 55,
+    "easy-medium": 28,
+    "erfaniaa": 1,
+    "euler-theorem": 1,
+    "euler-totient-function": 1,
+    "eulerian-tour": 1,
+    "expected-value": 1,
+    "expression parsing": 33,
+    "exun2021": 7,
+    "ezio_26": 2,
+    "factorial": 15,
+    "factorization": 3,
+    "fairy_winx": 1,
+    "fast-fourier-transform": 1,
+    "feb12": 1,
+    "feb13": 1,
+    "feb20": 1,
+    "fenwick-tree": 1,
+    "fft": 65,
+    "flow": 4,
+    "flows": 108,
+    "floyd-warshall": 1,
+    "foyaz05": 1,
+    "furko_adm": 1,
+    "game": 9,
+    "game theory": 1,
+    "game-theory": 3,
+    "games": 155,
+    "garners-algorithm": 1,
+    "gcd": 1,
+    "geometry": 339,
+    "graph matchings": 62,
+    "graphs": 841,
+    "greatest-common-divisor": 3,
+    "greedy": 2139,
+    "grid": 1,
+    "grundy-numbers": 1,
+    "gvaibhav21": 3,
+    "hackcyborg": 1,
+    "hackslash_123": 1,
+    "hadamard-matrix": 1,
+    "hamiltonian-cycle": 1,
+    "hard": 4,
+    "harshil21": 1,
+    "hashing": 151,
+    "heap": 1,
+    "hemanthram": 1,
+    "hiroto_adm": 1,
+    "hloya_ygrt": 1,
+    "icl2017": 2,
+    "icl2018": 3,
+    "implementation": 2310,
+    "infy20": 2,
+    "inov_adm": 2,
+    "inso2018": 3,
+    "insomnia18": 3,
+    "interactive": 115,
+    "inversions": 1,
+    "isha_adm": 1,
+    "ivanz_adm": 1,
+    "izaron": 1,
+    "jan15": 1,
+    "jan16": 1,
+    "jan21": 1,
+    "jan221": 4,
+    "jan222": 4,
+    "jeevan_adm": 2,
+    "jeevanjyot": 8,
+    "jnarutoj": 1,
+    "july12": 1,
+    "july13": 1,
+    "july16": 1,
+    "july17": 1,
+    "july19": 1,
+    "june12": 1,
+    "june13": 1,
+    "june14": 1,
+    "june15": 1,
+    "june17": 1,
+    "june18": 1,
+    "june222": 2,
+    "kalpitk": 1,
+    "katana_handler": 1,
+    "khad_adm": 1,
+    "kingofnumbers": 7,
+    "kmaaszraa": 3,
+    "knapsack": 3,
+    "kostya_by": 2,
+    "kuhn": 1,
+    "kushalgoel": 1,
+    "lavish315": 1,
+    "lavish_adm": 3,
+    "likecs": 6,
+    "locapr18": 2,
+    "log/exp/pow": 3,
+    "logic-maths": 1,
+    "logical": 1,
+    "logical-thinking": 17,
+    "logicalthinking": 1,
+    "long-challenge": 2,
+    "longest-inc-subsequence": 1,
+    "looping": 2,
+    "ltime101": 1,
+    "ltime112": 1,
+    "ltime16": 1,
+    "ltime27": 1,
+    "ltime28": 1,
+    "ltime32": 1,
+    "ltime38": 1,
+    "ltime51": 1,
+    "ltime53": 1,
+    "ltime63": 1,
+    "ltime64": 1,
+    "ltime65": 1,
+    "ltime66": 1,
+    "ltime68": 1,
+    "ltime70": 1,
+    "ltime71": 1,
+    "ltime73": 1,
+    "ltime74": 2,
+    "ltime75": 1,
+    "ltime78": 1,
+    "ltime98": 1,
+    "ltime99": 1,
+    "m0stik": 1,
+    "ma5termind": 1,
+    "madhav_1999": 1,
+    "mamedov": 1,
+    "mani_adm": 2,
+    "map": 18,
+    "march12": 1,
+    "march16": 1,
+    "march19": 2,
+    "march21": 1,
+    "math": 2147,
+    "maths": 49,
+    "matrices": 93,
+    "matrix pow": 1,
+    "matrix-exponentiation": 1,
+    "may12": 1,
+    "may13": 1,
+    "may15": 1,
+    "may16": 2,
+    "may18": 1,
+    "may20": 1,
+    "mazihang2022": 1,
+    "medium": 6,
+    "medium-hard": 2,
+    "meet-in-middle": 1,
+    "meet-in-the-middle": 36,
+    "melfice": 2,
+    "mexomerf": 1,
+    "mgch": 2,
+    "minimum-cut": 1,
+    "modular arithmetic": 5,
+    "modular-arith": 2,
+    "modular-arithmetic": 1,
+    "modulo": 3,
+    "mradul_adm": 2,
+    "mrkerim": 1,
+    "mst": 3,
+    "munch_01": 2,
+    "nikhil_adm": 2,
+    "nim game": 5,
+    "nots0fast": 1,
+    "notsoloud": 2,
+    "nov18": 1,
+    "nov19": 1,
+    "number theory": 543,
+    "number-theoretic-transfmtn": 1,
+    "number-theory": 37,
+    "observation": 13,
+    "oct13": 1,
+    "oct15": 1,
+    "oct16": 2,
+    "oct17": 1,
+    "oct18": 1,
+    "ojasbansal": 1,
+    "omelyanenko": 2,
+    "optimization": 4,
+    "paley-construction": 1,
+    "palindrome": 27,
+    "palindromes": 2,
+    "panik": 1,
+    "pattern": 1,
+    "pattern-printing": 18,
+    "pavel1996": 1,
+    "pelt2019": 2,
+    "permutation": 19,
+    "polynomial": 2,
+    "prakhar17252": 1,
+    "prasant21": 1,
+    "prateekg603": 1,
+    "pre-computation": 1,
+    "prefix-sum": 21,
+    "present_sir": 1,
+    "primes": 3,
+    "priority-queue": 6,
+    "priyanshi_": 1,
+    "prnjl_rai": 1,
+    "probabilities": 165,
+    "probability": 3,
+    "proconjunior": 1,
+    "proof": 1,
+    "properties": 4,
+    "pruning": 1,
+    "queue": 4,
+    "rag_hav13": 1,
+    "rajat1603": 1,
+    "range sum": 1,
+    "ratingoverflow": 1,
+    "reachability": 2,
+    "real life": 3,
+    "recursion": 2,
+    "rishup_nitdgp": 2,
+    "roman_adm": 1,
+    "romawhite": 1,
+    "satej_adm": 1,
+    "scc": 1,
+    "schedules": 7,
+    "segment-tree": 2,
+    "sept15": 3,
+    "sept18": 2,
+    "sept20": 1,
+    "sereja_adm": 2,
+    "sergey_adm": 2,
+    "series": 31,
+    "set": 15,
+    "sgbtech96": 1,
+    "shaanknight": 1,
+    "shift": 1,
+    "shivamg_isc": 1,
+    "shortest paths": 196,
+    "sidhant007": 1,
+    "sieve": 30,
+    "simple": 22,
+    "simulation": 1,
+    "sliding-window": 32,
+    "smit_adm": 1,
+    "sorting": 20,
+    "sortings": 809,
+    "soumyadeep_21": 3,
+    "sprague-grundy": 1,
+    "srikkanth_adm": 2,
+    "sssp": 9,
+    "stack": 4,
+    "start13": 1,
+    "start14": 1,
+    "start22": 5,
+    "start23": 2,
+    "start3": 1,
+    "start36": 7,
+    "start37": 9,
+    "start45": 4,
+    "start50": 4,
+    "start6": 1,
+    "string suffix structures": 71,
+    "strings": 600,
+    "subsequence": 1,
+    "subset": 6,
+    "suffix tree": 2,
+    "suryaprak_adm": 1,
+    "sylvesters-criterion": 1,
+    "tanmay28": 1,
+    "taran_1407": 13,
+    "tejas_adm": 3,
+    "ternary search": 45,
+    "theoneyouwant": 1,
+    "time": 6,
+    "tmwilliamlin": 2,
+    "topsort": 1,
+    "tree": 1,
+    "tree ds": 1,
+    "trees": 575,
+    "trygub_adm": 4,
+    "two pointers": 387,
+    "two-pointer-algorithm": 39,
+    "two-pointers": 2,
+    "union-find": 5,
+    "utkarsh_25dec": 1,
+    "utkarsh_adm": 13,
+    "vamsi_adm": 1,
+    "varunkhare1234": 2,
+    "vichitr": 1,
+    "vijju123": 1,
+    "vinay_adm": 1,
+    "vishal_nnd0": 1,
+    "vishesh_s": 8,
+    "vitalij_adm": 2,
+    "vladprog": 1,
+    "watcher": 2,
+    "williamson": 1,
+    "witaliy_adm": 2,
+    "wwwwodddd": 1,
+    "xor": 2,
+    "yash5507": 1,
+    "yjgarg": 1,
+    "zappelectro": 3,
+    "zeckendorf Theorem": 1
+  },
+  "raw_to_normalized_counts": {
+    "0_1_bfs": {
+      "0-1 BFS": 1
+    },
+    "0_1_knapsack": {
+      "0-1 Knapsack": 3
+    },
+    "1d_arrays": {
+      "1D Arrays": 70
+    },
+    "2_sat": {
+      "2 SAT": 2,
+      "2-sat": 20
+    },
+    "2d_array": {
+      "2d array": 5
+    },
+    "2d_arrays": {
+      "2D Arrays": 29
+    },
+    "3d_arrays": {
+      "3D+ Arrays": 1
+    },
+    "aangairbender": {
+      "aangairbender": 1
+    },
+    "aashu_k": {
+      "aashu_k": 1
+    },
+    "abdullah768": {
+      "abdullah768": 1
+    },
+    "abhi_inav": {
+      "abhi_inav": 2
+    },
+    "activity_selection": {
+      "Activity Selection": 2
+    },
+    "ad_hoc": {
+      "Ad-Hoc": 139,
+      "Ad-hoc": 775,
+      "ad-hoc": 361
+    },
+    "adhoc": {
+      "adhoc": 1
+    },
+    "aditya10": {
+      "aditya10_": 1
+    },
+    "admin": {
+      "admin": 2
+    },
+    "admin2": {
+      "admin2": 6
+    },
+    "admin3": {
+      "admin3": 1
+    },
+    "advanced_algorithms": {
+      "Advanced Algorithms": 108
+    },
+    "advanced_data_structure": {
+      "Advanced Data Structure": 28
+    },
+    "advanced_data_structures": {
+      "Advanced Data Structures": 80
+    },
+    "advanced_dp": {
+      "Advanced DP": 27
+    },
+    "advanced_graph_algos": {
+      "Advanced Graph Algos": 22
+    },
+    "advanced_greedy": {
+      "Advanced Greedy": 1
+    },
+    "advanced_tree_structures": {
+      "Advanced Tree Structures": 56
+    },
+    "aho_corasick": {
+      "Aho Corasick": 2
+    },
+    "akashbhalotia": {
+      "akashbhalotia": 1
+    },
+    "akshatgirdhar8": {
+      "akshatgirdhar8": 2
+    },
+    "alei": {
+      "alei": 2
+    },
+    "alexvaleanu": {
+      "alexvaleanu": 1
+    },
+    "algebra": {
+      "Algebra": 38
+    },
+    "algorithms_bit_manipulation": {
+      "Algorithms - Bit Manipulation": 26
+    },
+    "algorithms_constructive_algorithms": {
+      "Algorithms - Constructive Algorithms": 8
+    },
+    "algorithms_debugging": {
+      "Algorithms - Debugging": 3
+    },
+    "algorithms_dynamic_programming": {
+      "Algorithms - Dynamic Programming": 79
+    },
+    "algorithms_game_theory": {
+      "Algorithms - Game Theory": 30
+    },
+    "algorithms_graph_theory": {
+      "Algorithms - Graph Theory": 52
+    },
+    "algorithms_greedy": {
+      "Algorithms - Greedy": 24
+    },
+    "algorithms_implementation": {
+      "Algorithms - Implementation": 61
+    },
+    "algorithms_np_complete": {
+      "Algorithms - NP Complete": 1
+    },
+    "algorithms_recursion": {
+      "Algorithms - Recursion": 10
+    },
+    "algorithms_search": {
+      "Algorithms - Search": 25
+    },
+    "algorithms_sorting": {
+      "Algorithms - Sorting": 14
+    },
+    "algorithms_strings": {
+      "Algorithms - Strings": 43
+    },
+    "algorithms_warmup": {
+      "Algorithms - Warmup": 9
+    },
+    "all_pairs": {
+      "all pairs": 1
+    },
+    "allllekssssa": {
+      "allllekssssa": 1
+    },
+    "aloochaat1998": {
+      "aloochaat1998": 1
+    },
+    "alphabets": {
+      "alphabets": 1
+    },
+    "aman1108": {
+      "aman1108": 1
+    },
+    "amitpandeykgp": {
+      "amitpandeykgp": 1
+    },
+    "amortized_analysis": {
+      "Amortized analysis": 564
+    },
+    "amsgame2": {
+      "amsgame2": 1
+    },
+    "anagram": {
+      "anagram": 2
+    },
+    "anhdq_adm": {
+      "anhdq_adm": 1
+    },
+    "anil_adm": {
+      "anil_adm": 3
+    },
+    "anmolrishi": {
+      "anmolrishi": 1
+    },
+    "anshg0711": {
+      "anshg0711": 1
+    },
+    "anton_adm": {
+      "anton_adm": 2
+    },
+    "antoniuk1": {
+      "antoniuk1": 1
+    },
+    "anudeep2011": {
+      "anudeep2011": 1
+    },
+    "ap": {
+      "AP": 11
+    },
+    "april11": {
+      "april11": 1
+    },
+    "april12": {
+      "april12": 1
+    },
+    "april13": {
+      "april13": 1
+    },
+    "april16": {
+      "april16": 1
+    },
+    "april19": {
+      "april19": 1
+    },
+    "april21": {
+      "april21": 2
+    },
+    "arayi": {
+      "arayi": 1
+    },
+    "arbitrary_precision": {
+      "Arbitrary Precision": 11
+    },
+    "arithmetic": {
+      "Arithmetic": 79
+    },
+    "arjunarul_adm": {
+      "arjunarul_adm": 1
+    },
+    "array": {
+      "Array": 322,
+      "array": 5
+    },
+    "arrays": {
+      "Arrays": 1196
+    },
+    "arunsharma": {
+      "arunsharma_": 1
+    },
+    "aryanag_adm": {
+      "aryanag_adm": 3
+    },
+    "ascii_art": {
+      "ASCII Art": 38
+    },
+    "aswinashok44": {
+      "aswinashok44": 1
+    },
+    "aug15": {
+      "aug15": 2
+    },
+    "aug20": {
+      "aug20": 1
+    },
+    "aug21": {
+      "aug21": 1
+    },
+    "auxiliary_tree": {
+      "Auxiliary Tree": 1
+    },
+    "avi224": {
+      "avi224": 2
+    },
+    "avl_tree": {
+      "AVL-Tree": 1
+    },
+    "backtracking": {
+      "Backtracking": 66,
+      "backtracking": 8
+    },
+    "base": {
+      "base": 2
+    },
+    "basic": {
+      "basic": 1
+    },
+    "basic_programming": {
+      "Basic-Programming": 1
+    },
+    "basic_programming_concepts": {
+      "Basic Programming Concepts": 254
+    },
+    "basicprogramming": {
+      "BasicProgramming": 85
+    },
+    "beatty_sequence": {
+      "Beatty sequence": 1
+    },
+    "bellmanford": {
+      "BellmanFord": 1
+    },
+    "berezin": {
+      "berezin": 3
+    },
+    "bezout_s_identity": {
+      "Bezout's Identity": 1
+    },
+    "bfs": {
+      "BFS": 80,
+      "bfs": 7
+    },
+    "bhavyarustgi10": {
+      "bhavyarustgi10": 1
+    },
+    "biconnected_components": {
+      "Biconnected Components": 1
+    },
+    "big_integer": {
+      "Big Integer": 7,
+      "big-integer": 1
+    },
+    "bigbag": {
+      "bigbag": 1
+    },
+    "binary": {
+      "Binary": 38
+    },
+    "binary_exponentiation": {
+      "Binary Exponentiation": 10
+    },
+    "binary_indexed_tree": {
+      "Binary Indexed Tree": 3
+    },
+    "binary_lifting": {
+      "Binary lifting": 4,
+      "binary-lifting": 1
+    },
+    "binary_representation": {
+      "Binary Representation": 13
+    },
+    "binary_search": {
+      "Binary Search": 195,
+      "binary search": 766,
+      "binary-search": 6
+    },
+    "binary_search_on_answer": {
+      "Binary Search on Answer": 12
+    },
+    "binary_search_tree": {
+      "Binary Search Tree": 59
+    },
+    "binary_search_trees": {
+      "Binary Search Trees": 1
+    },
+    "binary_tree": {
+      "Binary Tree": 10
+    },
+    "binary_trees": {
+      "Binary Trees": 2
+    },
+    "binarysearch": {
+      "BinarySearch": 37
+    },
+    "binarysearchtree": {
+      "BinarySearchTree": 4
+    },
+    "binarytree": {
+      "BinaryTree": 2
+    },
+    "binomial_theorem": {
+      "Binomial Theorem": 4
+    },
+    "bipartite": {
+      "Bipartite": 3,
+      "bipartite": 2
+    },
+    "bipartite_graphs": {
+      "Bipartite Graphs": 6
+    },
+    "bipartitegraph": {
+      "BipartiteGraph": 2
+    },
+    "bipin2": {
+      "bipin2": 1
+    },
+    "bit": {
+      "BIT": 14
+    },
+    "bit22019": {
+      "bit22019": 1
+    },
+    "bit_magic": {
+      "Bit Magic": 119
+    },
+    "bit_manipulation": {
+      "Bit Manipulation": 198,
+      "Bit manipulation": 832,
+      "bit manipulation": 1,
+      "bit-manipulation": 3
+    },
+    "bitmanipulation": {
+      "Bitmanipulation": 16
+    },
+    "bitmask": {
+      "Bitmask": 25
+    },
+    "bitmasking": {
+      "Bitmasking": 18
+    },
+    "bitmasks": {
+      "bitmasks": 376
+    },
+    "bits": {
+      "Bits": 16
+    },
+    "bitwise_and": {
+      "bitwise-and": 1
+    },
+    "bitwise_operation": {
+      "Bitwise Operation": 102,
+      "bitwise-operation": 6
+    },
+    "bitwise_xor": {
+      "bitwise-xor": 1
+    },
+    "bottom_up": {
+      "Bottom-up": 20
+    },
+    "brainteaser": {
+      "Brainteaser": 4
+    },
+    "breadth_first_search": {
+      "Breadth-First Search": 27
+    },
+    "brute_force": {
+      "Brute Force": 157,
+      "brute-force": 9
+    },
+    "bruteforce": {
+      "BruteForce": 22
+    },
+    "bst": {
+      "bst": 3
+    },
+    "bucket_sort": {
+      "Bucket Sort": 3
+    },
+    "burnside_lemma": {
+      "Burnside Lemma": 1
+    },
+    "bytr2020": {
+      "bytr2020": 1
+    },
+    "cakewalk": {
+      "cakewalk": 26
+    },
+    "calculus": {
+      "Calculus": 4
+    },
+    "carmichael_function": {
+      "carmichael-function": 1
+    },
+    "cartesian_coordinate_system": {
+      "Cartesian Coordinate System": 10
+    },
+    "case_work": {
+      "Case work": 83
+    },
+    "catalan_numbers": {
+      "Catalan Numbers": 2
+    },
+    "cauchy_schwarz_inequality": {
+      "Cauchy Schwarz Inequality": 1
+    },
+    "ccrc2021": {
+      "ccrc2021": 1
+    },
+    "cenadar": {
+      "cenadar": 2
+    },
+    "cg": {
+      "cg": 17
+    },
+    "challenge": {
+      "Challenge": 1,
+      "challenge": 1
+    },
+    "challenge_problem": {
+      "Challenge Problem": 19
+    },
+    "chemthan": {
+      "chemthan": 2
+    },
+    "chess": {
+      "Chess": 12,
+      "chess": 1
+    },
+    "chigu": {
+      "chigu": 1
+    },
+    "chinese_remainder_theorem": {
+      "Chinese Remainder Theorem": 2,
+      "chinese remainder theorem": 14,
+      "chinese-remainder-theorem": 1
+    },
+    "ciphers": {
+      "Ciphers": 16
+    },
+    "circular_linked_list": {
+      "circular linked list": 2,
+      "circular-linked-list": 6
+    },
+    "coloring": {
+      "Coloring": 6
+    },
+    "combinatorial": {
+      "Combinatorial": 23
+    },
+    "combinatorics": {
+      "Combinatorics": 753,
+      "combinatorics": 461
+    },
+    "complete_search": {
+      "Complete Search": 3
+    },
+    "completed": {
+      "Completed": 1
+    },
+    "computational_geometry": {
+      "Computational Geometry": 17
+    },
+    "conditional_statements": {
+      "Conditional Statements": 141
+    },
+    "connected_components": {
+      "Connected Components": 8
+    },
+    "connectivity": {
+      "Connectivity": 1
+    },
+    "constructive": {
+      "Constructive": 426,
+      "Constructive algorithms": 1699,
+      "constructive": 2,
+      "constructive algorithms": 1258
+    },
+    "constructive_algo": {
+      "constructive algo": 3
+    },
+    "contribution_trick": {
+      "Contribution Trick": 5
+    },
+    "convex_hull": {
+      "Convex Hull": 6,
+      "convex-hull": 1
+    },
+    "convolution": {
+      "Convolution": 2
+    },
+    "cook06": {
+      "cook06": 1
+    },
+    "cook08": {
+      "cook08": 1
+    },
+    "cook10": {
+      "cook10": 1
+    },
+    "cook100": {
+      "cook100": 1
+    },
+    "cook101": {
+      "cook101": 1
+    },
+    "cook103": {
+      "cook103": 1
+    },
+    "cook108": {
+      "cook108": 1
+    },
+    "cook111": {
+      "cook111": 1
+    },
+    "cook113": {
+      "cook113": 1
+    },
+    "cook116": {
+      "cook116": 1
+    },
+    "cook118": {
+      "cook118": 1
+    },
+    "cook130": {
+      "cook130": 1
+    },
+    "cook132": {
+      "cook132": 1
+    },
+    "cook137": {
+      "cook137": 6
+    },
+    "cook14": {
+      "cook14": 3
+    },
+    "cook141": {
+      "cook141": 8
+    },
+    "cook143": {
+      "cook143": 4
+    },
+    "cook20": {
+      "cook20": 1
+    },
+    "cook21": {
+      "cook21": 2
+    },
+    "cook38": {
+      "cook38": 1
+    },
+    "cook42": {
+      "cook42": 1
+    },
+    "cook45": {
+      "cook45": 1
+    },
+    "cook46": {
+      "cook46": 1
+    },
+    "cook47": {
+      "cook47": 1
+    },
+    "cook70": {
+      "cook70": 1
+    },
+    "cook75": {
+      "cook75": 1
+    },
+    "cook82": {
+      "cook82": 1
+    },
+    "cook90": {
+      "cook90": 1
+    },
+    "cook94": {
+      "cook94": 1
+    },
+    "cook98": {
+      "cook98": 1
+    },
+    "cook_off": {
+      "cook-off": 5
+    },
+    "coordinate_compression": {
+      "Coordinate Compression": 3,
+      "coordinate-compression": 1
+    },
+    "counting": {
+      "Counting": 28,
+      "counting": 2
+    },
+    "counting_sort": {
+      "Counting Sort": 2
+    },
+    "coverings": {
+      "Coverings": 2
+    },
+    "cpp": {
+      "CPP": 19
+    },
+    "cpp_control_flow": {
+      "CPP-Control-Flow": 1
+    },
+    "cpp_strings": {
+      "cpp-strings": 2
+    },
+    "cross_product": {
+      "Cross Product": 1
+    },
+    "cryptography": {
+      "Cryptography": 21
+    },
+    "csns2021": {
+      "csns2021": 2
+    },
+    "cut": {
+      "cut": 1
+    },
+    "cycle": {
+      "cycle": 1
+    },
+    "cycle_graph": {
+      "cycle_graph": 1
+    },
+    "cycles": {
+      "Cycles": 7
+    },
+    "cyclic_rotation": {
+      "Cyclic Rotation": 2
+    },
+    "daanish_adm": {
+      "daanish_adm": 3
+    },
+    "dag": {
+      "dag": 3
+    },
+    "dag_algos": {
+      "DAG Algos": 5
+    },
+    "daniel_1999": {
+      "daniel_1999": 1
+    },
+    "darkshadows": {
+      "darkshadows": 3
+    },
+    "data_science": {
+      "Data Science": 8
+    },
+    "data_structure": {
+      "data-structure": 1
+    },
+    "data_structures": {
+      "Data Structures": 2227,
+      "Data structures": 4531,
+      "Data-Structures": 1,
+      "data structures": 1246
+    },
+    "data_structures_advanced": {
+      "Data Structures - Advanced": 42
+    },
+    "data_structures_arrays": {
+      "Data Structures - Arrays": 5
+    },
+    "data_structures_balanced_trees": {
+      "Data Structures - Balanced Trees": 2
+    },
+    "data_structures_disjoint_set": {
+      "Data Structures - Disjoint Set": 3
+    },
+    "data_structures_heap": {
+      "Data Structures - Heap": 4
+    },
+    "data_structures_queues": {
+      "Data Structures - Queues": 5
+    },
+    "data_structures_stacks": {
+      "Data Structures - Stacks": 9
+    },
+    "data_structures_trees": {
+      "Data Structures - Trees": 5
+    },
+    "data_structures_trie": {
+      "Data Structures - Trie": 2
+    },
+    "data_types": {
+      "Data Types": 7
+    },
+    "datastructures": {
+      "DataStructures": 81
+    },
+    "date_time": {
+      "Date Time": 20,
+      "Date-Time": 1
+    },
+    "david_adm": {
+      "david_adm": 3
+    },
+    "dazlersan1": {
+      "dazlersan1": 1
+    },
+    "deadwing97": {
+      "deadwing97": 3
+    },
+    "debugging": {
+      "Debugging": 26
+    },
+    "dec19": {
+      "dec19": 2
+    },
+    "depth_first_search": {
+      "Depth-First Search": 18,
+      "depth-first-search": 1
+    },
+    "deque": {
+      "Deque": 11
+    },
+    "derangements": {
+      "Derangements": 1
+    },
+    "design_pattern": {
+      "Design-Pattern": 11
+    },
+    "determinant": {
+      "Determinant": 2
+    },
+    "dfs": {
+      "DFS": 138
+    },
+    "dfs_order": {
+      "DFS Order": 3
+    },
+    "difference_array": {
+      "difference-array": 1
+    },
+    "difference_arrays": {
+      "Difference Arrays": 7
+    },
+    "differentiation": {
+      "Differentiation": 1
+    },
+    "digit_dp": {
+      "Digit DP": 5,
+      "digit-dp": 1
+    },
+    "dijkstra": {
+      "Dijkstra": 4,
+      "dijkstra": 5
+    },
+    "dijkstra_s_algorithm": {
+      "Dijkstra's Algorithm": 8
+    },
+    "dilworth_theorem": {
+      "Dilworth Theorem": 2
+    },
+    "directed_acyclic_graphs": {
+      "Directed Acyclic Graphs": 2
+    },
+    "directed_graph": {
+      "directed-graph": 1
+    },
+    "directed_graphs": {
+      "Directed Graphs": 6,
+      "Directed graphs": 15
+    },
+    "dirichlet_convolution": {
+      "Dirichlet Convolution": 1
+    },
+    "discrete_logarithm": {
+      "Discrete Logarithm": 1
+    },
+    "discrete_mathematics": {
+      "Discrete Mathematics": 2
+    },
+    "discrete_maths": {
+      "Discrete Maths": 1
+    },
+    "disjoint_set": {
+      "Disjoint Set": 4
+    },
+    "disjoint_set_union": {
+      "Disjoint Set Union": 12
+    },
+    "disjoint_sets": {
+      "disjoint sets": 2
+    },
+    "disjointset": {
+      "DisjointSet": 10
+    },
+    "distribution": {
+      "Distribution": 1
+    },
+    "divide_and_conquer": {
+      "Divide and Conquer": 38,
+      "Divide and conquer": 242,
+      "divide and conquer": 202
+    },
+    "divideandconquer": {
+      "DivideAndConquer": 2
+    },
+    "divisibility": {
+      "Divisibility": 12
+    },
+    "division": {
+      "Division": 8
+    },
+    "divisors": {
+      "Divisors": 38,
+      "divisors": 1
+    },
+    "dolabmoon": {
+      "dolabmoon": 1
+    },
+    "doubly_linked_list": {
+      "doubly-linked-list": 7
+    },
+    "dp_approach": {
+      "DP Approach": 33
+    },
+    "dp_bitmask": {
+      "DP Bitmask": 11
+    },
+    "dp_greedy": {
+      "dp & greedy": 30
+    },
+    "dp_on_sequences": {
+      "DP on sequences": 7
+    },
+    "dp_on_trees": {
+      "DP on Trees": 7
+    },
+    "drswad": {
+      "drswad": 1
+    },
+    "dsu": {
+      "dsu": 249
+    },
+    "dsu_on_trees": {
+      "DSU on Trees": 2
+    },
+    "dynamic_programming": {
+      "Dynamic Programming": 606,
+      "Dynamic programming": 2454,
+      "dp": 1565,
+      "dynamic-programming": 22
+    },
+    "dynamicprogramming": {
+      "DynamicProgramming": 140
+    },
+    "easy": {
+      "easy": 55
+    },
+    "easy_medium": {
+      "easy-medium": 28
+    },
+    "enumeration": {
+      "Enumeration": 8
+    },
+    "erfaniaa": {
+      "erfaniaa": 1
+    },
+    "error_detection": {
+      "Error Detection": 2
+    },
+    "esoteric_languages": {
+      "Esoteric Languages": 8
+    },
+    "euclid_s_algorithm": {
+      "Euclid's Algorithm": 6
+    },
+    "euler_theorem": {
+      "Euler Theorem": 1,
+      "euler-theorem": 1
+    },
+    "euler_totient_function": {
+      "Euler Totient Function": 4,
+      "euler-totient-function": 1
+    },
+    "euler_tour": {
+      "Euler Tour": 3
+    },
+    "eulerian_tour": {
+      "eulerian-tour": 1
+    },
+    "expectation": {
+      "Expectation": 3
+    },
+    "expected_value": {
+      "Expected Value": 28,
+      "expected-value": 1
+    },
+    "exponentiation": {
+      "Exponentiation": 12
+    },
+    "expression_parsing": {
+      "expression parsing": 33
+    },
+    "extendedeuclid": {
+      "ExtendedEuclid": 1
+    },
+    "exun2021": {
+      "exun2021": 7
+    },
+    "ezio_26": {
+      "ezio_26": 2
+    },
+    "factorial": {
+      "factorial": 15
+    },
+    "factorials": {
+      "Factorials": 7
+    },
+    "factorization": {
+      "Factorization": 3,
+      "factorization": 3
+    },
+    "fairy_winx": {
+      "fairy_winx": 1
+    },
+    "fast_fourier_transform": {
+      "fast-fourier-transform": 1
+    },
+    "feb12": {
+      "feb12": 1
+    },
+    "feb13": {
+      "feb13": 1
+    },
+    "feb20": {
+      "feb20": 1
+    },
+    "fenwick_tree": {
+      "fenwick-tree": 1
+    },
+    "fenwick_trees": {
+      "Fenwick Trees": 20
+    },
+    "fenwicktree": {
+      "FenwickTree": 6
+    },
+    "fermat_s_little_theorem": {
+      "Fermat's Little Theorem": 6
+    },
+    "fft": {
+      "FFT": 10,
+      "fft": 65
+    },
+    "fibonacci": {
+      "Fibonacci": 18
+    },
+    "fibonacci_series": {
+      "Fibonacci Series": 3
+    },
+    "filtering": {
+      "Filtering": 6
+    },
+    "flood_fill": {
+      "Flood Fill": 1
+    },
+    "flow": {
+      "Flow": 2,
+      "flow": 4
+    },
+    "flow_networks": {
+      "Flow Networks": 6
+    },
+    "flows": {
+      "flows": 108
+    },
+    "flows_and_cuts": {
+      "Flows and cuts": 156
+    },
+    "floyd_warshall": {
+      "floyd-warshall": 1
+    },
+    "floyd_warshall_s_algorithm": {
+      "Floyd Warshall's Algorithm": 2
+    },
+    "floydwarshall": {
+      "FloydWarshall": 2
+    },
+    "ford_fulkerson_algorithm": {
+      "Ford-Fulkerson Algorithm": 1
+    },
+    "formal_language": {
+      "Formal Language": 1
+    },
+    "foyaz05": {
+      "foyaz05": 1
+    },
+    "fractions": {
+      "Fractions": 3
+    },
+    "frequency_arrays": {
+      "Frequency Arrays": 52
+    },
+    "functional_equations": {
+      "Functional Equations": 1
+    },
+    "functional_programming": {
+      "Functional Programming": 6
+    },
+    "functions": {
+      "Functions": 1
+    },
+    "furko_adm": {
+      "furko_adm": 1
+    },
+    "game": {
+      "game": 9
+    },
+    "game_theory": {
+      "Game Theory": 63,
+      "Game theory": 308,
+      "game theory": 1,
+      "game-theory": 3
+    },
+    "games": {
+      "Games": 45,
+      "games": 155
+    },
+    "gametheory": {
+      "GameTheory": 12
+    },
+    "garners_algorithm": {
+      "garners-algorithm": 1
+    },
+    "gaussian_elimination": {
+      "Gaussian Elimination": 3
+    },
+    "gcd": {
+      "GCD": 69,
+      "gcd": 1
+    },
+    "general": {
+      "Algorithms": 3827,
+      "Fundamentals": 1326
+    },
+    "generating_functions": {
+      "Generating Functions": 2
+    },
+    "geometric": {
+      "Geometric": 18
+    },
+    "geometry": {
+      "Geometry": 506,
+      "geometry": 339
+    },
+    "gomory_hu_tree": {
+      "Gomory-Hu Tree": 1
+    },
+    "gp": {
+      "GP": 7
+    },
+    "graph": {
+      "Graph": 106,
+      "Graph algorithms": 1211,
+      "Graph traversal": 899,
+      "dfs and similar": 667,
+      "graphs": 841
+    },
+    "graph_algos": {
+      "Graph Algos": 122
+    },
+    "graph_isomorphism_problem": {
+      "Graph Isomorphism Problem": 1
+    },
+    "graph_matchings": {
+      "graph matchings": 62
+    },
+    "graph_theory": {
+      "Graph Theory": 2
+    },
+    "graphs": {
+      "Graphs": 91
+    },
+    "graphtheory": {
+      "GraphTheory": 47
+    },
+    "gray_code": {
+      "Gray code": 1
+    },
+    "greatest_common_divisor": {
+      "greatest-common-divisor": 3
+    },
+    "greedy": {
+      "Greedy": 397,
+      "Greedy algorithms": 2567,
+      "greedy": 2139
+    },
+    "grid": {
+      "grid": 1
+    },
+    "group_theory": {
+      "Group Theory": 2
+    },
+    "groupings": {
+      "Groupings": 21
+    },
+    "grundy_numbers": {
+      "grundy-numbers": 1
+    },
+    "gvaibhav21": {
+      "gvaibhav21": 3
+    },
+    "hackcyborg": {
+      "hackcyborg": 1
+    },
+    "hackenbush": {
+      "Hackenbush": 1
+    },
+    "hackslash_123": {
+      "hackslash_123": 1
+    },
+    "hadamard_matrix": {
+      "hadamard-matrix": 1
+    },
+    "hamiltonian_cycle": {
+      "Hamiltonian Cycle": 1,
+      "hamiltonian-cycle": 1
+    },
+    "hamming_distance": {
+      "Hamming Distance": 2
+    },
+    "hard": {
+      "hard": 4
+    },
+    "harshil21": {
+      "harshil21": 1
+    },
+    "hash": {
+      "Hash": 142
+    },
+    "hash_function": {
+      "Hash Function": 7
+    },
+    "hash_table": {
+      "Hash Table": 102
+    },
+    "hashing": {
+      "Hashing": 40,
+      "hashing": 151
+    },
+    "hashmap": {
+      "HashMap": 4
+    },
+    "hashmaps": {
+      "Hashmaps": 22
+    },
+    "heap": {
+      "Heap": 35,
+      "heap": 1
+    },
+    "heap_priority_queue": {
+      "Heap (Priority Queue)": 20
+    },
+    "heaps": {
+      "Heaps": 8
+    },
+    "heavylightdecomposition": {
+      "Heavylightdecomposition": 1
+    },
+    "hemanthram": {
+      "hemanthram": 1
+    },
+    "heuristics": {
+      "Heuristics": 2
+    },
+    "hiroto_adm": {
+      "hiroto_adm": 1
+    },
+    "hld": {
+      "HLD": 3
+    },
+    "hloya_ygrt": {
+      "hloya_ygrt": 1
+    },
+    "hopcroft_karp_algorithm": {
+      "Hopcroft Karp Algorithm": 1
+    },
+    "icl2017": {
+      "icl2017": 2
+    },
+    "icl2018": {
+      "icl2018": 3
+    },
+    "image_processing": {
+      "Image Processing": 1
+    },
+    "impartial_game": {
+      "Impartial Game": 1
+    },
+    "implementation": {
+      "Implementation": 2741,
+      "implementation": 2310
+    },
+    "inbuilt_functions": {
+      "Inbuilt functions": 16
+    },
+    "inclusion_exclusion_principle": {
+      "Inclusion Exclusion Principle": 11
+    },
+    "inequalities": {
+      "Inequalities": 4
+    },
+    "infy20": {
+      "infy20": 2
+    },
+    "inov_adm": {
+      "inov_adm": 2
+    },
+    "inso2018": {
+      "inso2018": 3
+    },
+    "insomnia18": {
+      "insomnia18": 3
+    },
+    "integer_division": {
+      "Integer Division": 20
+    },
+    "integer_factorisation": {
+      "Integer Factorisation": 54
+    },
+    "integration": {
+      "Integration": 1
+    },
+    "interactive": {
+      "interactive": 115
+    },
+    "interpolation": {
+      "Interpolation": 2
+    },
+    "interpreters": {
+      "Interpreters": 8
+    },
+    "inversions": {
+      "inversions": 1
+    },
+    "isha_adm": {
+      "isha_adm": 1
+    },
+    "iterators": {
+      "Iterators": 2
+    },
+    "ivanz_adm": {
+      "ivanz_adm": 1
+    },
+    "izaron": {
+      "izaron": 1
+    },
+    "jan15": {
+      "jan15": 1
+    },
+    "jan16": {
+      "jan16": 1
+    },
+    "jan21": {
+      "jan21": 1
+    },
+    "jan221": {
+      "jan221": 4
+    },
+    "jan222": {
+      "jan222": 4
+    },
+    "java": {
+      "Java": 14
+    },
+    "java_collections": {
+      "Java-Collections": 2
+    },
+    "jeevan_adm": {
+      "jeevan_adm": 2
+    },
+    "jeevanjyot": {
+      "jeevanjyot": 8
+    },
+    "jnarutoj": {
+      "jnarutoj": 1
+    },
+    "json": {
+      "JSON": 1
+    },
+    "july12": {
+      "july12": 1
+    },
+    "july13": {
+      "july13": 1
+    },
+    "july16": {
+      "july16": 1
+    },
+    "july17": {
+      "july17": 1
+    },
+    "july19": {
+      "july19": 1
+    },
+    "june12": {
+      "june12": 1
+    },
+    "june13": {
+      "june13": 1
+    },
+    "june14": {
+      "june14": 1
+    },
+    "june15": {
+      "june15": 1
+    },
+    "june17": {
+      "june17": 1
+    },
+    "june18": {
+      "june18": 1
+    },
+    "june222": {
+      "june222": 2
+    },
+    "kadane": {
+      "Kadane": 3
+    },
+    "kadane_algorithm": {
+      "Kadane Algorithm": 5
+    },
+    "kalpitk": {
+      "kalpitk": 1
+    },
+    "katana_handler": {
+      "katana_handler": 1
+    },
+    "khad_adm": {
+      "khad_adm": 1
+    },
+    "kingofnumbers": {
+      "kingofnumbers": 7
+    },
+    "kirchhoffs_matrix_tree_theorem": {
+      "Kirchhoffs Matrix Tree Theorem": 2
+    },
+    "kmaaszraa": {
+      "kmaaszraa": 3
+    },
+    "kmp": {
+      "KMP": 3
+    },
+    "kmp_algorithm": {
+      "KMP Algorithm": 7
+    },
+    "knapsack": {
+      "Knapsack": 5,
+      "knapsack": 3
+    },
+    "kostya_by": {
+      "kostya_by": 2
+    },
+    "kruskal": {
+      "Kruskal": 1
+    },
+    "kruskal_s_algorithm": {
+      "Kruskal's Algorithm": 2
+    },
+    "kuhn": {
+      "kuhn": 1
+    },
+    "kushalgoel": {
+      "kushalgoel": 1
+    },
+    "lagrange_interpolation": {
+      "Lagrange Interpolation": 2
+    },
+    "language_features": {
+      "Language Features": 2
+    },
+    "lavish315": {
+      "lavish315": 1
+    },
+    "lavish_adm": {
+      "lavish_adm": 3
+    },
+    "lazy_propagation": {
+      "Lazy Propagation": 4
+    },
+    "lcm": {
+      "LCM": 15
+    },
+    "lcs": {
+      "LCS": 1
+    },
+    "lexicographic_order": {
+      "Lexicographic Order": 3
+    },
+    "likecs": {
+      "likecs": 6
+    },
+    "line_sweep": {
+      "Line Sweep": 1,
+      "Line-sweep": 1
+    },
+    "linear_algebra": {
+      "Linear Algebra": 10
+    },
+    "linear_programming": {
+      "Linear Programming": 1
+    },
+    "lines": {
+      "Lines": 1
+    },
+    "linked_list": {
+      "Linked List": 94
+    },
+    "linked_lists": {
+      "Linked Lists": 1
+    },
+    "lists": {
+      "Lists": 80
+    },
+    "locapr18": {
+      "locapr18": 2
+    },
+    "log_exp_pow": {
+      "log/exp/pow": 3
+    },
+    "logarithm": {
+      "Logarithm": 5
+    },
+    "logic": {
+      "Logic": 63
+    },
+    "logic_maths": {
+      "logic-maths": 1
+    },
+    "logical": {
+      "logical": 1
+    },
+    "logical_thinking": {
+      "logical-thinking": 17
+    },
+    "logicalthinking": {
+      "logicalthinking": 1
+    },
+    "long_challenge": {
+      "long-challenge": 2
+    },
+    "longest_common_substring": {
+      "Longest Common Substring": 1
+    },
+    "longest_inc_subsequence": {
+      "longest-inc-subsequence": 1
+    },
+    "longest_increasing_subsequence": {
+      "Longest Increasing Subsequence": 5
+    },
+    "looping": {
+      "looping": 2
+    },
+    "loops": {
+      "Loops": 48
+    },
+    "lowest_common_ancestor": {
+      "Lowest Common Ancestor": 10
+    },
+    "ltime101": {
+      "ltime101": 1
+    },
+    "ltime112": {
+      "ltime112": 1
+    },
+    "ltime16": {
+      "ltime16": 1
+    },
+    "ltime27": {
+      "ltime27": 1
+    },
+    "ltime28": {
+      "ltime28": 1
+    },
+    "ltime32": {
+      "ltime32": 1
+    },
+    "ltime38": {
+      "ltime38": 1
+    },
+    "ltime51": {
+      "ltime51": 1
+    },
+    "ltime53": {
+      "ltime53": 1
+    },
+    "ltime63": {
+      "ltime63": 1
+    },
+    "ltime64": {
+      "ltime64": 1
+    },
+    "ltime65": {
+      "ltime65": 1
+    },
+    "ltime66": {
+      "ltime66": 1
+    },
+    "ltime68": {
+      "ltime68": 1
+    },
+    "ltime70": {
+      "ltime70": 1
+    },
+    "ltime71": {
+      "ltime71": 1
+    },
+    "ltime73": {
+      "ltime73": 1
+    },
+    "ltime74": {
+      "ltime74": 2
+    },
+    "ltime75": {
+      "ltime75": 1
+    },
+    "ltime78": {
+      "ltime78": 1
+    },
+    "ltime98": {
+      "ltime98": 1
+    },
+    "ltime99": {
+      "ltime99": 1
+    },
+    "lucas_theorem": {
+      "Lucas Theorem": 4
+    },
+    "m0stik": {
+      "m0stik": 1
+    },
+    "ma5termind": {
+      "ma5termind": 1
+    },
+    "machine_learning": {
+      "Machine Learning": 3
+    },
+    "madhav_1999": {
+      "madhav_1999": 1
+    },
+    "mamedov": {
+      "mamedov": 1
+    },
+    "manachers_algorithm": {
+      "Manachers Algorithm": 3
+    },
+    "mani_adm": {
+      "mani_adm": 2
+    },
+    "map": {
+      "Map": 29,
+      "map": 18
+    },
+    "maps": {
+      "Maps": 37
+    },
+    "march12": {
+      "march12": 1
+    },
+    "march16": {
+      "march16": 1
+    },
+    "march19": {
+      "march19": 2
+    },
+    "march21": {
+      "march21": 1
+    },
+    "matching": {
+      "Matching": 3
+    },
+    "math": {
+      "Basic Maths": 520,
+      "Math": 348,
+      "Mathematical": 588,
+      "Mathematics": 4747,
+      "math": 2147
+    },
+    "mathematics_algebra": {
+      "Mathematics - Algebra": 33
+    },
+    "mathematics_combinatorics": {
+      "Mathematics - Combinatorics": 50
+    },
+    "mathematics_fundamentals": {
+      "Mathematics - Fundamentals": 32
+    },
+    "mathematics_geometry": {
+      "Mathematics - Geometry": 29
+    },
+    "mathematics_number_theory": {
+      "Mathematics - Number Theory": 70
+    },
+    "mathematics_probability": {
+      "Mathematics - Probability": 21
+    },
+    "maths": {
+      "maths": 49
+    },
+    "matrices": {
+      "Matrices": 360,
+      "matrices": 93
+    },
+    "matrix": {
+      "Matrix": 161
+    },
+    "matrix_exponentiation": {
+      "Matrix Exponentiation": 8,
+      "matrix-exponentiation": 1
+    },
+    "matrix_multiplication": {
+      "Matrix Multiplication": 8
+    },
+    "matrix_pow": {
+      "matrix pow": 1
+    },
+    "matrixexponentiation": {
+      "MatrixExponentiation": 13
+    },
+    "maximum_bipartite_matching": {
+      "Maximum Bipartite Matching": 3
+    },
+    "maximum_flow": {
+      "Maximum Flow": 1
+    },
+    "may12": {
+      "may12": 1
+    },
+    "may13": {
+      "may13": 1
+    },
+    "may15": {
+      "may15": 1
+    },
+    "may16": {
+      "may16": 2
+    },
+    "may18": {
+      "may18": 1
+    },
+    "may20": {
+      "may20": 1
+    },
+    "mazihang2022": {
+      "mazihang2022": 1
+    },
+    "medium": {
+      "medium": 6
+    },
+    "medium_hard": {
+      "medium-hard": 2
+    },
+    "meet_in_middle": {
+      "meet-in-middle": 1
+    },
+    "meet_in_the_middle": {
+      "Meet in the middle": 4,
+      "meet-in-the-middle": 36
+    },
+    "melfice": {
+      "melfice": 2
+    },
+    "memoization": {
+      "Memoization": 25
+    },
+    "merge_sort": {
+      "Merge Sort": 8
+    },
+    "mexomerf": {
+      "mexomerf": 1
+    },
+    "mgch": {
+      "mgch": 2
+    },
+    "min_cut_max_flow": {
+      "Min Cut Max flow": 1
+    },
+    "minimum_cut": {
+      "minimum-cut": 1
+    },
+    "minimum_spanning_trees": {
+      "Minimum Spanning Trees": 8
+    },
+    "minimumspanningtree": {
+      "MinimumSpanningTree": 8
+    },
+    "misc": {
+      "Misc": 30
+    },
+    "mo_s_algorithm": {
+      "Mo's Algorithm": 1
+    },
+    "mobius_function": {
+      "Mobius Function": 2
+    },
+    "mobius_inversion": {
+      "Mobius Inversion": 2
+    },
+    "modular_arith": {
+      "modular-arith": 2
+    },
+    "modular_arithmetic": {
+      "Modular Arithmetic": 139,
+      "modular arithmetic": 5,
+      "modular-arithmetic": 1
+    },
+    "modular_exponentiation": {
+      "Modular Exponentiation": 29
+    },
+    "modulararithmetic": {
+      "Modulararithmetic": 5
+    },
+    "modularexponentiation": {
+      "Modularexponentiation": 6
+    },
+    "modulo": {
+      "modulo": 3
+    },
+    "modulo_multiplicative_inverse": {
+      "Modulo Multiplicative Inverse": 12
+    },
+    "monotonic_queue": {
+      "Monotonic Queue": 4
+    },
+    "monotonic_stack": {
+      "Monotonic Stack": 15,
+      "Monotonic stack": 4
+    },
+    "monthly_contest": {
+      "Monthly-Contest": 1
+    },
+    "mradul_adm": {
+      "mradul_adm": 2
+    },
+    "mrkerim": {
+      "mrkerim": 1
+    },
+    "mst": {
+      "mst": 3
+    },
+    "multi_source_bfs": {
+      "Multi source BFS": 1
+    },
+    "multiset": {
+      "Multiset": 14
+    },
+    "munch_01": {
+      "munch_01": 2
+    },
+    "networks": {
+      "Networks": 4
+    },
+    "next_greater_element": {
+      "Next Greater Element": 2
+    },
+    "nikhil_adm": {
+      "nikhil_adm": 2
+    },
+    "nim_game": {
+      "nim game": 5
+    },
+    "nots0fast": {
+      "nots0fast": 1
+    },
+    "notsoloud": {
+      "notsoloud": 2
+    },
+    "nov18": {
+      "nov18": 1
+    },
+    "nov19": {
+      "nov19": 1
+    },
+    "ntt": {
+      "NTT": 1
+    },
+    "number_system": {
+      "Number System": 13
+    },
+    "number_theoretic_transfmtn": {
+      "number-theoretic-transfmtn": 1
+    },
+    "number_theory": {
+      "Number Theory": 217,
+      "Number theory": 1106,
+      "number theory": 543,
+      "number-theory": 37
+    },
+    "numbers": {
+      "Numbers": 46
+    },
+    "numbertheory": {
+      "NumberTheory": 48
+    },
+    "numpy": {
+      "NumPy": 2
+    },
+    "object_oriented_programming": {
+      "Object-oriented Programming": 1
+    },
+    "observation": {
+      "Observation": 296,
+      "observation": 13
+    },
+    "oct13": {
+      "oct13": 1
+    },
+    "oct15": {
+      "oct15": 1
+    },
+    "oct16": {
+      "oct16": 2
+    },
+    "oct17": {
+      "oct17": 1
+    },
+    "oct18": {
+      "oct18": 1
+    },
+    "offline_queries": {
+      "Offline Queries": 8
+    },
+    "ojasbansal": {
+      "ojasbansal": 1
+    },
+    "omelyanenko": {
+      "omelyanenko": 2
+    },
+    "online_queries": {
+      "Online Queries": 12
+    },
+    "oop": {
+      "OOP": 1
+    },
+    "operators": {
+      "Operators": 7
+    },
+    "optimization": {
+      "optimization": 4
+    },
+    "optimization_problems": {
+      "Optimization Problems": 5
+    },
+    "ordered_set": {
+      "Ordered Set": 5
+    },
+    "paley_construction": {
+      "paley-construction": 1
+    },
+    "palindrome": {
+      "palindrome": 27
+    },
+    "palindromes": {
+      "palindromes": 2
+    },
+    "panik": {
+      "panik": 1
+    },
+    "parsing": {
+      "Parsing": 20
+    },
+    "partitions": {
+      "Partitions": 2
+    },
+    "paths_and_circuits": {
+      "Paths and circuits": 2
+    },
+    "pattern": {
+      "pattern": 1
+    },
+    "pattern_printing": {
+      "pattern-printing": 18
+    },
+    "pattern_searching": {
+      "Pattern Searching": 9
+    },
+    "patterns": {
+      "Patterns": 5
+    },
+    "pavel1996": {
+      "pavel1996": 1
+    },
+    "pelt2019": {
+      "pelt2019": 2
+    },
+    "performance": {
+      "Performance": 49
+    },
+    "permutation": {
+      "permutation": 19
+    },
+    "permutation_cycles": {
+      "Permutation Cycles": 1
+    },
+    "permutations": {
+      "Permutations": 18
+    },
+    "permutations_combinations": {
+      "Permutations & Combinations": 18
+    },
+    "persistent_segment_trees": {
+      "Persistent Segment Trees": 4
+    },
+    "persistent_structures": {
+      "Persistent Structures": 4
+    },
+    "physics": {
+      "Physics": 8
+    },
+    "pigeonhole_principle": {
+      "Pigeonhole Principle": 9
+    },
+    "planar_graph": {
+      "Planar Graph": 1
+    },
+    "pointers": {
+      "Pointers": 1
+    },
+    "policy_based_data_structures": {
+      "Policy Based Data Structures": 1
+    },
+    "poly_divisible_numbers": {
+      "Poly Divisible Numbers": 1
+    },
+    "polygons": {
+      "Polygons": 12
+    },
+    "polynomial": {
+      "Polynomial": 6,
+      "polynomial": 2
+    },
+    "polynomials_and_generating_functions": {
+      "Polynomials and generating functions": 81
+    },
+    "prakhar17252": {
+      "prakhar17252": 1
+    },
+    "prasant21": {
+      "prasant21": 1
+    },
+    "prateekg603": {
+      "prateekg603": 1
+    },
+    "pre_computation": {
+      "pre-computation": 1
+    },
+    "pre_processing": {
+      "Pre processing": 24
+    },
+    "precomputation": {
+      "Precomputation": 1
+    },
+    "prefix_sum": {
+      "Prefix Sum": 86,
+      "prefix-sum": 21
+    },
+    "preprocessing": {
+      "Preprocessing": 26
+    },
+    "present_sir": {
+      "present_sir": 1
+    },
+    "prim_s_algorithm": {
+      "Prim's Algorithm": 1
+    },
+    "primality_checking": {
+      "Primality Checking": 5
+    },
+    "prime_divisors": {
+      "Prime Divisors": 24
+    },
+    "prime_number": {
+      "Prime Number": 52
+    },
+    "primefactorization": {
+      "PrimeFactorization": 8
+    },
+    "primes": {
+      "Primes": 9,
+      "primes": 3
+    },
+    "primitive_root": {
+      "Primitive Root": 2
+    },
+    "printing_patterns": {
+      "Printing Patterns": 1
+    },
+    "priority_queue": {
+      "Priority Queue": 19,
+      "Priority-Queue": 1,
+      "priority-queue": 6
+    },
+    "priorityqueue": {
+      "PriorityQueue": 6
+    },
+    "priyanshi": {
+      "priyanshi_": 1
+    },
+    "prnjl_rai": {
+      "prnjl_rai": 1
+    },
+    "probabilities": {
+      "probabilities": 165
+    },
+    "probability": {
+      "Probability": 261,
+      "probability": 3
+    },
+    "probability_and_statistics": {
+      "Probability and Statistics": 4
+    },
+    "proconjunior": {
+      "proconjunior": 1
+    },
+    "proof": {
+      "proof": 1
+    },
+    "properties": {
+      "properties": 4
+    },
+    "pruning": {
+      "pruning": 1
+    },
+    "puzzles": {
+      "Puzzles": 215
+    },
+    "python_basic_data_types": {
+      "Python - Basic Data Types": 5
+    },
+    "python_built_ins": {
+      "Python - Built-Ins": 6
+    },
+    "python_classes": {
+      "Python - Classes": 1
+    },
+    "python_closures_and_decorators": {
+      "Python - Closures and Decorators": 2
+    },
+    "python_collections": {
+      "Python - Collections": 8
+    },
+    "python_date_and_time": {
+      "Python - Date and Time": 2
+    },
+    "python_errors_and_exceptions": {
+      "Python - Errors and Exceptions": 2
+    },
+    "python_introduction": {
+      "Python - Introduction": 6
+    },
+    "python_itertools": {
+      "Python - Itertools": 7
+    },
+    "python_math": {
+      "Python - Math": 7
+    },
+    "python_numpy": {
+      "Python - Numpy": 12
+    },
+    "python_python_functionals": {
+      "Python - Python Functionals": 2
+    },
+    "python_regex_and_parsing": {
+      "Python - Regex and Parsing": 17
+    },
+    "python_sets": {
+      "Python - Sets": 13
+    },
+    "python_strings": {
+      "Python - Strings": 13
+    },
+    "python_xml": {
+      "Python - XML": 2
+    },
+    "quadratic_residue": {
+      "Quadratic Residue": 1
+    },
+    "quantifiers": {
+      "Quantifiers": 1
+    },
+    "queries": {
+      "Queries": 34
+    },
+    "queue": {
+      "Queue": 42,
+      "queue": 4
+    },
+    "queues": {
+      "Queues": 39
+    },
+    "quickselect": {
+      "Quickselect": 1
+    },
+    "rabin_karp_algorithm": {
+      "Rabin Karp Algorithm": 1
+    },
+    "rabin_miller_test": {
+      "Rabin Miller Test": 1
+    },
+    "radix_sort": {
+      "Radix Sort": 1
+    },
+    "rag_hav13": {
+      "rag_hav13": 1
+    },
+    "rajat1603": {
+      "rajat1603": 1
+    },
+    "randomized_algorithms": {
+      "Randomized Algorithms": 3
+    },
+    "range_minimum_queries": {
+      "Range Minimum Queries": 3
+    },
+    "range_queries": {
+      "Range Queries": 12,
+      "Range queries": 273
+    },
+    "range_sum": {
+      "range sum": 1
+    },
+    "range_sum_queries": {
+      "Range Sum Queries": 1
+    },
+    "ratingoverflow": {
+      "ratingoverflow": 1
+    },
+    "reachability": {
+      "reachability": 2
+    },
+    "real_life": {
+      "real life": 3
+    },
+    "recurrence_relation": {
+      "Recurrence Relation": 4
+    },
+    "recursion": {
+      "Recursion": 159,
+      "recursion": 2
+    },
+    "refactoring": {
+      "Refactoring": 8
+    },
+    "regular_expression": {
+      "Regular Expression": 5
+    },
+    "regular_expressions": {
+      "Regular Expressions": 121
+    },
+    "restricted": {
+      "Restricted": 7
+    },
+    "reverse": {
+      "Reverse": 1
+    },
+    "riddles": {
+      "Riddles": 1
+    },
+    "rishup_nitdgp": {
+      "rishup_nitdgp": 2
+    },
+    "rolling_hash": {
+      "Rolling Hash": 7
+    },
+    "roman_adm": {
+      "roman_adm": 1
+    },
+    "romawhite": {
+      "romawhite": 1
+    },
+    "rotating_caliper": {
+      "Rotating Caliper": 1
+    },
+    "satej_adm": {
+      "satej_adm": 1
+    },
+    "scanline_algorithm": {
+      "Scanline Algorithm": 1
+    },
+    "scc": {
+      "scc": 1
+    },
+    "schedules": {
+      "schedules": 7
+    },
+    "scheduling": {
+      "Scheduling": 2
+    },
+    "search_bruteforce": {
+      "Complete search": 1853,
+      "brute force": 1231
+    },
+    "searching": {
+      "Searching": 160
+    },
+    "security": {
+      "Security": 9
+    },
+    "segment_tree": {
+      "Segment Tree": 2,
+      "Segment-Tree": 11,
+      "segment-tree": 2
+    },
+    "segment_trees": {
+      "Segment Trees": 51
+    },
+    "segment_trees_revisited": {
+      "Segment trees revisited": 94
+    },
+    "segmented_sieve": {
+      "Segmented Sieve": 6
+    },
+    "segmenttrees": {
+      "SegmentTrees": 21
+    },
+    "sept15": {
+      "sept15": 3
+    },
+    "sept18": {
+      "sept18": 2
+    },
+    "sept20": {
+      "sept20": 1
+    },
+    "sequences_and_progression": {
+      "Sequences and Progression": 23
+    },
+    "sereja_adm": {
+      "sereja_adm": 2
+    },
+    "sergey_adm": {
+      "sergey_adm": 2
+    },
+    "series": {
+      "series": 31
+    },
+    "set": {
+      "Set": 1,
+      "set": 15
+    },
+    "set_theory": {
+      "Set Theory": 23
+    },
+    "sets": {
+      "Sets": 46
+    },
+    "sgbtech96": {
+      "sgbtech96": 1
+    },
+    "shaanknight": {
+      "shaanknight": 1
+    },
+    "shift": {
+      "shift": 1
+    },
+    "shivamg_isc": {
+      "shivamg_isc": 1
+    },
+    "shortest_path": {
+      "Shortest Path": 9,
+      "Shortest-path": 4
+    },
+    "shortest_paths": {
+      "Shortest Paths": 10,
+      "Shortest paths": 225,
+      "shortest paths": 196
+    },
+    "sidhant007": {
+      "sidhant007": 1
+    },
+    "sieve": {
+      "Sieve": 15,
+      "sieve": 30
+    },
+    "sieve_of_eratosthenes": {
+      "Sieve of Eratosthenes": 35
+    },
+    "simple": {
+      "simple": 22
+    },
+    "simple_algos": {
+      "Simple Algos": 109
+    },
+    "simple_math": {
+      "Simple-math": 7
+    },
+    "simulation": {
+      "Simulation": 23,
+      "simulation": 1
+    },
+    "sliding_window": {
+      "Sliding Window": 38,
+      "sliding-window": 32
+    },
+    "smit_adm": {
+      "smit_adm": 1
+    },
+    "sorting": {
+      "Sorting": 2172,
+      "sorting": 20,
+      "sortings": 809
+    },
+    "sos_dp": {
+      "SOS DP": 2
+    },
+    "soumyadeep_21": {
+      "soumyadeep_21": 3
+    },
+    "spanning_trees": {
+      "Spanning trees": 308
+    },
+    "sparse_table": {
+      "Sparse Table": 4
+    },
+    "special": {
+      "*special": 207,
+      "Special": 103
+    },
+    "sperner_s_theorem": {
+      "Sperner's Theorem": 1
+    },
+    "splay_tree": {
+      "Splay Tree": 2
+    },
+    "sprague_grundy": {
+      "sprague-grundy": 1
+    },
+    "sprague_grundy_theorem": {
+      "Sprague Grundy Theorem": 8
+    },
+    "sqrt_decomposition": {
+      "Sqrt Decomposition": 2,
+      "Sqrt-Decomposition": 3
+    },
+    "sqrt_n_primality_check": {
+      "Sqrt N Primality Check": 3
+    },
+    "square_root_algorithms": {
+      "Square root algorithms": 19
+    },
+    "square_root_decomposition": {
+      "Square Root Decomposition": 11
+    },
+    "squares": {
+      "Squares": 2
+    },
+    "srikkanth_adm": {
+      "srikkanth_adm": 2
+    },
+    "sssp": {
+      "sssp": 9
+    },
+    "stack": {
+      "Stack": 120,
+      "stack": 4
+    },
+    "stacks": {
+      "Stacks": 22
+    },
+    "start13": {
+      "start13": 1
+    },
+    "start14": {
+      "start14": 1
+    },
+    "start22": {
+      "start22": 5
+    },
+    "start23": {
+      "start23": 2
+    },
+    "start3": {
+      "start3": 1
+    },
+    "start36": {
+      "start36": 7
+    },
+    "start37": {
+      "start37": 9
+    },
+    "start45": {
+      "start45": 4
+    },
+    "start50": {
+      "start50": 4
+    },
+    "start6": {
+      "start6": 1
+    },
+    "state_machines": {
+      "State Machines": 3
+    },
+    "statistics": {
+      "Statistics": 9
+    },
+    "stl": {
+      "STL": 38
+    },
+    "string": {
+      "String": 346,
+      "String algorithms": 2122,
+      "Strings": 775,
+      "strings": 600
+    },
+    "string_algos": {
+      "String Algos": 4
+    },
+    "string_manipulation": {
+      "String-Manipulation": 1
+    },
+    "string_matching": {
+      "String Matching": 15
+    },
+    "string_parsing": {
+      "String Parsing": 1
+    },
+    "string_suffix_structures": {
+      "string suffix structures": 71
+    },
+    "stringalgorithms": {
+      "StringAlgorithms": 26
+    },
+    "strong_connectivity": {
+      "Strong connectivity": 25
+    },
+    "strongly_connected_components": {
+      "Strongly Connected Components": 3
+    },
+    "subarray": {
+      "Subarray": 6
+    },
+    "subsequence": {
+      "Subsequence": 11,
+      "subsequence": 1
+    },
+    "subset": {
+      "subset": 6
+    },
+    "subset_enumeration": {
+      "Subset Enumeration": 1
+    },
+    "substring": {
+      "Substring": 3
+    },
+    "suffix_array": {
+      "Suffix Array": 1
+    },
+    "suffix_sum": {
+      "Suffix Sum": 13
+    },
+    "suffix_tree": {
+      "suffix tree": 2
+    },
+    "suffixarrays": {
+      "SuffixArrays": 1
+    },
+    "suryaprak_adm": {
+      "suryaprak_adm": 1
+    },
+    "sweep_line_algorithm": {
+      "Sweep line Algorithm": 3
+    },
+    "sweep_line_algorithms": {
+      "Sweep line algorithms": 17
+    },
+    "sylvesters_criterion": {
+      "Sylvesters Criterion": 1,
+      "sylvesters-criterion": 1
+    },
+    "tanmay28": {
+      "tanmay28": 1
+    },
+    "taran_1407": {
+      "taran_1407": 13
+    },
+    "tejas_adm": {
+      "tejas_adm": 3
+    },
+    "ternary_search": {
+      "Ternary Search": 2,
+      "ternary search": 45
+    },
+    "theoneyouwant": {
+      "theoneyouwant": 1
+    },
+    "time": {
+      "time": 6
+    },
+    "tmwilliamlin": {
+      "tmwilliamlin": 2
+    },
+    "top_down": {
+      "Top-down": 6
+    },
+    "topological_sort": {
+      "Topological Sort": 3
+    },
+    "topological_sorting": {
+      "Topological Sorting": 4
+    },
+    "topsort": {
+      "topsort": 1
+    },
+    "transformations": {
+      "Transformations": 10
+    },
+    "traversal": {
+      "Traversal": 13
+    },
+    "traversals": {
+      "Traversals": 82
+    },
+    "treap": {
+      "Treap": 1
+    },
+    "tree": {
+      "Tree": 181,
+      "tree": 1
+    },
+    "tree_algorithms": {
+      "Tree algorithms": 837
+    },
+    "tree_algos": {
+      "Tree Algos": 9
+    },
+    "tree_data_structure": {
+      "Tree Data Structure": 8
+    },
+    "tree_ds": {
+      "tree ds": 1
+    },
+    "tree_queries": {
+      "Tree queries": 21
+    },
+    "trees": {
+      "Trees": 60,
+      "trees": 575
+    },
+    "triangles": {
+      "Triangles": 3
+    },
+    "trie": {
+      "Trie": 29
+    },
+    "tries": {
+      "Tries": 10
+    },
+    "tries_with_xor": {
+      "Tries with XOR": 3
+    },
+    "trigonometry": {
+      "Trigonometry": 5
+    },
+    "trygub_adm": {
+      "trygub_adm": 4
+    },
+    "tutorials": {
+      "Tutorials": 6
+    },
+    "two_pointer": {
+      "Two-pointer": 2
+    },
+    "two_pointer_algorithm": {
+      "two-pointer-algorithm": 39
+    },
+    "two_pointers": {
+      "Two Pointers": 43,
+      "Two pointers": 32,
+      "two pointers": 387,
+      "two-pointers": 2
+    },
+    "unicode": {
+      "Unicode": 3
+    },
+    "union_find": {
+      "Union Find": 10,
+      "union-find": 5
+    },
+    "unordered_sets": {
+      "Unordered Sets": 2
+    },
+    "utkarsh_25dec": {
+      "utkarsh_25dec": 1
+    },
+    "utkarsh_adm": {
+      "utkarsh_adm": 13
+    },
+    "vamsi_adm": {
+      "vamsi_adm": 1
+    },
+    "varunkhare1234": {
+      "varunkhare1234": 2
+    },
+    "vertex_cover": {
+      "Vertex Cover": 1
+    },
+    "veryeasy": {
+      "VeryEasy": 6
+    },
+    "vichitr": {
+      "vichitr": 1
+    },
+    "vijju123": {
+      "vijju123": 1
+    },
+    "vinay_adm": {
+      "vinay_adm": 1
+    },
+    "vishal_nnd0": {
+      "vishal_nnd0": 1
+    },
+    "vishesh_s": {
+      "vishesh_s": 8
+    },
+    "vitalij_adm": {
+      "vitalij_adm": 2
+    },
+    "vladprog": {
+      "vladprog": 1
+    },
+    "watcher": {
+      "watcher": 2
+    },
+    "williamson": {
+      "williamson": 1
+    },
+    "witaliy_adm": {
+      "witaliy_adm": 2
+    },
+    "wwwwodddd": {
+      "wwwwodddd": 1
+    },
+    "xor": {
+      "xor": 2
+    },
+    "yash5507": {
+      "yash5507": 1
+    },
+    "yjgarg": {
+      "yjgarg": 1
+    },
+    "z_algorithm": {
+      "Z Algorithm": 2,
+      "Z-algorithm": 3
+    },
+    "zappelectro": {
+      "zappelectro": 3
+    },
+    "zeckendorf_theorem": {
+      "zeckendorf Theorem": 1
+    }
+  },
+  "records_with_tags": 17084,
+  "records_without_tags": 9386,
+  "tagged_record_source_counts": {
+    "codechef": 2486,
+    "codeforces": 7468,
+    "codewars": 2089,
+    "geeksforgeeks": 2517,
+    "hackerearth": 843,
+    "hackerrank": 802,
+    "kattis": 304,
+    "leetcode": 575
+  },
+  "total_records": 26470,
+  "unique_normalized_tag_count": 861,
+  "unique_raw_tag_count": 980
+}

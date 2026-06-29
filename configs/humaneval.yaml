@@ -1,5 +1,0 @@
-dataset: "humaneval"
-# HumanEval test split is small (~164); cap train to leave a holdout
-train_size: 131
-epochs: 6
-batch_size: 20

@@ -1,0 +1,981 @@
+raw_tag,count,normalized_tag
+Mathematics,4747,math
+Data structures,4531,data_structures
+Algorithms,3827,general
+Implementation,2741,implementation
+Greedy algorithms,2567,greedy
+Dynamic programming,2454,dynamic_programming
+implementation,2310,implementation
+Data Structures,2227,data_structures
+Sorting,2172,sorting
+math,2147,math
+greedy,2139,greedy
+String algorithms,2122,string
+Complete search,1853,search_bruteforce
+Constructive algorithms,1699,constructive
+dp,1565,dynamic_programming
+Fundamentals,1326,general
+constructive algorithms,1258,constructive
+data structures,1246,data_structures
+brute force,1231,search_bruteforce
+Graph algorithms,1211,graph
+Arrays,1196,arrays
+Number theory,1106,number_theory
+Graph traversal,899,graph
+graphs,841,graph
+Tree algorithms,837,tree_algorithms
+Bit manipulation,832,bit_manipulation
+sortings,809,sorting
+Ad-hoc,775,ad_hoc
+Strings,775,string
+binary search,766,binary_search
+Combinatorics,753,combinatorics
+dfs and similar,667,graph
+Dynamic Programming,606,dynamic_programming
+strings,600,string
+Mathematical,588,math
+trees,575,trees
+Amortized analysis,564,amortized_analysis
+number theory,543,number_theory
+Basic Maths,520,math
+Geometry,506,geometry
+combinatorics,461,combinatorics
+Constructive,426,constructive
+Greedy,397,greedy
+two pointers,387,two_pointers
+bitmasks,376,bitmasks
+ad-hoc,361,ad_hoc
+Matrices,360,matrices
+Math,348,math
+String,346,string
+geometry,339,geometry
+Array,322,array
+Game theory,308,game_theory
+Spanning trees,308,spanning_trees
+Observation,296,observation
+Range queries,273,range_queries
+Probability,261,probability
+Basic Programming Concepts,254,basic_programming_concepts
+dsu,249,dsu
+Divide and conquer,242,divide_and_conquer
+Shortest paths,225,shortest_paths
+Number Theory,217,number_theory
+Puzzles,215,puzzles
+*special,207,special
+divide and conquer,202,divide_and_conquer
+Bit Manipulation,198,bit_manipulation
+shortest paths,196,shortest_paths
+Binary Search,195,binary_search
+Tree,181,tree
+probabilities,165,probabilities
+Matrix,161,matrix
+Searching,160,searching
+Recursion,159,recursion
+Brute Force,157,brute_force
+Flows and cuts,156,flows_and_cuts
+games,155,games
+hashing,151,hashing
+Hash,142,hash
+Conditional Statements,141,conditional_statements
+DynamicProgramming,140,dynamicprogramming
+Ad-Hoc,139,ad_hoc
+Modular Arithmetic,139,modular_arithmetic
+DFS,138,dfs
+Graph Algos,122,graph_algos
+Regular Expressions,121,regular_expressions
+Stack,120,stack
+Bit Magic,119,bit_magic
+interactive,115,interactive
+Simple Algos,109,simple_algos
+Advanced Algorithms,108,advanced_algorithms
+flows,108,flows
+Graph,106,graph
+Special,103,special
+Bitwise Operation,102,bitwise_operation
+Hash Table,102,hash_table
+Linked List,94,linked_list
+Segment trees revisited,94,segment_trees_revisited
+matrices,93,matrices
+Graphs,91,graphs
+Prefix Sum,86,prefix_sum
+BasicProgramming,85,basicprogramming
+Case work,83,case_work
+Traversals,82,traversals
+DataStructures,81,datastructures
+Polynomials and generating functions,81,polynomials_and_generating_functions
+Advanced Data Structures,80,advanced_data_structures
+BFS,80,bfs
+Lists,80,lists
+Algorithms - Dynamic Programming,79,algorithms_dynamic_programming
+Arithmetic,79,arithmetic
+string suffix structures,71,string_suffix_structures
+1D Arrays,70,1d_arrays
+Mathematics - Number Theory,70,mathematics_number_theory
+GCD,69,gcd
+Backtracking,66,backtracking
+fft,65,fft
+Game Theory,63,game_theory
+Logic,63,logic
+graph matchings,62,graph_matchings
+Algorithms - Implementation,61,algorithms_implementation
+Trees,60,trees
+Binary Search Tree,59,binary_search_tree
+Advanced Tree Structures,56,advanced_tree_structures
+easy,55,easy
+Integer Factorisation,54,integer_factorisation
+Algorithms - Graph Theory,52,algorithms_graph_theory
+Frequency Arrays,52,frequency_arrays
+Prime Number,52,prime_number
+Segment Trees,51,segment_trees
+Mathematics - Combinatorics,50,mathematics_combinatorics
+Performance,49,performance
+maths,49,maths
+Loops,48,loops
+NumberTheory,48,numbertheory
+GraphTheory,47,graphtheory
+Numbers,46,numbers
+Sets,46,sets
+Games,45,games
+ternary search,45,ternary_search
+Algorithms - Strings,43,algorithms_strings
+Two Pointers,43,two_pointers
+Data Structures - Advanced,42,data_structures_advanced
+Queue,42,queue
+Hashing,40,hashing
+Queues,39,queues
+two-pointer-algorithm,39,two_pointer_algorithm
+ASCII Art,38,ascii_art
+Algebra,38,algebra
+Binary,38,binary
+Divide and Conquer,38,divide_and_conquer
+Divisors,38,divisors
+STL,38,stl
+Sliding Window,38,sliding_window
+BinarySearch,37,binarysearch
+Maps,37,maps
+number-theory,37,number_theory
+meet-in-the-middle,36,meet_in_the_middle
+Heap,35,heap
+Sieve of Eratosthenes,35,sieve_of_eratosthenes
+Queries,34,queries
+DP Approach,33,dp_approach
+Mathematics - Algebra,33,mathematics_algebra
+expression parsing,33,expression_parsing
+Mathematics - Fundamentals,32,mathematics_fundamentals
+Two pointers,32,two_pointers
+sliding-window,32,sliding_window
+series,31,series
+Algorithms - Game Theory,30,algorithms_game_theory
+Misc,30,misc
+dp & greedy,30,dp_greedy
+sieve,30,sieve
+2D Arrays,29,2d_arrays
+Map,29,map
+Mathematics - Geometry,29,mathematics_geometry
+Modular Exponentiation,29,modular_exponentiation
+Trie,29,trie
+Advanced Data Structure,28,advanced_data_structure
+Counting,28,counting
+Expected Value,28,expected_value
+easy-medium,28,easy_medium
+Advanced DP,27,advanced_dp
+Breadth-First Search,27,breadth_first_search
+palindrome,27,palindrome
+Algorithms - Bit Manipulation,26,algorithms_bit_manipulation
+Debugging,26,debugging
+Preprocessing,26,preprocessing
+StringAlgorithms,26,stringalgorithms
+cakewalk,26,cakewalk
+Algorithms - Search,25,algorithms_search
+Bitmask,25,bitmask
+Memoization,25,memoization
+Strong connectivity,25,strong_connectivity
+Algorithms - Greedy,24,algorithms_greedy
+Pre processing,24,pre_processing
+Prime Divisors,24,prime_divisors
+Combinatorial,23,combinatorial
+Sequences and Progression,23,sequences_and_progression
+Set Theory,23,set_theory
+Simulation,23,simulation
+Advanced Graph Algos,22,advanced_graph_algos
+BruteForce,22,bruteforce
+Hashmaps,22,hashmaps
+Stacks,22,stacks
+dynamic-programming,22,dynamic_programming
+simple,22,simple
+Cryptography,21,cryptography
+Groupings,21,groupings
+Mathematics - Probability,21,mathematics_probability
+SegmentTrees,21,segmenttrees
+Tree queries,21,tree_queries
+prefix-sum,21,prefix_sum
+2-sat,20,2_sat
+Bottom-up,20,bottom_up
+Date Time,20,date_time
+Fenwick Trees,20,fenwick_trees
+Heap (Priority Queue),20,heap_priority_queue
+Integer Division,20,integer_division
+Parsing,20,parsing
+sorting,20,sorting
+CPP,19,cpp
+Challenge Problem,19,challenge_problem
+Priority Queue,19,priority_queue
+Square root algorithms,19,square_root_algorithms
+permutation,19,permutation
+Bitmasking,18,bitmasking
+Depth-First Search,18,depth_first_search
+Fibonacci,18,fibonacci
+Geometric,18,geometric
+Permutations,18,permutations
+Permutations & Combinations,18,permutations_combinations
+map,18,map
+pattern-printing,18,pattern_printing
+Computational Geometry,17,computational_geometry
+Python - Regex and Parsing,17,python_regex_and_parsing
+Sweep line algorithms,17,sweep_line_algorithms
+cg,17,cg
+logical-thinking,17,logical_thinking
+Bitmanipulation,16,bitmanipulation
+Bits,16,bits
+Ciphers,16,ciphers
+Inbuilt functions,16,inbuilt_functions
+Directed graphs,15,directed_graphs
+LCM,15,lcm
+Monotonic Stack,15,monotonic_stack
+Sieve,15,sieve
+String Matching,15,string_matching
+factorial,15,factorial
+set,15,set
+Algorithms - Sorting,14,algorithms_sorting
+BIT,14,bit
+Java,14,java
+Multiset,14,multiset
+chinese remainder theorem,14,chinese_remainder_theorem
+Binary Representation,13,binary_representation
+MatrixExponentiation,13,matrixexponentiation
+Number System,13,number_system
+Python - Sets,13,python_sets
+Python - Strings,13,python_strings
+Suffix Sum,13,suffix_sum
+Traversal,13,traversal
+observation,13,observation
+taran_1407,13,taran_1407
+utkarsh_adm,13,utkarsh_adm
+Binary Search on Answer,12,binary_search_on_answer
+Chess,12,chess
+Disjoint Set Union,12,disjoint_set_union
+Divisibility,12,divisibility
+Exponentiation,12,exponentiation
+GameTheory,12,gametheory
+Modulo Multiplicative Inverse,12,modulo_multiplicative_inverse
+Online Queries,12,online_queries
+Polygons,12,polygons
+Python - Numpy,12,python_numpy
+Range Queries,12,range_queries
+AP,11,ap
+Arbitrary Precision,11,arbitrary_precision
+DP Bitmask,11,dp_bitmask
+Deque,11,deque
+Design-Pattern,11,design_pattern
+Inclusion Exclusion Principle,11,inclusion_exclusion_principle
+Segment-Tree,11,segment_tree
+Square Root Decomposition,11,square_root_decomposition
+Subsequence,11,subsequence
+Algorithms - Recursion,10,algorithms_recursion
+Binary Exponentiation,10,binary_exponentiation
+Binary Tree,10,binary_tree
+Cartesian Coordinate System,10,cartesian_coordinate_system
+DisjointSet,10,disjointset
+FFT,10,fft
+Linear Algebra,10,linear_algebra
+Lowest Common Ancestor,10,lowest_common_ancestor
+Shortest Paths,10,shortest_paths
+Transformations,10,transformations
+Tries,10,tries
+Union Find,10,union_find
+Algorithms - Warmup,9,algorithms_warmup
+Data Structures - Stacks,9,data_structures_stacks
+Pattern Searching,9,pattern_searching
+Pigeonhole Principle,9,pigeonhole_principle
+Primes,9,primes
+Security,9,security
+Shortest Path,9,shortest_path
+Statistics,9,statistics
+Tree Algos,9,tree_algos
+brute-force,9,brute_force
+game,9,game
+sssp,9,sssp
+start37,9,start37
+Algorithms - Constructive Algorithms,8,algorithms_constructive_algorithms
+Connected Components,8,connected_components
+Data Science,8,data_science
+Dijkstra's Algorithm,8,dijkstra_s_algorithm
+Division,8,division
+Enumeration,8,enumeration
+Esoteric Languages,8,esoteric_languages
+Heaps,8,heaps
+Interpreters,8,interpreters
+Matrix Exponentiation,8,matrix_exponentiation
+Matrix Multiplication,8,matrix_multiplication
+Merge Sort,8,merge_sort
+Minimum Spanning Trees,8,minimum_spanning_trees
+MinimumSpanningTree,8,minimumspanningtree
+Offline Queries,8,offline_queries
+Physics,8,physics
+PrimeFactorization,8,primefactorization
+Python - Collections,8,python_collections
+Refactoring,8,refactoring
+Sprague Grundy Theorem,8,sprague_grundy_theorem
+Tree Data Structure,8,tree_data_structure
+backtracking,8,backtracking
+cook141,8,cook141
+jeevanjyot,8,jeevanjyot
+vishesh_s,8,vishesh_s
+Big Integer,7,big_integer
+Cycles,7,cycles
+DP on Trees,7,dp_on_trees
+DP on sequences,7,dp_on_sequences
+Data Types,7,data_types
+Difference Arrays,7,difference_arrays
+Factorials,7,factorials
+GP,7,gp
+Hash Function,7,hash_function
+KMP Algorithm,7,kmp_algorithm
+Operators,7,operators
+Python - Itertools,7,python_itertools
+Python - Math,7,python_math
+Restricted,7,restricted
+Rolling Hash,7,rolling_hash
+Simple-math,7,simple_math
+bfs,7,bfs
+doubly-linked-list,7,doubly_linked_list
+exun2021,7,exun2021
+kingofnumbers,7,kingofnumbers
+schedules,7,schedules
+start36,7,start36
+Bipartite Graphs,6,bipartite_graphs
+Coloring,6,coloring
+Convex Hull,6,convex_hull
+Directed Graphs,6,directed_graphs
+Euclid's Algorithm,6,euclid_s_algorithm
+FenwickTree,6,fenwicktree
+Fermat's Little Theorem,6,fermat_s_little_theorem
+Filtering,6,filtering
+Flow Networks,6,flow_networks
+Functional Programming,6,functional_programming
+Modularexponentiation,6,modularexponentiation
+Polynomial,6,polynomial
+PriorityQueue,6,priorityqueue
+Python - Built-Ins,6,python_built_ins
+Python - Introduction,6,python_introduction
+Segmented Sieve,6,segmented_sieve
+Subarray,6,subarray
+Top-down,6,top_down
+Tutorials,6,tutorials
+VeryEasy,6,veryeasy
+admin2,6,admin2
+binary-search,6,binary_search
+bitwise-operation,6,bitwise_operation
+circular-linked-list,6,circular_linked_list
+cook137,6,cook137
+likecs,6,likecs
+medium,6,medium
+priority-queue,6,priority_queue
+subset,6,subset
+time,6,time
+2d array,5,2d_array
+Contribution Trick,5,contribution_trick
+DAG Algos,5,dag_algos
+Data Structures - Arrays,5,data_structures_arrays
+Data Structures - Queues,5,data_structures_queues
+Data Structures - Trees,5,data_structures_trees
+Digit DP,5,digit_dp
+Kadane Algorithm,5,kadane_algorithm
+Knapsack,5,knapsack
+Logarithm,5,logarithm
+Longest Increasing Subsequence,5,longest_increasing_subsequence
+Modulararithmetic,5,modulararithmetic
+Optimization Problems,5,optimization_problems
+Ordered Set,5,ordered_set
+Patterns,5,patterns
+Primality Checking,5,primality_checking
+Python - Basic Data Types,5,python_basic_data_types
+Regular Expression,5,regular_expression
+Trigonometry,5,trigonometry
+array,5,array
+cook-off,5,cook_off
+dijkstra,5,dijkstra
+modular arithmetic,5,modular_arithmetic
+nim game,5,nim_game
+start22,5,start22
+union-find,5,union_find
+Binary lifting,4,binary_lifting
+BinarySearchTree,4,binarysearchtree
+Binomial Theorem,4,binomial_theorem
+Brainteaser,4,brainteaser
+Calculus,4,calculus
+Data Structures - Heap,4,data_structures_heap
+Dijkstra,4,dijkstra
+Disjoint Set,4,disjoint_set
+Euler Totient Function,4,euler_totient_function
+HashMap,4,hashmap
+Inequalities,4,inequalities
+Lazy Propagation,4,lazy_propagation
+Lucas Theorem,4,lucas_theorem
+Meet in the middle,4,meet_in_the_middle
+Monotonic Queue,4,monotonic_queue
+Monotonic stack,4,monotonic_stack
+Networks,4,networks
+Persistent Segment Trees,4,persistent_segment_trees
+Persistent Structures,4,persistent_structures
+Probability and Statistics,4,probability_and_statistics
+Recurrence Relation,4,recurrence_relation
+Shortest-path,4,shortest_path
+Sparse Table,4,sparse_table
+String Algos,4,string_algos
+Topological Sorting,4,topological_sorting
+cook143,4,cook143
+flow,4,flow
+hard,4,hard
+jan221,4,jan221
+jan222,4,jan222
+optimization,4,optimization
+properties,4,properties
+queue,4,queue
+stack,4,stack
+start45,4,start45
+start50,4,start50
+trygub_adm,4,trygub_adm
+0-1 Knapsack,3,0_1_knapsack
+Algorithms - Debugging,3,algorithms_debugging
+Binary Indexed Tree,3,binary_indexed_tree
+Bipartite,3,bipartite
+Bucket Sort,3,bucket_sort
+Complete Search,3,complete_search
+Coordinate Compression,3,coordinate_compression
+DFS Order,3,dfs_order
+Data Structures - Disjoint Set,3,data_structures_disjoint_set
+Euler Tour,3,euler_tour
+Expectation,3,expectation
+Factorization,3,factorization
+Fibonacci Series,3,fibonacci_series
+Fractions,3,fractions
+Gaussian Elimination,3,gaussian_elimination
+HLD,3,hld
+KMP,3,kmp
+Kadane,3,kadane
+Lexicographic Order,3,lexicographic_order
+Machine Learning,3,machine_learning
+Manachers Algorithm,3,manachers_algorithm
+Matching,3,matching
+Maximum Bipartite Matching,3,maximum_bipartite_matching
+Randomized Algorithms,3,randomized_algorithms
+Range Minimum Queries,3,range_minimum_queries
+Sqrt N Primality Check,3,sqrt_n_primality_check
+Sqrt-Decomposition,3,sqrt_decomposition
+State Machines,3,state_machines
+Strongly Connected Components,3,strongly_connected_components
+Substring,3,substring
+Sweep line Algorithm,3,sweep_line_algorithm
+Topological Sort,3,topological_sort
+Triangles,3,triangles
+Tries with XOR,3,tries_with_xor
+Unicode,3,unicode
+Z-algorithm,3,z_algorithm
+anil_adm,3,anil_adm
+aryanag_adm,3,aryanag_adm
+berezin,3,berezin
+bit-manipulation,3,bit_manipulation
+bst,3,bst
+constructive algo,3,constructive_algo
+cook14,3,cook14
+daanish_adm,3,daanish_adm
+dag,3,dag
+darkshadows,3,darkshadows
+david_adm,3,david_adm
+deadwing97,3,deadwing97
+factorization,3,factorization
+game-theory,3,game_theory
+greatest-common-divisor,3,greatest_common_divisor
+gvaibhav21,3,gvaibhav21
+icl2018,3,icl2018
+inso2018,3,inso2018
+insomnia18,3,insomnia18
+kmaaszraa,3,kmaaszraa
+knapsack,3,knapsack
+lavish_adm,3,lavish_adm
+log/exp/pow,3,log_exp_pow
+modulo,3,modulo
+mst,3,mst
+primes,3,primes
+probability,3,probability
+real life,3,real_life
+sept15,3,sept15
+soumyadeep_21,3,soumyadeep_21
+tejas_adm,3,tejas_adm
+zappelectro,3,zappelectro
+2 SAT,2,2_sat
+Activity Selection,2,activity_selection
+Aho Corasick,2,aho_corasick
+Binary Trees,2,binary_trees
+BinaryTree,2,binarytree
+BipartiteGraph,2,bipartitegraph
+Catalan Numbers,2,catalan_numbers
+Chinese Remainder Theorem,2,chinese_remainder_theorem
+Convolution,2,convolution
+Counting Sort,2,counting_sort
+Coverings,2,coverings
+Cyclic Rotation,2,cyclic_rotation
+DSU on Trees,2,dsu_on_trees
+Data Structures - Balanced Trees,2,data_structures_balanced_trees
+Data Structures - Trie,2,data_structures_trie
+Determinant,2,determinant
+Dilworth Theorem,2,dilworth_theorem
+Directed Acyclic Graphs,2,directed_acyclic_graphs
+Discrete Mathematics,2,discrete_mathematics
+DivideAndConquer,2,divideandconquer
+Error Detection,2,error_detection
+Flow,2,flow
+Floyd Warshall's Algorithm,2,floyd_warshall_s_algorithm
+FloydWarshall,2,floydwarshall
+Generating Functions,2,generating_functions
+Graph Theory,2,graph_theory
+Group Theory,2,group_theory
+Hamming Distance,2,hamming_distance
+Heuristics,2,heuristics
+Interpolation,2,interpolation
+Iterators,2,iterators
+Java-Collections,2,java_collections
+Kirchhoffs Matrix Tree Theorem,2,kirchhoffs_matrix_tree_theorem
+Kruskal's Algorithm,2,kruskal_s_algorithm
+Lagrange Interpolation,2,lagrange_interpolation
+Language Features,2,language_features
+Mobius Function,2,mobius_function
+Mobius Inversion,2,mobius_inversion
+Next Greater Element,2,next_greater_element
+NumPy,2,numpy
+Partitions,2,partitions
+Paths and circuits,2,paths_and_circuits
+Primitive Root,2,primitive_root
+Python - Closures and Decorators,2,python_closures_and_decorators
+Python - Date and Time,2,python_date_and_time
+Python - Errors and Exceptions,2,python_errors_and_exceptions
+Python - Python Functionals,2,python_python_functionals
+Python - XML,2,python_xml
+SOS DP,2,sos_dp
+Scheduling,2,scheduling
+Segment Tree,2,segment_tree
+Splay Tree,2,splay_tree
+Sqrt Decomposition,2,sqrt_decomposition
+Squares,2,squares
+Ternary Search,2,ternary_search
+Two-pointer,2,two_pointer
+Unordered Sets,2,unordered_sets
+Z Algorithm,2,z_algorithm
+abhi_inav,2,abhi_inav
+admin,2,admin
+akshatgirdhar8,2,akshatgirdhar8
+alei,2,alei
+anagram,2,anagram
+anton_adm,2,anton_adm
+april21,2,april21
+aug15,2,aug15
+avi224,2,avi224
+base,2,base
+bipartite,2,bipartite
+cenadar,2,cenadar
+chemthan,2,chemthan
+circular linked list,2,circular_linked_list
+constructive,2,constructive
+cook21,2,cook21
+counting,2,counting
+cpp-strings,2,cpp_strings
+csns2021,2,csns2021
+dec19,2,dec19
+disjoint sets,2,disjoint_sets
+ezio_26,2,ezio_26
+icl2017,2,icl2017
+infy20,2,infy20
+inov_adm,2,inov_adm
+jeevan_adm,2,jeevan_adm
+june222,2,june222
+kostya_by,2,kostya_by
+locapr18,2,locapr18
+long-challenge,2,long_challenge
+looping,2,looping
+ltime74,2,ltime74
+mani_adm,2,mani_adm
+march19,2,march19
+may16,2,may16
+medium-hard,2,medium_hard
+melfice,2,melfice
+mgch,2,mgch
+modular-arith,2,modular_arith
+mradul_adm,2,mradul_adm
+munch_01,2,munch_01
+nikhil_adm,2,nikhil_adm
+notsoloud,2,notsoloud
+oct16,2,oct16
+omelyanenko,2,omelyanenko
+palindromes,2,palindromes
+pelt2019,2,pelt2019
+polynomial,2,polynomial
+reachability,2,reachability
+recursion,2,recursion
+rishup_nitdgp,2,rishup_nitdgp
+segment-tree,2,segment_tree
+sept18,2,sept18
+sereja_adm,2,sereja_adm
+sergey_adm,2,sergey_adm
+srikkanth_adm,2,srikkanth_adm
+start23,2,start23
+suffix tree,2,suffix_tree
+tmwilliamlin,2,tmwilliamlin
+two-pointers,2,two_pointers
+varunkhare1234,2,varunkhare1234
+vitalij_adm,2,vitalij_adm
+watcher,2,watcher
+witaliy_adm,2,witaliy_adm
+xor,2,xor
+0-1 BFS,1,0_1_bfs
+3D+ Arrays,1,3d_arrays
+AVL-Tree,1,avl_tree
+Advanced Greedy,1,advanced_greedy
+Algorithms - NP Complete,1,algorithms_np_complete
+Auxiliary Tree,1,auxiliary_tree
+Basic-Programming,1,basic_programming
+Beatty sequence,1,beatty_sequence
+BellmanFord,1,bellmanford
+Bezout's Identity,1,bezout_s_identity
+Biconnected Components,1,biconnected_components
+Binary Search Trees,1,binary_search_trees
+Burnside Lemma,1,burnside_lemma
+CPP-Control-Flow,1,cpp_control_flow
+Cauchy Schwarz Inequality,1,cauchy_schwarz_inequality
+Challenge,1,challenge
+Completed,1,completed
+Connectivity,1,connectivity
+Cross Product,1,cross_product
+Data-Structures,1,data_structures
+Date-Time,1,date_time
+Derangements,1,derangements
+Differentiation,1,differentiation
+Dirichlet Convolution,1,dirichlet_convolution
+Discrete Logarithm,1,discrete_logarithm
+Discrete Maths,1,discrete_maths
+Distribution,1,distribution
+Euler Theorem,1,euler_theorem
+ExtendedEuclid,1,extendedeuclid
+Flood Fill,1,flood_fill
+Ford-Fulkerson Algorithm,1,ford_fulkerson_algorithm
+Formal Language,1,formal_language
+Functional Equations,1,functional_equations
+Functions,1,functions
+Gomory-Hu Tree,1,gomory_hu_tree
+Graph Isomorphism Problem,1,graph_isomorphism_problem
+Gray code,1,gray_code
+Hackenbush,1,hackenbush
+Hamiltonian Cycle,1,hamiltonian_cycle
+Heavylightdecomposition,1,heavylightdecomposition
+Hopcroft Karp Algorithm,1,hopcroft_karp_algorithm
+Image Processing,1,image_processing
+Impartial Game,1,impartial_game
+Integration,1,integration
+JSON,1,json
+Kruskal,1,kruskal
+LCS,1,lcs
+Line Sweep,1,line_sweep
+Line-sweep,1,line_sweep
+Linear Programming,1,linear_programming
+Lines,1,lines
+Linked Lists,1,linked_lists
+Longest Common Substring,1,longest_common_substring
+Maximum Flow,1,maximum_flow
+Min Cut Max flow,1,min_cut_max_flow
+Mo's Algorithm,1,mo_s_algorithm
+Monthly-Contest,1,monthly_contest
+Multi source BFS,1,multi_source_bfs
+NTT,1,ntt
+OOP,1,oop
+Object-oriented Programming,1,object_oriented_programming
+Permutation Cycles,1,permutation_cycles
+Planar Graph,1,planar_graph
+Pointers,1,pointers
+Policy Based Data Structures,1,policy_based_data_structures
+Poly Divisible Numbers,1,poly_divisible_numbers
+Precomputation,1,precomputation
+Prim's Algorithm,1,prim_s_algorithm
+Printing Patterns,1,printing_patterns
+Priority-Queue,1,priority_queue
+Python - Classes,1,python_classes
+Quadratic Residue,1,quadratic_residue
+Quantifiers,1,quantifiers
+Quickselect,1,quickselect
+Rabin Karp Algorithm,1,rabin_karp_algorithm
+Rabin Miller Test,1,rabin_miller_test
+Radix Sort,1,radix_sort
+Range Sum Queries,1,range_sum_queries
+Reverse,1,reverse
+Riddles,1,riddles
+Rotating Caliper,1,rotating_caliper
+Scanline Algorithm,1,scanline_algorithm
+Set,1,set
+Sperner's Theorem,1,sperner_s_theorem
+String Parsing,1,string_parsing
+String-Manipulation,1,string_manipulation
+Subset Enumeration,1,subset_enumeration
+Suffix Array,1,suffix_array
+SuffixArrays,1,suffixarrays
+Sylvesters Criterion,1,sylvesters_criterion
+Treap,1,treap
+Vertex Cover,1,vertex_cover
+aangairbender,1,aangairbender
+aashu_k,1,aashu_k
+abdullah768,1,abdullah768
+adhoc,1,adhoc
+aditya10_,1,aditya10
+admin3,1,admin3
+akashbhalotia,1,akashbhalotia
+alexvaleanu,1,alexvaleanu
+all pairs,1,all_pairs
+allllekssssa,1,allllekssssa
+aloochaat1998,1,aloochaat1998
+alphabets,1,alphabets
+aman1108,1,aman1108
+amitpandeykgp,1,amitpandeykgp
+amsgame2,1,amsgame2
+anhdq_adm,1,anhdq_adm
+anmolrishi,1,anmolrishi
+anshg0711,1,anshg0711
+antoniuk1,1,antoniuk1
+anudeep2011,1,anudeep2011
+april11,1,april11
+april12,1,april12
+april13,1,april13
+april16,1,april16
+april19,1,april19
+arayi,1,arayi
+arjunarul_adm,1,arjunarul_adm
+arunsharma_,1,arunsharma
+aswinashok44,1,aswinashok44
+aug20,1,aug20
+aug21,1,aug21
+basic,1,basic
+bhavyarustgi10,1,bhavyarustgi10
+big-integer,1,big_integer
+bigbag,1,bigbag
+binary-lifting,1,binary_lifting
+bipin2,1,bipin2
+bit manipulation,1,bit_manipulation
+bit22019,1,bit22019
+bitwise-and,1,bitwise_and
+bitwise-xor,1,bitwise_xor
+bytr2020,1,bytr2020
+carmichael-function,1,carmichael_function
+ccrc2021,1,ccrc2021
+challenge,1,challenge
+chess,1,chess
+chigu,1,chigu
+chinese-remainder-theorem,1,chinese_remainder_theorem
+convex-hull,1,convex_hull
+cook06,1,cook06
+cook08,1,cook08
+cook10,1,cook10
+cook100,1,cook100
+cook101,1,cook101
+cook103,1,cook103
+cook108,1,cook108
+cook111,1,cook111
+cook113,1,cook113
+cook116,1,cook116
+cook118,1,cook118
+cook130,1,cook130
+cook132,1,cook132
+cook20,1,cook20
+cook38,1,cook38
+cook42,1,cook42
+cook45,1,cook45
+cook46,1,cook46
+cook47,1,cook47
+cook70,1,cook70
+cook75,1,cook75
+cook82,1,cook82
+cook90,1,cook90
+cook94,1,cook94
+cook98,1,cook98
+coordinate-compression,1,coordinate_compression
+cut,1,cut
+cycle,1,cycle
+cycle_graph,1,cycle_graph
+daniel_1999,1,daniel_1999
+data-structure,1,data_structure
+dazlersan1,1,dazlersan1
+depth-first-search,1,depth_first_search
+difference-array,1,difference_array
+digit-dp,1,digit_dp
+directed-graph,1,directed_graph
+divisors,1,divisors
+dolabmoon,1,dolabmoon
+drswad,1,drswad
+erfaniaa,1,erfaniaa
+euler-theorem,1,euler_theorem
+euler-totient-function,1,euler_totient_function
+eulerian-tour,1,eulerian_tour
+expected-value,1,expected_value
+fairy_winx,1,fairy_winx
+fast-fourier-transform,1,fast_fourier_transform
+feb12,1,feb12
+feb13,1,feb13
+feb20,1,feb20
+fenwick-tree,1,fenwick_tree
+floyd-warshall,1,floyd_warshall
+foyaz05,1,foyaz05
+furko_adm,1,furko_adm
+game theory,1,game_theory
+garners-algorithm,1,garners_algorithm
+gcd,1,gcd
+grid,1,grid
+grundy-numbers,1,grundy_numbers
+hackcyborg,1,hackcyborg
+hackslash_123,1,hackslash_123
+hadamard-matrix,1,hadamard_matrix
+hamiltonian-cycle,1,hamiltonian_cycle
+harshil21,1,harshil21
+heap,1,heap
+hemanthram,1,hemanthram
+hiroto_adm,1,hiroto_adm
+hloya_ygrt,1,hloya_ygrt
+inversions,1,inversions
+isha_adm,1,isha_adm
+ivanz_adm,1,ivanz_adm
+izaron,1,izaron
+jan15,1,jan15
+jan16,1,jan16
+jan21,1,jan21
+jnarutoj,1,jnarutoj
+july12,1,july12
+july13,1,july13
+july16,1,july16
+july17,1,july17
+july19,1,july19
+june12,1,june12
+june13,1,june13
+june14,1,june14
+june15,1,june15
+june17,1,june17
+june18,1,june18
+kalpitk,1,kalpitk
+katana_handler,1,katana_handler
+khad_adm,1,khad_adm
+kuhn,1,kuhn
+kushalgoel,1,kushalgoel
+lavish315,1,lavish315
+logic-maths,1,logic_maths
+logical,1,logical
+logicalthinking,1,logicalthinking
+longest-inc-subsequence,1,longest_inc_subsequence
+ltime101,1,ltime101
+ltime112,1,ltime112
+ltime16,1,ltime16
+ltime27,1,ltime27
+ltime28,1,ltime28
+ltime32,1,ltime32
+ltime38,1,ltime38
+ltime51,1,ltime51
+ltime53,1,ltime53
+ltime63,1,ltime63
+ltime64,1,ltime64
+ltime65,1,ltime65
+ltime66,1,ltime66
+ltime68,1,ltime68
+ltime70,1,ltime70
+ltime71,1,ltime71
+ltime73,1,ltime73
+ltime75,1,ltime75
+ltime78,1,ltime78
+ltime98,1,ltime98
+ltime99,1,ltime99
+m0stik,1,m0stik
+ma5termind,1,ma5termind
+madhav_1999,1,madhav_1999
+mamedov,1,mamedov
+march12,1,march12
+march16,1,march16
+march21,1,march21
+matrix pow,1,matrix_pow
+matrix-exponentiation,1,matrix_exponentiation
+may12,1,may12
+may13,1,may13
+may15,1,may15
+may18,1,may18
+may20,1,may20
+mazihang2022,1,mazihang2022
+meet-in-middle,1,meet_in_middle
+mexomerf,1,mexomerf
+minimum-cut,1,minimum_cut
+modular-arithmetic,1,modular_arithmetic
+mrkerim,1,mrkerim
+nots0fast,1,nots0fast
+nov18,1,nov18
+nov19,1,nov19
+number-theoretic-transfmtn,1,number_theoretic_transfmtn
+oct13,1,oct13
+oct15,1,oct15
+oct17,1,oct17
+oct18,1,oct18
+ojasbansal,1,ojasbansal
+paley-construction,1,paley_construction
+panik,1,panik
+pattern,1,pattern
+pavel1996,1,pavel1996
+prakhar17252,1,prakhar17252
+prasant21,1,prasant21
+prateekg603,1,prateekg603
+pre-computation,1,pre_computation
+present_sir,1,present_sir
+priyanshi_,1,priyanshi
+prnjl_rai,1,prnjl_rai
+proconjunior,1,proconjunior
+proof,1,proof
+pruning,1,pruning
+rag_hav13,1,rag_hav13
+rajat1603,1,rajat1603
+range sum,1,range_sum
+ratingoverflow,1,ratingoverflow
+roman_adm,1,roman_adm
+romawhite,1,romawhite
+satej_adm,1,satej_adm
+scc,1,scc
+sept20,1,sept20
+sgbtech96,1,sgbtech96
+shaanknight,1,shaanknight
+shift,1,shift
+shivamg_isc,1,shivamg_isc
+sidhant007,1,sidhant007
+simulation,1,simulation
+smit_adm,1,smit_adm
+sprague-grundy,1,sprague_grundy
+start13,1,start13
+start14,1,start14
+start3,1,start3
+start6,1,start6
+subsequence,1,subsequence
+suryaprak_adm,1,suryaprak_adm
+sylvesters-criterion,1,sylvesters_criterion
+tanmay28,1,tanmay28
+theoneyouwant,1,theoneyouwant
+topsort,1,topsort
+tree,1,tree
+tree ds,1,tree_ds
+utkarsh_25dec,1,utkarsh_25dec
+vamsi_adm,1,vamsi_adm
+vichitr,1,vichitr
+vijju123,1,vijju123
+vinay_adm,1,vinay_adm
+vishal_nnd0,1,vishal_nnd0
+vladprog,1,vladprog
+williamson,1,williamson
+wwwwodddd,1,wwwwodddd
+yash5507,1,yash5507
+yjgarg,1,yjgarg
+zeckendorf Theorem,1,zeckendorf_theorem

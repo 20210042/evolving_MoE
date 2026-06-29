@@ -1,0 +1,126 @@
+{
+  "critic_count_type": "included_raw_tag_count_sum",
+  "critic_counts": {
+    "Data Structure / String": 10126,
+    "Greedy / Sorting": 6878,
+    "Implementation / Constructive": 8008,
+    "Math / Fundamentals": 8220,
+    "State-Space Search / DP / Graph": 8314
+  },
+  "critic_definitions": {
+    "Data Structure / String": {
+      "description": "자료구조 선택, 상태 유지, query/update invariant, string 처리 오류 진단",
+      "raw_tags": [
+        "Data Structures",
+        "Data structures",
+        "String algorithms",
+        "data structures"
+      ]
+    },
+    "Greedy / Sorting": {
+      "description": "정렬 기준, greedy choice, exchange argument 오류 진단",
+      "raw_tags": [
+        "Greedy algorithms",
+        "Sorting",
+        "greedy"
+      ]
+    },
+    "Implementation / Constructive": {
+      "description": "구현 실수, 조건 분기, constructive 구성 방식 오류 진단",
+      "raw_tags": [
+        "Constructive algorithms",
+        "Implementation",
+        "constructive algorithms",
+        "implementation"
+      ]
+    },
+    "Math / Fundamentals": {
+      "description": "수식화, 조건 처리, overflow-like logic, edge case 진단",
+      "raw_tags": [
+        "Fundamentals",
+        "Mathematics",
+        "math"
+      ]
+    },
+    "State-Space Search / DP / Graph": {
+      "description": "state 정의, recurrence, graph modeling, exhaustive search, pruning, path/cycle 오류 진단",
+      "raw_tags": [
+        "Complete search",
+        "Dynamic programming",
+        "Graph algorithms",
+        "brute force",
+        "dp"
+      ]
+    }
+  },
+  "critic_record_counts": {
+    "Data Structure / String": 5629,
+    "Greedy / Sorting": 4027,
+    "Implementation / Constructive": 4107,
+    "Math / Fundamentals": 5845,
+    "State-Space Search / DP / Graph": 4910
+  },
+  "critic_source_counts": {
+    "Data Structure / String": {
+      "codechef": 616,
+      "codeforces": 1781,
+      "codewars": 771,
+      "geeksforgeeks": 1658,
+      "hackerearth": 140,
+      "hackerrank": 141,
+      "kattis": 40,
+      "leetcode": 482
+    },
+    "Greedy / Sorting": {
+      "codechef": 415,
+      "codeforces": 2939,
+      "codewars": 70,
+      "geeksforgeeks": 253,
+      "hackerearth": 118,
+      "hackerrank": 38,
+      "kattis": 30,
+      "leetcode": 164
+    },
+    "Implementation / Constructive": {
+      "codechef": 693,
+      "codeforces": 3190,
+      "geeksforgeeks": 10,
+      "hackerearth": 85,
+      "hackerrank": 69,
+      "kattis": 60
+    },
+    "Math / Fundamentals": {
+      "codechef": 1133,
+      "codeforces": 2109,
+      "codewars": 1393,
+      "geeksforgeeks": 649,
+      "hackerearth": 301,
+      "hackerrank": 39,
+      "kattis": 65,
+      "leetcode": 156
+    },
+    "State-Space Search / DP / Graph": {
+      "codechef": 608,
+      "codeforces": 3092,
+      "codewars": 60,
+      "geeksforgeeks": 489,
+      "hackerearth": 212,
+      "hackerrank": 166,
+      "kattis": 83,
+      "leetcode": 200
+    }
+  },
+  "critic_tag_sum_counts": {
+    "Data Structure / String": 10126,
+    "Greedy / Sorting": 6878,
+    "Implementation / Constructive": 8008,
+    "Math / Fundamentals": 8220,
+    "State-Space Search / DP / Graph": 8314
+  },
+  "input": "data/processed/04_execution_ready.jsonl",
+  "multi_critic_record_count": 7079,
+  "records_with_critic": 15318,
+  "records_with_tags": 17084,
+  "records_without_critic": 11152,
+  "total_records": 26470
+}

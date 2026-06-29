@@ -1,0 +1,1 @@
+{"question_id":"lcb_sum","question_content":"Given two integers, write a program that prints their sum.","task_variant":"code_generation","public_test_cases":[{"input":"1 2\n","output":"3\n"}],"private_test_cases":[{"input":"5 6\n","output":"11\n"}],"platform":"leetcode","url":"https://example.com/lcb_sum","split":"test"}

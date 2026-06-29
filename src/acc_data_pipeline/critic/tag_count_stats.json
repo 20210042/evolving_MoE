@@ -1,0 +1,82 @@
+{
+  "input": "data/processed/04_execution_ready.jsonl",
+  "normalized_tag_count_distribution_per_record": {
+    "0": 9386,
+    "1": 2802,
+    "2": 5013,
+    "3": 3424,
+    "4": 2345,
+    "5": 1527,
+    "6": 877,
+    "7": 453,
+    "8": 245,
+    "9": 154,
+    "10": 74,
+    "11": 58,
+    "12": 34,
+    "13": 27,
+    "14": 12,
+    "15": 12,
+    "16": 10,
+    "17": 5,
+    "18": 4,
+    "19": 2,
+    "20": 4,
+    "21": 1,
+    "24": 1
+  },
+  "normalized_tag_count_summary_all_records": {
+    "max": 24,
+    "mean": 2.072497166603702,
+    "median": 2.0,
+    "min": 0
+  },
+  "normalized_tag_count_summary_tagged_records_only": {
+    "max": 24,
+    "mean": 3.2111332240693047,
+    "median": 3.0,
+    "min": 1
+  },
+  "raw_tag_count_distribution_per_record": {
+    "0": 9386,
+    "1": 1032,
+    "2": 3377,
+    "3": 1888,
+    "4": 3771,
+    "5": 1144,
+    "6": 2516,
+    "7": 736,
+    "8": 1227,
+    "9": 310,
+    "10": 501,
+    "11": 140,
+    "12": 218,
+    "13": 50,
+    "14": 75,
+    "15": 22,
+    "16": 29,
+    "17": 19,
+    "18": 6,
+    "19": 6,
+    "20": 6,
+    "21": 5,
+    "22": 2,
+    "23": 3,
+    "26": 1
+  },
+  "raw_tag_count_summary_all_records": {
+    "max": 26,
+    "mean": 3.010086890819796,
+    "median": 2.0,
+    "min": 0
+  },
+  "raw_tag_count_summary_tagged_records_only": {
+    "max": 26,
+    "mean": 4.663837508780145,
+    "median": 4.0,
+    "min": 1
+  },
+  "records_with_tags": 17084,
+  "records_without_tags": 9386,
+  "total_records": 26470
+}

@@ -1,0 +1,6 @@
+critic,tag_sum_count,record_count,description,raw_tags
+Data Structure / String,10126,5629,"자료구조 선택, 상태 유지, query/update invariant, string 처리 오류 진단","[""Data Structures"", ""Data structures"", ""String algorithms"", ""data structures""]"
+State-Space Search / DP / Graph,8314,4910,"state 정의, recurrence, graph modeling, exhaustive search, pruning, path/cycle 오류 진단","[""Complete search"", ""Dynamic programming"", ""Graph algorithms"", ""brute force"", ""dp""]"
+Math / Fundamentals,8220,5845,"수식화, 조건 처리, overflow-like logic, edge case 진단","[""Fundamentals"", ""Mathematics"", ""math""]"
+Implementation / Constructive,8008,4107,"구현 실수, 조건 분기, constructive 구성 방식 오류 진단","[""Constructive algorithms"", ""Implementation"", ""constructive algorithms"", ""implementation""]"
+Greedy / Sorting,6878,4027,"정렬 기준, greedy choice, exchange argument 오류 진단","[""Greedy algorithms"", ""Sorting"", ""greedy""]"
