@@ -13,7 +13,6 @@ build/
 
 # Runs / artifacts
 logs/
-results/
 *.jsonl
 !configs/**/*.yaml
 
