@@ -106,9 +106,9 @@ class ExtraArguments:
         default=False,
         metadata={"help": "reasoning 활성화. vllm/hf: chat template enable_thinking=True, api: reasoning_effort=medium."},
     )
-    use_category_prompt: bool = field(
-        default=False,
-        metadata={"help": "numina_cot 평가 시 category별 math persona system prompt를 사용할지 여부."},
+    use_category_prompt: Optional[str] = field(
+        default=None,
+        metadata={"help": "numina_cot 평가 시 전체 run에 고정해서 사용할 category persona 이름."},
     )
 
 
@@ -255,11 +255,12 @@ def main():
 
     is_math = data_args.test_dataset.lower() in MATH_DATASETS
     is_math_dataset = data_args.test_dataset.lower() in {"math", "bigmath", "numina_cot"}
-    use_numina_category_prompt = (
-        extra_args.use_category_prompt
-        and data_args.test_dataset.lower() == "numina_cot"
-    )
+    use_numina_category_prompt = bool(extra_args.use_category_prompt) and data_args.test_dataset.lower() == "numina_cot"
+    fixed_category_prompt_metadata = None
+    if use_numina_category_prompt:
+        fixed_category_prompt_metadata = {"category": extra_args.use_category_prompt}
     logger.info(f"카테고리별 system prompt 사용: {use_numina_category_prompt}")
+    logger.info(f"카테고리별 system prompt 고정값: {extra_args.use_category_prompt or '없음'}")
 
     # 청크 단위로 예측 → 즉시 append
     chunk_size = 1000
@@ -269,7 +270,7 @@ def main():
             messages_chunk = [
                 build_math_prompt(
                     item["instruction"],
-                    metadata=item if use_numina_category_prompt else None,
+                    metadata=fixed_category_prompt_metadata,
                 ) if is_math
                 else [{"role": "user", "content": item["instruction"]}]
                 for item in chunk

@@ -2,7 +2,7 @@
 #SBATCH --gres=gpu:PRO6000:1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=32G
-#SBATCH --time=48:00:00
+#SBATCH --time=12:00:00
 #SBATCH --output=logs/%x.%j.log
 #SBATCH --error=logs/%x.%j.log
 
@@ -15,7 +15,8 @@ cd "$REPO"
 
 source ~/.bashrc
 source ~/data/miniconda3/etc/profile.d/conda.sh
-conda activate MoE
+CONDA_ENV="${CONDA_ENV:-MoE}"
+conda activate "${CONDA_ENV}"
 
 export PYTHONPATH="$REPO/src"
 
@@ -45,14 +46,19 @@ if [ "${ENABLE_THINKING}" = "true" ] || [ "${ENABLE_THINKING}" = "1" ]; then
 fi
 
 CATEGORY_PROMPT_FLAG=()
-if [ "${USE_CATEGORY_PROMPT}" = "true" ] || [ "${USE_CATEGORY_PROMPT}" = "1" ]; then
-    CATEGORY_PROMPT_FLAG=(--use_category_prompt)
+if [ -n "${USE_CATEGORY_PROMPT}" ] && [ "${USE_CATEGORY_PROMPT}" != "false" ] && [ "${USE_CATEGORY_PROMPT}" != "0" ]; then
+    if [ "${USE_CATEGORY_PROMPT}" = "true" ] || [ "${USE_CATEGORY_PROMPT}" = "1" ]; then
+        echo "ERROR: USE_CATEGORY_PROMPT should be a category name, e.g. USE_CATEGORY_PROMPT=Algebra" >&2
+        exit 1
+    fi
+    CATEGORY_PROMPT_FLAG=(--use_category_prompt "${USE_CATEGORY_PROMPT}")
 fi
 
 echo "=== 평가 시작: ${RUN_NAME} ==="
 echo "MODEL_NAME=${MODEL_NAME}"
 echo "LORA_PATH=${LORA_PATH}"
 echo "TEST_DATASET=${TEST_DATASET}"
+echo "CONDA_ENV=${CONDA_ENV}"
 echo "USE_CATEGORY_PROMPT=${USE_CATEGORY_PROMPT}"
 echo "SLURM_JOB_ID=${SLURM_JOB_ID:-unknown}"
 
