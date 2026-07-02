@@ -67,6 +67,10 @@ class GMEvolutionOrchestrator:
         use_approach_persona: bool = False,
         shared_contribution_exemption: bool = True,
         failure_mode_scout: bool = False,
+        deletion_window: int = 0,
+        deletion_floor: float = 0.0,
+        delete_cooldown: int = 0,
+        add_only: bool = False,
     ):
         self.agent = agent
         self.roster_path = roster_path
@@ -85,6 +89,18 @@ class GMEvolutionOrchestrator:
         self.failure_mode_scout = failure_mode_scout
         self._fm_rng = random.Random(seed)
         self.max_lives = max_lives
+        # Windowed deletion (deletion_window>0): the whole removal path — eviction
+        # eligibility (lives), worst ordering, and the delete trigger — keys off one
+        # accumulated unique-solve rate over the last `deletion_window` batches,
+        # instead of instantaneous single-batch WAR/mcl + the two lives exemptions.
+        # 0 = OFF = legacy behavior, byte-identical. delete_cooldown rate-limits
+        # deletes (≤1 per K steps) to damp the overshoot-top cascade.
+        self.deletion_window = deletion_window
+        self.deletion_floor = deletion_floor
+        self.delete_cooldown = delete_cooldown
+        self._last_delete_step = -(10**9)
+        # Saturated run: never delete/swap → roster grows to the add-penalty fixed point.
+        self.add_only = add_only
         for p in self.roster:
             p.setdefault("total_war", 0)
             p.setdefault("active_steps", 0)
@@ -92,6 +108,7 @@ class GMEvolutionOrchestrator:
             p.setdefault("lives", self.max_lives)
             p.setdefault("routing_history", [])
             p.setdefault("exclusive_solves", [])
+            p.setdefault("recent_unique", [])
         self.action_cfg = action_cfg or ActionGateConfig()
         self.max_refine_iters = max_refine_iters
         self.lcb_timeout = lcb_timeout
@@ -324,6 +341,9 @@ class GMEvolutionOrchestrator:
         if all_zero_war:
             logging.info("All-zero WAR batch — skipping lives penalty (collective failure).")
 
+        win = self.deletion_window
+        batch_n = len(batch_data)
+        unique_rate_map: Dict[str, float] = {}
         for p in self.roster:
             p_id = p["id"]
             if p_id in war_scores:
@@ -331,15 +351,33 @@ class GMEvolutionOrchestrator:
                 p["total_war"] = p.get("total_war", 0) + current_score
                 p["active_steps"] = p.get("active_steps", 0) + 1
                 p["average_war"] = p["total_war"] / p["active_steps"]
-                agent_solved_any = bool(squad_results.get(p_id, set()))
-                if current_score > 0:
-                    p["lives"] = self.max_lives
-                elif all_zero_war:
-                    pass  # batch-level collective failure — no individual penalty
-                elif self.shared_contribution_exemption and agent_solved_any:
-                    pass  # solved shared problems — not an individual failure (toggleable)
+                if win > 0:
+                    # Window mode: accumulate the per-batch unique-solve count (== WAR
+                    # score) over a sliding window and key lives off the sustained
+                    # unique-rate, not one unlucky batch. Newborns get a full-window
+                    # grace period; exemptions are unnecessary (a collective-fail or
+                    # shared-only batch simply lowers everyone's rate equally).
+                    ru = p.setdefault("recent_unique", [])
+                    ru.append(current_score)
+                    del ru[:-win]
+                    rate = sum(ru) / (len(ru) * batch_n) if ru and batch_n > 0 else 0.0
+                    unique_rate_map[p_id] = rate
+                    if len(ru) < win:
+                        pass  # grace: not enough history to judge redundancy
+                    elif rate > self.deletion_floor:
+                        p["lives"] = min(self.max_lives, p.get("lives", self.max_lives) + 1)
+                    else:
+                        p["lives"] = max(0, p.get("lives", self.max_lives) - 1)
                 else:
-                    p["lives"] = max(0, p.get("lives", self.max_lives) - 1)
+                    agent_solved_any = bool(squad_results.get(p_id, set()))
+                    if current_score > 0:
+                        p["lives"] = self.max_lives
+                    elif all_zero_war:
+                        pass  # batch-level collective failure — no individual penalty
+                    elif self.shared_contribution_exemption and agent_solved_any:
+                        pass  # solved shared problems — not an individual failure (toggleable)
+                    else:
+                        p["lives"] = max(0, p.get("lives", self.max_lives) - 1)
 
         # Accumulate exclusive solve history per agent (problems only that agent solved).
         roster_by_id = {p["id"]: p for p in self.roster}
@@ -362,6 +400,7 @@ class GMEvolutionOrchestrator:
             self.roster,
             tiebreak=self.war_tiebreak,
             rng=rng,
+            unique_rate_map=(unique_rate_map if win > 0 else None),
         )
         logging.info("Worst Agent for Eviction: %s", worst_agent)
         logging.info("Total Hard Errors: %s", len(hard_errors_texts))
@@ -468,7 +507,25 @@ class GMEvolutionOrchestrator:
             new_pass_ids=new_pass_ids,
             batch_size=len(batch_data),
             cfg=self.action_cfg,
+            worst_unique_rate=(
+                unique_rate_map.get(worst_agent) if (win > 0 and worst_agent) else None
+            ),
+            add_only=self.add_only,
         )
+
+        # Down-stroke damping: rate-limit deletes (≤1 per delete_cooldown steps) so the
+        # overshoot top doesn't cascade-collapse. Swaps keep size, so they're exempt.
+        if (
+            self.delete_cooldown > 0
+            and decision.action == "delete"
+            and (self._step_for_log - self._last_delete_step) < self.delete_cooldown
+        ):
+            logging.info(
+                "Delete suppressed by cooldown (since last=%d < %d).",
+                self._step_for_log - self._last_delete_step,
+                self.delete_cooldown,
+            )
+            decision.action = "noop"
 
         logging.info(
             "Action gate: %s | U=%s | MCL(worst)≈%.3f | new_pass=%s/%s | niche_recover=%s/%s%s",
@@ -507,6 +564,7 @@ class GMEvolutionOrchestrator:
         elif decision.action == "delete":
             self.roster = [r for r in self.roster if r["id"] != worst_agent]
             save_roster(self.roster_path, self.roster)
+            self._last_delete_step = self._step_for_log
             logging.info("Commit DELETE: removed worst agent %s", worst_agent)
         elif decision.action == "swap":
             self.roster = [r for r in self.roster if r["id"] != worst_agent]

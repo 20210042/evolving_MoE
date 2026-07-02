@@ -1,0 +1,30 @@
+# seed20210020: SATURATED RUN — Phase-2(delete) 끄고 add-or-noop만(add_only).
+#   기본형(topic scout = seed16과 동일 프롬프트, 풀이과정 없음, batch 100). 삭제 없음.
+#   목적: 로스터를 exp add-페널티 고정점까지 단조증가시켜 진동 없는 "maximal final roster" 상한 확보.
+#   관전: (1) 어느 크기에서 포화·유지되나 (2) maximal 로스터로도 UB가 ~77–78% 못 넘으면
+#         천장=backbone(distractor) 확정. seed16(OFF, 진동)과 대조.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "numina_cot"
+split: "train"
+train_size: 62185
+epochs: 1
+batch_size: 100
+max_lives: 5                # 삭제 없으니 무의미(참고용)
+enable_thinking: false
+shared_contribution_exemption: false
+
+# saturated run
+add_only: true             # ← Phase-2(delete/swap) 봉쇄. add 아니면 noop.
+# deletion_window/floor/cooldown = base 기본 0 (삭제 자체가 꺼져 무관)
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

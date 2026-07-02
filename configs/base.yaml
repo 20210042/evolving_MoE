@@ -33,6 +33,17 @@ infer_batch_size: 64
 # WAR / eviction
 war_tiebreak: "random"  # random | alphabetical — avoid systematic bias
 max_lives: 3
+# Windowed deletion (0 = OFF = legacy single-batch mcl + lives exemptions). When
+# >0, the whole removal path (lives eligibility, worst ordering, delete trigger)
+# keys off one accumulated unique-solve rate over the last `deletion_window`
+# batches; an agent's lives decay only on a sustained rate <= deletion_floor.
+# delete_cooldown rate-limits deletes (≤1 per K steps) to damp cascade collapse.
+deletion_window: 0
+deletion_floor: 0.0
+delete_cooldown: 0
+# Saturated run: disable Phase-2 (delete/swap) → add-or-noop only. Roster grows
+# monotonically until the exponential add-size penalty stalls it (fixed-point superset).
+add_only: false
 
 # Action gate
 action_gate:

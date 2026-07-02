@@ -22,6 +22,11 @@ setup_job_env() {
     export PYTHONPATH="${REPO}/src"
     export VLLM_USE_FLASHINFER_SAMPLER=0
     export VLLM_DISABLE_FLASHINFER=1
+    # HF cache MUST live on /data5 (home quota is tiny). Pin it here so the job never
+    # depends on the submitting shell's env (a shell without HF_HOME re-downloads the
+    # 52G model into the home quota and the engine dies at load).
+    export HF_HOME="${HF_HOME:-/data5/jaehoonjeong/.cache/huggingface}"
+    export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-/data5/jaehoonjeong/.cache/huggingface}"
     mkdir -p "${REPO}/logs"
 }
 

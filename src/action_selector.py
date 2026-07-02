@@ -36,6 +36,8 @@ def select_action(
     new_pass_ids: Set[str],
     batch_size: int,
     cfg: ActionGateConfig,
+    worst_unique_rate: Optional[float] = None,
+    add_only: bool = False,
 ) -> ActionDecision:
     """
     Independent Phase 1 (Add or Stay) and Phase 2 (Delete or Stay) Roster Decisions.
@@ -79,7 +81,11 @@ def select_action(
                 other_solves.update(solves)
 
         unique_worst_solves = worst_solves - other_solves
-        mcl = len(unique_worst_solves) / batch_size if batch_size > 0 else 0.0
+        # Single-batch unique-solve fraction (legacy / OFF path). The set above is
+        # always needed for the hole-aware swap guard below; only the *gate signal*
+        # switches to the accumulated window rate when one is supplied.
+        single_batch_mcl = len(unique_worst_solves) / batch_size if batch_size > 0 else 0.0
+        mcl = single_batch_mcl if worst_unique_rate is None else worst_unique_rate
 
         u_delete = lambda_del - mcl
         if N > 1 and u_delete > 0.0:
@@ -92,6 +98,11 @@ def select_action(
     # but gh_add above intersects only hard_errors -> phase-1 add utility unchanged.
     recovered = new_pass_ids & unique_worst_solves
     niche_recovered = recovered == unique_worst_solves  # trivially true when niche empty
+
+    # add_only (saturated run): disable Phase-2 entirely → add-or-noop only, roster
+    # grows monotonically until the exponential size penalty stalls adds (fixed point).
+    if add_only:
+        phase2_delete = False
 
     # 4. Combine Decisions
     demoted_swap = False

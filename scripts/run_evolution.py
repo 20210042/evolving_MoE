@@ -180,6 +180,10 @@ def main() -> None:
         use_approach_persona=bool(cfg.get("use_approach_persona", False)),
         shared_contribution_exemption=bool(cfg.get("shared_contribution_exemption", True)),
         failure_mode_scout=bool(cfg.get("failure_mode_scout", False)),
+        deletion_window=int(cfg.get("deletion_window", 0)),
+        deletion_floor=float(cfg.get("deletion_floor", 0.0)),
+        delete_cooldown=int(cfg.get("delete_cooldown", 0)),
+        add_only=bool(cfg.get("add_only", False)),
     )
 
     step_count = 0
