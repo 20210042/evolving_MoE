@@ -17,7 +17,8 @@ from prompts.coding import build_expert_prompt
 from roster import assign_candidate_id, ensure_roster, normalize_persona_fields, save_roster
 from scout import scout_new_persona
 from step_logger import StepLogContext, StepLogger
-from utils.helpers import extract_code_block
+from utils.domains import task_family
+from utils.helpers import finalize_generation_output
 from war import compute_war_scores, pick_worst_agent
 
 _SCORE_WORKERS = min(4, os.cpu_count() or 1)
@@ -238,10 +239,11 @@ class GMEvolutionOrchestrator:
         for pair, raw in zip(pair_order, gen_out):
             pid, cid = pair
             item = by_id[pid]
-            if item.get("domain") == "math":
-                codes[pair] = raw
-            else:
-                codes[pair] = extract_code_block(raw) or raw
+            codes[pair] = finalize_generation_output(
+                raw,
+                dataset=item.get("dataset") or self.dataset_name,
+                domain=item.get("domain"),
+            )
 
         scores = self._score_pairs_parallel(batch_data, codes)
 
@@ -260,7 +262,8 @@ class GMEvolutionOrchestrator:
 
             if not any_solved:
                 clean_desc = item.get("prompt_text") or instruction
-                if item.get("domain") == "math":
+                family = task_family(dataset=item.get("dataset") or self.dataset_name, domain=item.get("domain"))
+                if family == "math":
                     if self.failure_mode_scout:
                         attempts = [
                             codes[(problem_id, p["id"])]
@@ -273,12 +276,14 @@ class GMEvolutionOrchestrator:
                                 f"{self._fm_rng.choice(attempts)}"
                             )
                     hard_errors_texts[problem_id] = clean_desc
-                else:
+                elif family == "coding":
                     tests_str = "\n".join(item.get("test_list", []))
                     hard_errors_texts[problem_id] = (
                         f"{clean_desc}\n"
                         f"Tests:\n{tests_str}"
                     )
+                else:
+                    hard_errors_texts[problem_id] = clean_desc
 
         return squad_results, hard_errors_texts
 
@@ -299,10 +304,10 @@ class GMEvolutionOrchestrator:
             dataset=ds_probe,
             model_name=model_name,
             starter_code=item.get("starter_code"),
+            domain=item.get("domain"),
         )
         raw = self.agent.chat(msg, enable_thinking=self.enable_thinking)
-        domain = item.get("domain", "coding")
-        return raw if domain == "math" else (extract_code_block(raw) or raw)
+        return finalize_generation_output(raw, dataset=ds_probe, domain=item.get("domain"))
 
     def _update_routing_memory(self, batch_data: List[Dict], squad_results: Dict[str, Set[str]]) -> None:
         for item in batch_data:
@@ -492,10 +497,11 @@ class GMEvolutionOrchestrator:
                 )
             probe_out = self.agent.chat_batch(probe_msgs, enable_thinking=self.enable_thinking)
             for item, raw in zip(probe_items, probe_out):
-                if item.get("domain") == "math":
-                    code = raw
-                else:
-                    code = extract_code_block(raw) or raw
+                code = finalize_generation_output(
+                    raw,
+                    dataset=item.get("dataset") or self.dataset_name,
+                    domain=item.get("domain"),
+                )
                 if pass_at_threshold(self._score(item, code)):
                     new_pass_ids.add(item["id"])
 

@@ -31,3 +31,25 @@ def test_llama_baseline_messages():
     assert isinstance(msgs, list)
     assert msgs[0]["role"] == "system"
     assert "```python" in msgs[0]["content"]
+
+
+def test_qasc_prompt_is_letter_only_not_code():
+    msgs = coding.build_baseline_prompt("Q? (A) x (B) y", dataset="qasc", model_name="google/gemma")
+    assert isinstance(msgs, list)
+    assert "answer letter" in msgs[1]["content"]
+    assert "```python" not in msgs[0]["content"]
+    assert "```python" not in msgs[1]["content"]
+
+
+def test_lbox_prompt_is_legal_not_code():
+    msgs = coding.build_expert_prompt(
+        "다음 사실관계에 해당하는 죄명을 정확히 한 줄로 답하라.",
+        "You specialize in Korean criminal law.",
+        dataset="lbox",
+        model_name="google/gemma",
+        domain="lbox",
+    )
+    assert isinstance(msgs, list)
+    assert "Korean legal classification" in msgs[1]["content"]
+    assert "```python" not in msgs[0]["content"]
+    assert "```python" not in msgs[1]["content"]

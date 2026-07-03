@@ -12,7 +12,8 @@ from prompts.coding import (
     build_critic_prompt,
     build_refine_prompt,
 )
-from utils.helpers import check_stop_condition, extract_code_block
+from utils.domains import task_family
+from utils.helpers import check_stop_condition, finalize_generation_output
 
 
 class RawPipeline(BasePipeline):
@@ -38,7 +39,7 @@ class RawPipeline(BasePipeline):
         raw_output = self.agent.chat(
             build_baseline_prompt(instruction, dataset=ds, model_name=model_name, domain=self.domain),
         )
-        code = raw_output if self.domain == "math" else (extract_code_block(raw_output) or raw_output)
+        code = finalize_generation_output(raw_output, dataset=ds, domain=self.domain)
 
         return {
             "id": input_item.get("id"),
@@ -58,7 +59,8 @@ class RawPipeline(BasePipeline):
         outs = self.agent.chat_batch(msgs)
         results = []
         for item, raw in zip(items, outs):
-            code = raw if self.domain == "math" else (extract_code_block(raw) or raw)
+            ds = (item.get("dataset") or "mbpp").lower()
+            code = finalize_generation_output(raw, dataset=ds, domain=self.domain)
             results.append(
                 {
                     "id": item.get("id"),
@@ -98,11 +100,15 @@ class SelfRefinePipeline(BasePipeline):
         from prompts import baseline_prompts
 
         model_name = self.agent.llm.model_name
-        neutral_critic_sys = (
-            baseline_prompts.MATH_CRITIC_SYSTEM
-            if self.domain == "math"
-            else baseline_prompts.CODING_CRITIC_SYSTEM
-        )
+        family = task_family(domain=self.domain)
+        if family == "math":
+            neutral_critic_sys = baseline_prompts.MATH_CRITIC_SYSTEM
+        elif family == "qasc":
+            neutral_critic_sys = baseline_prompts.QASC_CRITIC_SYSTEM
+        elif family == "lbox":
+            neutral_critic_sys = baseline_prompts.LBOX_CRITIC_SYSTEM
+        else:
+            neutral_critic_sys = baseline_prompts.CODING_CRITIC_SYSTEM
 
         instructions = [self._instruction(it) for it in items]
         datasets = [(it.get("dataset") or "mbpp").lower() for it in items]
@@ -113,8 +119,8 @@ class SelfRefinePipeline(BasePipeline):
         ]
         raw_init = self.agent.chat_batch(init_msgs)
         codes = [
-            r if self.domain == "math" else (extract_code_block(r) or r)
-            for r in raw_init
+            finalize_generation_output(r, dataset=ds, domain=self.domain)
+            for r, ds in zip(raw_init, datasets)
         ]
         histories = [[{"step": "initial", "output": c}] for c in codes]
         active = [True] * len(items)
@@ -159,7 +165,7 @@ class SelfRefinePipeline(BasePipeline):
             ]
             refined = self.agent.chat_batch(refine_msgs)
             for j, ref_raw in zip(refine_tasks, refined):
-                codes[j] = ref_raw if self.domain == "math" else (extract_code_block(ref_raw) or ref_raw)
+                codes[j] = finalize_generation_output(ref_raw, dataset=datasets[j], domain=self.domain)
                 histories[j].append({"step": f"refine_{i}", "output": codes[j]})
 
         results = []

@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from agents.base import Agent
 from prompts.meta import META_AGENT_PROMPT
+from utils.domains import task_family
 from utils.helpers import extract_json_object
 
 
@@ -68,11 +69,11 @@ def scout_new_persona(
     roster_str = _format_roster_table(roster)
 
     ds = (dataset_name or "").lower()
-    is_math = (domain == "math") if domain is not None else ds in ("bigmath", "math", "numina_cot")
+    family = task_family(dataset=ds, domain=domain)
     # failure mode includes a full failed attempt per hard error → larger cap so
     # solutions aren't sliced; plain modes keep the original 4k char budget.
     cap = 40000 if failure_mode else 4000
-    if is_math:
+    if family == "math":
         if failure_mode:
             from prompts.meta import META_AGENT_MATH_PROMPT_FAILURE
             prompt = META_AGENT_MATH_PROMPT_FAILURE.substitute(
@@ -99,6 +100,18 @@ def scout_new_persona(
                 hard_errors=hard_errors_text[:4000],
                 current_roster=roster_str,
             )
+    elif family == "qasc":
+        from prompts.meta import META_AGENT_QASC_PROMPT
+        prompt = META_AGENT_QASC_PROMPT.substitute(
+            hard_errors=hard_errors_text[:4000],
+            current_roster=roster_str,
+        )
+    elif family == "lbox":
+        from prompts.meta import META_AGENT_LEGAL_PROMPT
+        prompt = META_AGENT_LEGAL_PROMPT.substitute(
+            hard_errors=hard_errors_text[:4000],
+            current_roster=roster_str,
+        )
     else:
         prompt = META_AGENT_PROMPT.substitute(
             hard_errors=hard_errors_text[:4000],

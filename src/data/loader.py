@@ -22,6 +22,10 @@ def scoring_kind_for_dataset(name: str) -> str:
         return "humaneval_check"
     if n == "acc":            # QuantCat/TACO coding: eval_spec-driven (stdin/function_call/gfg)
         return "acc"
+    if n == "qasc":
+        return "qasc"
+    if n == "lbox":
+        return "lbox"
     return "asserts"
 
 
@@ -206,7 +210,15 @@ def load_livecodebench(release_version: str = "release_v5") -> List[Dict[str, An
 
 def load_from_jsonl(filepath: str, dataset_key: str) -> List[Dict[str, Any]]:
     data = []
-    domain = "math" if dataset_key.lower() in ("math", "bigmath", "numina_cot") else "coding"
+    key = dataset_key.lower()
+    if key in ("math", "bigmath", "numina_cot"):
+        domain = "math"
+    elif key == "qasc":
+        domain = "qasc"
+    elif key == "lbox":
+        domain = "lbox"
+    else:
+        domain = "coding"
     with open(filepath, "r") as f:
         for line in f:
             item = json.loads(line)

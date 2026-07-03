@@ -16,7 +16,7 @@ from typing import Any, Dict, List
 from agents.base import Agent
 from pipelines.base_pipeline import BasePipeline
 from prompts.coding import build_expert_prompt
-from utils.helpers import extract_code_block
+from utils.helpers import finalize_generation_output
 
 
 class BinningPipeline(BasePipeline):
@@ -84,7 +84,8 @@ class BinningPipeline(BasePipeline):
             expert_outputs: Dict[str, str] = {}
             for j, expert in enumerate(self.roster):
                 raw = outs[i * n + j]
-                code = raw if self.domain == "math" else (extract_code_block(raw) or raw)
+                ds = item.get("dataset") or "mbpp"
+                code = finalize_generation_output(raw, dataset=ds, domain=self.domain)
                 expert_outputs[expert["id"]] = code
             results.append({"id": item.get("id"), "expert_outputs": expert_outputs})
         return results

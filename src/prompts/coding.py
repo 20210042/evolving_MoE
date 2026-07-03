@@ -6,12 +6,9 @@ from typing import List, Union
 
 from prompts import baseline_prompts
 from prompts import qwen3_lcb
+from utils.domains import task_family
 
 Message = Union[str, List[dict]]
-
-# domain="math"가 1차 기준. domain이 안 넘어오면 dataset 이름으로 폴백(아래 집합).
-# 새 수학 데이터셋은 여기 한 곳만 추가하면 됨.
-_MATH_DATASETS = ("bigmath", "math", "numina_cot")
 
 _LLAMA_CODE_HINT = (
     " Output ONLY a single fenced Markdown ```python ... ``` block with no text outside it."
@@ -36,10 +33,18 @@ def build_baseline_prompt(
     domain: str | None = None,
 ) -> Message:
     ds = (dataset or "mbpp").lower()
-    is_math = (domain == "math") if domain is not None else ds in _MATH_DATASETS
-    if is_math:
+    family = task_family(dataset=ds, domain=domain)
+    if family == "math":
         system = baseline_prompts.MATH_GEN_SYSTEM
         user = baseline_prompts.MATH_GEN_USER.format(instruction=instruction)
+        return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+    if family == "qasc":
+        system = baseline_prompts.QASC_GEN_SYSTEM
+        user = baseline_prompts.QASC_GEN_USER.format(instruction=instruction)
+        return [{"role": "system", "content": system}, {"role": "user", "content": user}]
+    if family == "lbox":
+        system = baseline_prompts.LBOX_GEN_SYSTEM
+        user = baseline_prompts.LBOX_GEN_USER.format(instruction=instruction)
         return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
     if starter_code:
@@ -89,10 +94,22 @@ def build_expert_prompt(
     """One-shot generation under a persona. system_prompt=정체성, approach(있으면)는
     user 턴에 프리앰블로 주입(Gemma가 user 지시를 더 잘 따름)."""
     ds = (dataset or "mbpp").lower()
-    is_math = (domain == "math") if domain is not None else ds in _MATH_DATASETS
-    if is_math:
+    family = task_family(dataset=ds, domain=domain)
+    if family == "math":
         persona_sys = system_prompt or baseline_prompts.MATH_GEN_SYSTEM
         user = baseline_prompts.MATH_GEN_USER.format(instruction=instruction)
+        if approach:
+            user = f"{approach}\n\n{user}"
+        return [{"role": "system", "content": persona_sys}, {"role": "user", "content": user}]
+    if family == "qasc":
+        persona_sys = system_prompt or baseline_prompts.QASC_GEN_SYSTEM
+        user = baseline_prompts.QASC_GEN_USER.format(instruction=instruction)
+        if approach:
+            user = f"{approach}\n\n{user}"
+        return [{"role": "system", "content": persona_sys}, {"role": "user", "content": user}]
+    if family == "lbox":
+        persona_sys = system_prompt or baseline_prompts.LBOX_GEN_SYSTEM
+        user = baseline_prompts.LBOX_GEN_USER.format(instruction=instruction)
         if approach:
             user = f"{approach}\n\n{user}"
         return [{"role": "system", "content": persona_sys}, {"role": "user", "content": user}]
@@ -141,6 +158,33 @@ def build_refine_prompt(
 ) -> Message:
     ds = (dataset or "mbpp").lower()
     family = get_prompt_family(model_name)
+    task = task_family(dataset=ds)
+
+    if task == "qasc":
+        return [
+            {"role": "system", "content": baseline_prompts.QASC_REVISION_SYSTEM},
+            {
+                "role": "user",
+                "content": baseline_prompts.QASC_REVISION_USER.format(
+                    instruction=instruction,
+                    solution=current_code,
+                    feedback=feedback,
+                ),
+            },
+        ]
+
+    if task == "lbox":
+        return [
+            {"role": "system", "content": baseline_prompts.LBOX_REVISION_SYSTEM},
+            {
+                "role": "user",
+                "content": baseline_prompts.LBOX_REVISION_USER.format(
+                    instruction=instruction,
+                    solution=current_code,
+                    feedback=feedback,
+                ),
+            },
+        ]
 
     if family == "qwen3" and ds == "livecodebench":
         return (
@@ -186,8 +230,33 @@ def build_critic_prompt(
     dataset: str,
     model_name: str,
 ) -> Message:
-    del dataset
+    ds = (dataset or "mbpp").lower()
+    task = task_family(dataset=ds)
     family = get_prompt_family(model_name)
+
+    if task == "qasc":
+        return [
+            {"role": "system", "content": sys_prompt or baseline_prompts.QASC_CRITIC_SYSTEM},
+            {
+                "role": "user",
+                "content": baseline_prompts.QASC_CRITIC_USER.format(
+                    instruction=instruction,
+                    solution=current_code,
+                ),
+            },
+        ]
+
+    if task == "lbox":
+        return [
+            {"role": "system", "content": sys_prompt or baseline_prompts.LBOX_CRITIC_SYSTEM},
+            {
+                "role": "user",
+                "content": baseline_prompts.LBOX_CRITIC_USER.format(
+                    instruction=instruction,
+                    solution=current_code,
+                ),
+            },
+        ]
 
     if family == "qwen3":
         return (

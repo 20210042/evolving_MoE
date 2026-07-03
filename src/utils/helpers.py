@@ -5,6 +5,8 @@ import re
 import torch
 from transformers import set_seed
 
+from utils.domains import is_text_generation_task
+
 logger = logging.getLogger(__name__)
 
 
@@ -85,6 +87,19 @@ def extract_code_block(text: str) -> str:
         code = code.split("</code>")[0]
 
     return code.strip()
+
+
+def finalize_generation_output(
+    text: str,
+    *,
+    dataset: str | None = None,
+    domain: str | None = None,
+) -> str:
+    """Return raw natural-language answers for EM/math tasks, code for coding tasks."""
+    cleaned = strip_thinking_channels(text or "")
+    if is_text_generation_task(dataset=dataset, domain=domain):
+        return cleaned
+    return extract_code_block(cleaned) or cleaned
 
 
 def check_stop_condition(feedback: str) -> bool:

@@ -81,6 +81,78 @@ Question:
 {instruction}
 """
 
+# --- SCIENCE MULTIPLE-CHOICE PROMPTS (QASC) ---
+
+QASC_GEN_SYSTEM = "You are a careful science multiple-choice solver."
+QASC_GEN_USER = """Solve the following science multiple-choice question.
+Output only the final answer letter, one of A, B, C, D, E, F, G, or H.
+
+Question:
+{instruction}
+"""
+QASC_CRITIC_SYSTEM = "You are a careful science multiple-choice reviewer."
+QASC_CRITIC_USER = """Review the proposed answer to this science multiple-choice question.
+
+Question:
+{instruction}
+
+Answer:
+{solution}
+
+Check whether the final letter is correct. If it is already correct, say no change is needed.
+Feedback: [Your concise feedback]
+"""
+QASC_REVISION_SYSTEM = "You are a careful science multiple-choice solver."
+QASC_REVISION_USER = """Revise the answer based on the feedback.
+
+Question:
+{instruction}
+
+Previous Answer:
+{solution}
+
+Feedback:
+{feedback}
+
+Output only the final answer letter.
+"""
+
+# --- KOREAN LEGAL EM PROMPTS (LBox Open) ---
+
+LBOX_GEN_SYSTEM = "You are a precise Korean legal classification assistant."
+LBOX_GEN_USER = """Answer the following Korean legal classification task exactly in the requested format.
+Do not add explanations.
+
+Task:
+{instruction}
+"""
+LBOX_CRITIC_SYSTEM = "You are a precise Korean legal classification reviewer."
+LBOX_CRITIC_USER = """Review the proposed answer to this Korean legal classification task.
+
+Task:
+{instruction}
+
+Answer:
+{solution}
+
+Check exactness against the requested output format. If it is already exact, say no change is needed.
+Feedback: [Your concise feedback]
+"""
+LBOX_REVISION_SYSTEM = "You are a precise Korean legal classification assistant."
+LBOX_REVISION_USER = """Revise the answer based on the feedback.
+
+Task:
+{instruction}
+
+Previous Answer:
+{solution}
+
+Feedback:
+{feedback}
+
+Output only the corrected final answer.
+"""
+
 # Critic: Zero-Shot, Textual Feedback Only
 MATH_CRITIC_SYSTEM = "You are a helpful assistant."
 MATH_CRITIC_USER = """Review the following solution.
