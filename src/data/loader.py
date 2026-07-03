@@ -20,6 +20,8 @@ def scoring_kind_for_dataset(name: str) -> str:
         return "lcb"
     if n == "humaneval":
         return "humaneval_check"
+    if n == "acc":            # QuantCat/TACO coding: eval_spec-driven (stdin/function_call/gfg)
+        return "acc"
     return "asserts"
 
 

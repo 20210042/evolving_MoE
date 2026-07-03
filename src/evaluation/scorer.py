@@ -60,6 +60,21 @@ def _mc_letter_value_match(pred: str, gold: str, instruction: str) -> bool:
     return False
 
 
+def _json(x):
+    import json
+    return json.loads(x) if isinstance(x, str) else x
+
+
+def score_acc_item(item: Dict[str, Any], code: str) -> float:
+    """QuantCat/TACO coding: exec candidate via acc_exec (stdin / function_call / gfg)."""
+    from evaluation.acc_exec import ExecutionInterface
+    problem = dict(item)
+    problem["eval_spec"] = _json(item.get("eval_spec")) or {}
+    problem["test_cases"] = _json(item.get("test_cases")) or []
+    out = ExecutionInterface().run(problem, code, solution_id="candidate")
+    return 100.0 if out.get("passed") else 0.0
+
+
 def score_one(
     item: Dict[str, Any],
     prediction_code: str,
@@ -91,6 +106,10 @@ def score_one(
             timeout=lcb_timeout,
             release_version=lcb_release_version,
         )
+
+    # QuantCat/TACO coding: eval_spec-driven execution (stdin / function_call / gfg).
+    if kind == "acc" or item.get("eval_spec"):
+        return score_acc_item(item, prediction_code)
 
     domain = item.get("domain", "coding")
     ground_truth = item.get("ground_truth")

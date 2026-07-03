@@ -4,6 +4,7 @@ from typing import Any
 
 from .base import ExecutionRunner, unsupported_result
 from .function_call_runner import FunctionCallRunner
+from .gfg_runner import GfgRunner
 from .stdin_stdout_runner import StdinStdoutRunner
 
 
@@ -26,6 +27,7 @@ class ExecutionInterface:
         self.runners: list[ExecutionRunner] = [
             StdinStdoutRunner(),
             FunctionCallRunner(),
+            GfgRunner(),
             SpecialJudgeRunner(),
         ]
 
