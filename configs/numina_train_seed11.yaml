@@ -11,7 +11,7 @@ use_exclusive_solves: true
 use_approach_persona: true
 
 vllm:
-  tp_size: 2
+  tp_size: 1
   dtype: bfloat16
   enable_prefix_caching: true
   max_num_seqs: 128

@@ -43,13 +43,22 @@
 - 어떤 버전도 **도메인명 prior는 안 줌**(도메인은 모델이 hard_errors 보고 선택). 차이는 **구조 prior(atomicity)뿐**.
 - ablation 종합: **BigMath V1(seed08) > V2(seed09)** (UB +20 vs +14). **numina V2(seed10) > V3(seed11)** (MoE 67.6 vs 63.9, V3 반증). **단 V1은 numina에서 미검증** → 이번에 보충.
 
-### 🆕 2×2 설계 착수 — scout(V1/V2) × shared(ON/OFF)
+### 🆕 2×2 결과 — scout(V1/V2) × shared(ON/OFF), 31B, MC-aware (완료)
 | | shared ON | shared OFF |
 |---|---|---|
-| **V2** | seed12 ✅ | seed13 ✅ |
-| **V1** | **seed14** (183264, R) | **seed15** (183267, R) |
-- seed14/15 = numina **V1**(atomicity), 백본 31B(MoE 아님), Thinking OFF, max_lives 5. config `numina_train_seed14/15.yaml`, submit 동명. (use_exclusive_solves 없음 → V1 라우팅.)
-- 검증포인트: 첫 스텝 로그에서 V1(atomicity) 적용 + persona '&' 안 붙는지.
+| **V2** | seed12: MoE 78.4 / UB 83.4(+26) / 7명 | seed13: MoE 77.4 / UB 81.4(+19) / 5명 |
+| **V1** | seed14: MoE 77.3 / UB 82.4(+19) / 7명 | seed15: MoE 77.0 / UB 82.6 / **5명(LUCA 도태)** |
+- **MoE 4칸 전부 동률(~77~78%).** UB는 **V2×ON 최고(83.4)** — **atomicity(V1)가 numina선 UB 못 올림**(BigMath V1>V2 미재현). V1 persona는 깔끔(`&` 0개, 단일도메인)하나 성능 이득 없음.
+- 🔑 **seed15(V1×OFF): LUCA 도태됨** — 제거 3건 전부 **delete**(swap 0, step17 luca delete). atomic 전문가 집단이 제너럴리스트를 밀어냄. demote=0(scale 0.25, hole-aware INERT 전 칸 실증).
+- **큰 로스터(ON,7명)가 일관 UB↑** → UB 극대화엔 도태 OFF 유리.
+
+### ✅ 확정 + 🚀 seed16 (MoE 백본 전체분화, 진행 중)
+- **선생님 확정: seed15(V1 × shared OFF)가 아키텍처.**
+- **seed16 제출됨**: **26B-A4B(MoE) 백본** + numina **train 전체(62185)** + **1 epoch** + **batch 100** + **tp=2(2 GPU)** + V1×OFF. config `numina_train_seed16.yaml`.
+  - job **183294**(R, n04, GPU2/CPU4/mem64) + **183295**(resume, `afternotok:183294`, 타임아웃 시 이어받음).
+  - ETA ~10~80h (A4B 고batch 속도 불확실; 48h+resume로 96h까지 커버, 80h max).
+  - 목적: MoE 백본의 최적 분류를 전체셋으로 도출 → 이후 최종 로스터를 train 전체에 사후평가해 **per-expert solve 기록** → MoE 각 expert 학습 데이터.
+- ⚠️ 작업주의(이번 세션 교훈): 잡 자원값 임의변경·running job 임의취소·sed 땜질·과설계 금지. (메모리 feedback_no_arbitrary_infra_changes)
 
 ### 🟩 별개 트랙 — MoE 백본(gemma-4-26B-A4B-it)
 - 다운로드(49GB) + **load-smoke 통과**: vLLM 0.21.0이 `Gemma4ForConditionalGeneration` 로드·생성 OK(48.5GB/tp=1), 출력 31B와 동일 깨끗(`\boxed`). 백본 기술 적합성 확인. (정확도는 별도 eval 필요. seed14/15와 무관.)
