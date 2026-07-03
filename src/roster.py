@@ -71,9 +71,21 @@ def assign_candidate_id(roster: List[Dict[str, Any]]) -> str:
     return f"c_{len(roster) + int(os.urandom(2).hex(), 16)}"
 
 
+def _as_text(v: Any) -> str:
+    if isinstance(v, (list, tuple)):
+        return ", ".join(_as_text(x) for x in v)
+    if isinstance(v, dict):
+        return "; ".join(f"{k}: {_as_text(x)}" for k, x in v.items())
+    return str(v) if v is not None else ""
+
+
 def normalize_persona_fields(persona: Dict[str, Any], new_id: str) -> Dict[str, Any]:
     persona = dict(persona)
     persona["id"] = new_id
+    # scout LLM may return these as list/dict → coerce to str (used in prompts & formatting)
+    for k in ("system_prompt", "strengths", "approach", "name", "persona_name"):
+        if k in persona:
+            persona[k] = _as_text(persona[k])
     if "name" not in persona and "persona_name" in persona:
         persona["name"] = persona["persona_name"]
     persona.setdefault("total_war", 0)

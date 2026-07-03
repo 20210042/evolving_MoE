@@ -10,14 +10,24 @@ from prompts.meta import META_AGENT_PROMPT
 from utils.helpers import extract_json_object
 
 
+def _as_text(v: Any) -> str:
+    """Scout LLM sometimes returns strengths/system_prompt as a list or dict, not a
+    string → coerce to a clean single-line string (else .replace() AttributeError)."""
+    if isinstance(v, (list, tuple)):
+        return ", ".join(_as_text(x) for x in v)
+    if isinstance(v, dict):
+        return "; ".join(f"{k}: {_as_text(x)}" for k, x in v.items())
+    return str(v) if v is not None else ""
+
+
 def _format_roster_table(roster: List[Dict[str, Any]]) -> str:
     # approach 모드(strengths 없이 identity+approach)면 그 둘을 보여준다.
     if any(p.get("approach") for p in roster):
         lines = ["| name | identity | approach |", "|------|----------|----------|"]
         for p in roster:
-            name = p.get("name", p.get("persona_name", ""))
-            ident = (p.get("system_prompt") or "").replace("|", "/")
-            appr = (p.get("approach") or "").replace("|", "/")
+            name = _as_text(p.get("name") or p.get("persona_name"))
+            ident = _as_text(p.get("system_prompt")).replace("|", "/")
+            appr = _as_text(p.get("approach")).replace("|", "/")
             lines.append(f"| {name} | {ident} | {appr} |")
         return "\n".join(lines)
     lines = [
@@ -25,8 +35,8 @@ def _format_roster_table(roster: List[Dict[str, Any]]) -> str:
         "|------|-----------|",
     ]
     for p in roster:
-        name = p.get("name", p.get("persona_name", ""))
-        strengths = (p.get("strengths") or "").replace("|", "/")
+        name = _as_text(p.get("name") or p.get("persona_name"))
+        strengths = _as_text(p.get("strengths")).replace("|", "/")
         lines.append(f"| {name} | {strengths} |")
     return "\n".join(lines)
 
