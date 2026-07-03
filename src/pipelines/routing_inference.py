@@ -26,10 +26,20 @@ class GMRoutingPipeline(BasePipeline):
         routing_memory_path: str = "results/routing_memory.json",
         max_refine_iters: int = 2,  # deprecated: kept for CLI compat
         gen_enable_thinking: bool = True,
+        router_use_description: bool = False,
+        router_enable_thinking: bool = False,
+        router_few_shot: bool = True,
     ):
         super().__init__(agent, domain)
         self.max_refine_iters = max_refine_iters
         self.gen_enable_thinking = gen_enable_thinking
+        # Router info/behavior toggles (all default = current byte-identical behavior):
+        #   description  → expose system_prompt instead of strengths keyword-list
+        #   thinking     → let the router reason before emitting the JSON choice
+        #   few_shot     → append random past-routing examples (nondeterministic)
+        self.router_use_description = router_use_description
+        self.router_enable_thinking = router_enable_thinking
+        self.router_few_shot = router_few_shot
         self.scouting_report_path = scouting_report_path
 
         try:
@@ -57,6 +67,12 @@ class GMRoutingPipeline(BasePipeline):
             if p.get("approach"):
                 base["identity"] = p.get("system_prompt", "")
                 base["approach"] = p.get("approach", "")
+            elif self.router_use_description:
+                # description 모드: 콤마-키워드 strengths 대신 전문가 자기서술(system_prompt)을
+                # 노출 → 라우터에 "무슨 문제를 어떻게 푸는가" 서술 신호를 준다.
+                base["description"] = (
+                    p.get("system_prompt") or p.get("strengths") or "Specialized coding expert"
+                )
             else:
                 # strengths 있으면 그대로(주제형 byte-identical). failure-mode 페르소나는
                 # strengths가 없어 generic 기본값으로 떨어지면 라우터가 이름만 보고 눈 가림 →
@@ -134,7 +150,7 @@ class GMRoutingPipeline(BasePipeline):
                 {"role": "system", "content": "You are a strict JSON API. Only output valid JSON."},
                 {"role": "user", "content": manager_prompt},
             ],
-            enable_thinking=False,
+            enable_thinking=self.router_enable_thinking,
         )
         return self._parse_expert_id(router_res)
 
@@ -142,7 +158,7 @@ class GMRoutingPipeline(BasePipeline):
         prompt = self._prepare_prompt(input_item)
         ds = input_item.get("dataset") or "mbpp"
         model_name = self.agent.llm.model_name
-        few_shot_str = self._few_shot_suffix()
+        few_shot_str = self._few_shot_suffix() if self.router_few_shot else ""
 
         selected_id = self._route_one(prompt, few_shot_str)
         history: list = [{"stage": "routing", "selected_expert": selected_id}]
@@ -182,7 +198,7 @@ class GMRoutingPipeline(BasePipeline):
             return []
 
         model_name = self.agent.llm.model_name
-        few_shot_str = self._few_shot_suffix()
+        few_shot_str = self._few_shot_suffix() if self.router_few_shot else ""
         roster_str = self._roster_json()
 
         route_msgs = []
@@ -202,7 +218,7 @@ class GMRoutingPipeline(BasePipeline):
                 ]
             )
 
-        route_out = self.agent.chat_batch(route_msgs, enable_thinking=False)
+        route_out = self.agent.chat_batch(route_msgs, enable_thinking=self.router_enable_thinking)
         selected_ids = [self._parse_expert_id(r) for r in route_out]
 
         gen_msgs = []

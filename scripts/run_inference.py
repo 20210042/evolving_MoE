@@ -170,6 +170,9 @@ def main() -> None:
             infer_batch_size,
         )
     else:
+        router_use_description = bool(cfg.get("router_use_description", False))
+        router_enable_thinking = bool(cfg.get("router_enable_thinking", False))
+        router_few_shot = bool(cfg.get("router_few_shot", True))
         pipeline = GMRoutingPipeline(
             agent,
             scouting_report_path=args.roster_path,
@@ -177,12 +180,19 @@ def main() -> None:
             routing_memory_path=str(Path(args.output_file).resolve().parent / "routing_memory.json"),
             max_refine_iters=max_refine_iters,
             gen_enable_thinking=bool(cfg.get("enable_thinking", True)),
+            router_use_description=router_use_description,
+            router_enable_thinking=router_enable_thinking,
+            router_few_shot=router_few_shot,
         )
         logging.info(
-            "Pipeline: Evolved GMRoutingPipeline one-step (roster=%s, infer_batch_size=%d, gen_thinking=%s)",
+            "Pipeline: Evolved GMRoutingPipeline one-step (roster=%s, infer_batch_size=%d, gen_thinking=%s | "
+            "router: description=%s thinking=%s few_shot=%s)",
             args.roster_path,
             infer_batch_size,
             bool(cfg.get("enable_thinking", True)),
+            router_use_description,
+            router_enable_thinking,
+            router_few_shot,
         )
 
     processed_ids = set()

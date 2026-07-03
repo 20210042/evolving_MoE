@@ -45,6 +45,17 @@ delete_cooldown: 0
 # monotonically until the exponential add-size penalty stalls it (fixed-point superset).
 add_only: false
 
+# Router (inference-time, GMRoutingPipeline) toggles. All default = current behavior.
+#   router_use_description : expose expert system_prompt (self-description) to the router
+#                            instead of the comma-keyword `strengths` list.
+#   router_enable_thinking : let the router reason before emitting its JSON choice
+#                            (default off = snap zero-shot pick).
+#   router_few_shot        : append random past-routing examples (nondeterministic;
+#                            set false for a clean, reproducible routing prompt).
+router_use_description: false
+router_enable_thinking: false
+router_few_shot: true
+
 # Action gate
 action_gate:
   lambda_size: 0.05
