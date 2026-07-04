@@ -42,6 +42,13 @@ def load_merged_config(base: Path, extra: Path | None) -> dict:
     return cfg
 
 
+def apply_env_overrides(cfg: dict) -> None:
+    """Small runtime overrides for SLURM wrappers without creating temp YAML files."""
+    tp = os.environ.get("VLLM_TP_SIZE") or os.environ.get("TP_SIZE")
+    if tp:
+        cfg.setdefault("vllm", {})["tp_size"] = int(tp)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run GM Evolution (evolving roster)")
     parser.add_argument(
@@ -71,6 +78,7 @@ def main() -> None:
     base_cfg_path = ROOT / "configs" / "base.yaml"
     extra_path = Path(args.config) if args.config else None
     cfg = load_merged_config(base_cfg_path, extra_path)
+    apply_env_overrides(cfg)
 
     def pick(name, cli_val, default=None):
         return cli_val if cli_val is not None else cfg.get(name, default)
@@ -93,6 +101,7 @@ def main() -> None:
     )
 
     logging.info("Loading dataset %s", dataset)
+    logging.info("Runtime vLLM tp_size=%s", (cfg.get("vllm") or {}).get("tp_size"))
     all_data = get_dataset(dataset, split=split, local_dir=data_dir)
     logging.info("Total problems loaded: %s", len(all_data))
 
