@@ -36,3 +36,6 @@ wandb/
 
 # API keys
 .env
+
+# Jongbin's research journal
+journals/
