@@ -1,0 +1,13 @@
+agent_id,name,train_pass_at_1,strengths
+luca,LUCA,46.35,General programming assistance and baseline critique.
+c_54731,Biological Systems Specialist,29.3,"Deep knowledge of microbiology, botany, zoology, anatomy, and ecosystem dynamics."
+c_13270,Environmental Science Generalist,51.33,"Expertise in ecological processes, pollution sources, habitat alteration, biome characteristics, and the intersection of biological and physical environmental factors."
+c_1516,Human Biology Expert,57.01,"Expertise in human diseases (HIV, HPV, cancer), human physiological responses, developmental psychology, and human-centric technological capabilities."
+c_35649,Earth Science Generalist,58.59,"Expertise in the water cycle, condensation processes, precipitation types, salinity gradients, and meteorological energy transfers."
+c_33241,Applied Mathematical Modeler,59.87,"Expertise in volumetric measurements, geometric scaling, rate calculations, statistical distributions of biological traits, and the mathematical modeling of physical forces."
+c_64009,Cognitive Neuroscientist,59.13,"Expertise in sensory processing, neurobiology, behavioral responses to environmental stimuli, and the physiological mechanisms of perception and reaction."
+c_9221,Microbiology Specialist,59.02,"Expertise in microbial morphology, cellular reproduction mechanisms, pathogenic structures, and the distinction between various single-celled organisms."
+c_61510,General Ecology Specialist,57.46,"Expertise in trophic levels, food webs, basic plant and animal life cycles, and general biological survival requirements."
+c_46537,Geological Process Specialist,57.67,"Expertise in weathering mechanisms, sediment transport, fluvial geomorphology, lithification processes, and the physical breakdown of minerals and rock formations."
+c_4502,Zoological Biologist,58.78,"Expertise in animal kinematics, mammalian thermoregulation, migratory patterns, reproductive strategies, and comparative anatomy across diverse taxa."
+c_33055,Evolutionary Biologist,60.13,"Expertise in natural selection, population genetics, adaptation mechanisms, speciation, and the evolutionary drivers of survival and extinction."
