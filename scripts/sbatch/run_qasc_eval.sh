@@ -16,12 +16,13 @@
 set -euo pipefail
 
 REPO="${REPO:-/home/jaehoonjeong/data/MetaAgentEvolution_Release}"
+SEED="${SEED:-20210201}"
+DATASET="${DATASET:-qasc}"
 # shellcheck source=scripts/sbatch/common_bigmath.sh
 source "${REPO}/scripts/sbatch/common_bigmath.sh"
 setup_job_env
 print_experiment_config
 
-DATASET="qasc"
 EVAL_CONFIG="${EVAL_CONFIG:-configs/qasc_eval_a4b.yaml}"
 LUCA_ROSTER="${LUCA_ROSTER:-configs/roster_init.json}"
 DATA_DIR="${DATA_DIR:-export/qasc}"

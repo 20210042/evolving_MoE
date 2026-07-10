@@ -1,207 +1,342 @@
-# Handover — 신규 도메인 온보딩: QASC(과학 MC) + Legal(Lbox_open)
+# Handover - QASC + Legal(LBox) full-train run (seed20210211 / seed20210311)
 
-> 후임자용 **step-by-step 실행 계획**. acc(코딩) 온보딩([HANDOVER_acc_coding.md](HANDOVER_acc_coding.md))과 동일 프로세스를 QASC·Legal에 적용. 각 단계에 **정확한 파일/함수/명령/검증/함정**을 적었다. 순서대로, 각 단계 검증 통과 후 다음으로.
+> acc(코딩) 핸드오버([HANDOVER_acc_coding.md](HANDOVER_acc_coding.md))와 같은 양식의 신규 도메인 핸드오버. 현재 결론은 **full train set evolution 완료**, **QASC train 전체 agent-solve labeling 완료**, **LBox train 전체 agent-solve labeling 진행 중**이다.
 
-## 2026-07-04 진행 현황
+## 0. 용어
 
-### 완료 커밋
-- `accde7b feat(domains): add qasc lbox paths`
-  - 기존 `math` vs coding 2분기를 `math/coding/qasc/lbox` task family로 일반화.
-  - QASC/Lbox 자연어 EM 태스크는 코드블록 추출을 타지 않고 raw answer를 채점하도록 `finalize_generation_output` 배선.
-  - QASC/Lbox 전용 generation/scout/router prompt와 scorer 배선 완료.
-  - 대상 테스트: `pytest tests/test_scorer.py tests/test_prompts.py` 통과.
-- `bee78c4 feat(qasc): add onboarding scripts`
-  - QASC builder/config/sbatch 추가.
-  - `scripts/build_qasc.py`로 local JSONL 생성 가능.
+- **hard error**: 그 batch에서 현재 로스터 전원이 못 푼 문제. scout에 전달됨(문제 설명만, 정답/풀이/참조문헌 없음).
+- **UB union**: 전문가 각자 solo로 돌려 union(>=1명 풀면 정답) = oracle 상한. 라우팅 무관.
+- **binning / labeling pass**: 최종 로스터의 모든 agent가 train 문제 전체를 풀고, 문제별 `solved_by` / `failed_by`와 agent별 `solved_problem_ids`를 만드는 MoE 학습용 라벨 생성.
+- **Phase 1 Legal**: LBox 중 `casename` + `statute`만 사용. `ljp_*` 양형 bucket과 summarization/precedent corpus는 제외.
 
-### QASC 현재 상태
-- 데이터 생성 완료:
+## 1. 프로젝트 한 줄
+
+고정 백본(`google/gemma-4-26B-A4B-it`) 위에서 프롬프트-레벨 전문가 로스터를 진화한다. 기존 math/coding 2분기를 **QASC(과학 8지선다) + Legal(LBox_open 한국 법률 EM)**까지 확장했고, 이번 라운드는 downstream MoE 학습에 줄 **train 전체 expert-solve membership**을 만들기 위해 valid가 아니라 **full train set 기준으로 evolution부터 다시 수행**했다.
+
+## 2. 데이터셋 정합화
+
+### QASC
+
+- 소스: `allenai/qasc`.
+- 사용 split: train 8,134 / validation 926. test는 라벨 없음이라 제외.
+- 산출물:
   - `export/qasc/qasc_train.jsonl`: **8,134**
   - `export/qasc/qasc_validation.jsonl`: **926**
-- 검증 완료:
-  - `get_dataset("qasc", split="validation", local_dir="export/qasc")` → 926 rows.
-  - 첫 샘플 gold letter 채점 `100.0`, wrong letter `0.0`.
-- 아직 미실행:
-  - QASC smoke evolution 제출.
-  - QASC validation LUCA baseline / final-roster UB / routed top-1 eval.
+- 빌더: [scripts/build_qasc.py](../scripts/build_qasc.py).
+- 레코드 형태: `instruction`은 `formatted_question` 그대로, `ground_truth`는 A-H 한 글자, `scoring_kind="qasc"`.
+- reference 정책: fact1/fact2는 넣지 않음. 1차 목표는 "문제+보기만으로 프롬프트 역할분화가 먹히나" 측정.
 
-### Legal 현재 상태
-- Phase 1 데이터 생성 완료(casename + statute only, `ljp_*` 제외):
+### Legal / LBox Phase 1
+
+- 소스: `lbox/lbox_open`.
+- 사용 config: `casename_classification`, `casename_classification_plus`, `statute_classification`, `statute_classification_plus`.
+- 제외: summarization 계열, `precedent_corpus`, `ljp_civil`, `ljp_criminal`.
+- 산출물:
   - `export/lbox/lbox_train.jsonl`: **46,019**
   - `export/lbox/lbox_valid.jsonl`: **7,651**
-  - valid task 분포: `casename=4,999`, `statute=2,652`.
-- 검증 완료:
-  - `get_dataset("lbox", split="valid", local_dir="export/lbox")` → 7,651 rows.
-  - casename/statute 샘플 gold 채점 `100.0`, wrong answer `0.0`.
-- 추가 파일:
-  - [scripts/build_lbox.py](../scripts/build_lbox.py)
-  - [configs/lbox_train_seed20210301.yaml](../configs/lbox_train_seed20210301.yaml)
-  - [configs/lbox_eval_a4b.yaml](../configs/lbox_eval_a4b.yaml)
-  - [scripts/sbatch/submit_lbox_seed20210301_smoke.sh](../scripts/sbatch/submit_lbox_seed20210301_smoke.sh)
-  - [scripts/sbatch/run_lbox_eval.sh](../scripts/sbatch/run_lbox_eval.sh)
-  - [scripts/sbatch/run_lbox_eval_routed.sh](../scripts/sbatch/run_lbox_eval_routed.sh)
-- 아직 미실행:
-  - Legal smoke evolution 제출.
-  - Legal valid LUCA baseline / final-roster UB / routed top-1 eval.
+  - valid 분포: `casename=4,999`, `statute=2,652`
+- 빌더: [scripts/build_lbox.py](../scripts/build_lbox.py).
+- 레코드 형태: `task_type`으로 casename/statute를 구분하고, task별 지시문을 `instruction` 앞에 붙임.
 
-### 전체 테스트 참고
-- 전체 `pytest`는 기존 테스트 4개 실패:
-  - `tests/test_action_selector.py` 2개: 현재 `ActionGateConfig.scale=0.5` + batch norm 수식과 테스트 기대값이 불일치.
-  - `tests/test_lives.py`, `tests/test_roster.py` 각 1개: 테스트 함수 안에서 `orchestrator` 인스턴스명을 `import orchestrator` 모듈로 shadowing.
-- 이번 멀티도메인/QASC 경로 대상 테스트는 통과.
+### 채점기
 
-## 0. 대전제 (읽고 시작)
-- 백본 = `google/gemma-4-26B-A4B-it` 고정. 프롬프트-레벨 로스터 진화(scout 제안→게이트 WAR/도태). **표준 레시피 = seed18**(windowed-deletion gatefix + topic scout, 문제설명만, LUCA 단독 시작, `enable_thinking=false`).
-- **적합성 판정 지표 = UB**(binning union). 진화 후 UB가 baseline보다 높고 상보성 있으면 "역할분화가 먹히는 도메인". 낮고 평탄하면 천장=백본.
-- **이번 방향 = reference 없이 맨몸 UB부터 측정.** QASC는 fact1/2 안 줌, Legal은 facts만 줌(법조문 후보·판례 안 줌). UB 낮으면 그때 reference(보기 fact / 판례 retrieval) 투입 재검토.
-- **핵심 통찰(acc와 동형)**: 한 도메인 안에 채점기 여러 개를 **디스패치**해도 됨. acc=`eval_mode`(stdin/function_call/gfg), Legal=`task_type`(casename/statute/ljp). 최종 판정은 다 **EM**.
+- QASC: [src/evaluation/scorer.py](../src/evaluation/scorer.py) `score_qasc_item` - 출력에서 A-H letter 추출 후 exact match.
+- LBox: [src/evaluation/scorer.py](../src/evaluation/scorer.py) `score_lbox_item`
+  - `casename`: 정규화 string EM.
+  - `statute`: 법조문 set EM(순서 무관, 부분집합은 오답).
+- loader 배선: [src/data/loader.py](../src/data/loader.py)에서 `scoring_kind`를 `qasc` / `lbox`로 디스패치.
+- 검증: `pytest tests/test_scorer.py tests/test_prompts.py` 통과.
 
-### 인프라 함정 (반드시 지킬 것)
-- **HF 캐시 = /data5** (홈 쿼터 작음). sbatch는 [common_bigmath.sh](../scripts/sbatch/common_bigmath.sh) `setup_job_env()`가 `HF_HOME=/data5...` 강제 — 새 sbatch는 반드시 이걸 source.
-- **n05 노드 전력문제로 사용 금지** → 모든 잡 제출에 `--exclude=n05`.
-- 데이터 로드는 실행 env로: `PY=/data5/jaehoonjeong/miniconda3/envs/evolving_moe/bin/python`. figure는 matplotlib 있는 `/data5/jaehoonjeong/miniconda3/bin/python`.
-- **Lbox split 이름은 `valid`** (not `validation`). QASC는 `validation`.
-- 커밋 메시지 한 줄, Co-Authored/Claude 이름 금지. 커밋 전 `git fetch`로 divergence 확인. push/force는 명시 지시 있을 때만.
+## 3. Full-Train Evolution
 
----
+- 레시피: windowed-deletion gatefix(`deletion_window=16`, `floor=0`, `delete_cooldown=8`) + topic scout(문제 설명만) + LUCA 시작 + `enable_thinking=false`.
+- Action gate는 phase1 add / phase2 delete를 독립 계산하고 4-action으로 결합한다: `noop`, `add`, `delete`, `swap`.
+- 이번 full run은 train 전체를 순회한다. valid/test holdout 필터는 사용하지 않는다.
 
-# A. QASC (가장 싼 probe — 먼저)
+| 도메인 | seed | train n | batch | steps | action counts | roster | UB first -> last | UB max | UB last10 mean | hard first -> last | hard min |
+|---|---:|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|
+| QASC | 20210211 | 8,134 | 50 | 163 | add 15 / delete 4 / swap 1 / noop 143 | 1 -> **12** | 42.0 -> **85.3** | **94.0** | **80.3** | 29 -> **5** | **3** |
+| LBox Phase 1 | 20210311 | 46,019 | 50 | 921 | add 32 / delete 23 / swap 2 / noop 864 | 1 -> **10** | 28.0 -> **73.7** | **74.0** | **56.8** | 36 -> **5** | **5** |
 
-과학 8지선다(A–H) EM. 데이터 작고 채점 trivial 하니 "MC도 헤드룸 나나"를 싸게 확인.
+- QASC는 full train 기준에서 smoke보다 로스터가 더 커져 N=12로 수렴했다. delete/swap도 실제 발동했고, 마지막 batch UB는 85.3%.
+- LBox는 921 step으로 train 전체를 돌았다. N=10으로 끝났고, 중간 churn(add/delete/swap)이 QASC보다 훨씬 많다.
+- LBox train prompt 중 16k context를 넘는 항목이 있어 full run config에 `max_prompt_chars: 12000` truncation을 넣었다. 이전 overlong prompt 실패는 이 경로에서 회피했다.
 
-### A-1. 데이터 준비 → `export/qasc/qasc_{train,valid}.jsonl`
-- **완료(2026-07-04, `bee78c4`)**: 실제 파일명은 loader 규칙에 맞춰 `qasc_train.jsonl`, `qasc_validation.jsonl`.
-- 소스: `allenai/qasc`. split: **train 8134(진화용) / validation 926(홀드아웃 eval용, answerKey 있음)**. test는 라벨 없음 → 안 씀.
-- 스크립트 [scripts/build_qasc.py](../scripts/build_qasc.py): 각 레코드를 아래 형태로 emit.
-  ```json
-  {"id": "...", "instruction": "<formatted_question 그대로>",
-   "ground_truth": "F", "domain": "qasc", "dataset": "qasc",
-   "scoring_kind": "qasc", "num_choices": 8}
-  ```
-  - `instruction` = 데이터셋의 `formatted_question` 필드(이미 "질문 (A) .. (H) .." 포맷 완성됨). reference(fact1/2)는 **넣지 않는다**(맨몸).
-  - `ground_truth` = `answerKey`(A~H 한 글자).
-- **검증**: emit 후 `head -1`로 한 줄 열어 instruction에 보기 8개 다 있고 ground_truth가 한 글자인지 눈으로 확인.
+QASC full-run figure: [docs/fig_fullrun_qasc_seed20210211.png](fig_fullrun_qasc_seed20210211.png)
 
-### A-2. 채점기 → `score_qasc_item`
-- **완료(2026-07-04, `accde7b`)**.
-- [src/evaluation/scorer.py](../src/evaluation/scorer.py)에 함수 추가:
-  ```python
-  def score_qasc_item(item, prediction):
-      # 모델 출력에서 선택지 letter 1개 추출(정규식 첫 A-H 대문자, 또는 "(A)"/"Answer: A")
-      # gold = item["ground_truth"]; EM이면 100 아니면 0
-  ```
-  - 추출 규칙: 마지막에 나오는 단독 대문자 A–H 우선, 없으면 보기 텍스트 일치 fallback. **후임 주의**: LLM이 "The answer is (F) local weather conditions"처럼 답함 → letter 우선 파싱.
-- `score_one`에 배선: `if kind == "qasc": return score_qasc_item(...)`.
-- [src/data/loader.py](../src/data/loader.py) `scoring_kind_for_dataset`: `if n == "qasc": return "qasc"`. `load_qasc()` 또는 get_dataset local_dir(`qasc_{split}.jsonl`)로 로드.
-- **검증**: 정답 letter/오답/보기텍스트답 3케이스 유닛 테스트로 100/0/100 확인 (acc 채점 검증했던 방식).
+![qasc full train evolution](fig_fullrun_qasc_seed20210211.png)
 
-### A-3. 프롬프트
-- **완료(2026-07-04, `accde7b`)**.
-- expert-gen: [src/prompts/coding.py](../src/prompts/coding.py) `build_expert_prompt`에 `task_family=qasc` 분기 추가. "정답 letter 하나만" 출력.
-- scout/router: [src/prompts/meta.py](../src/prompts/meta.py)에 QASC 전용 `META_AGENT_QASC_PROMPT`, `MANAGER_QASC_PROMPT` 추가.
-- 출력 후처리: [src/utils/helpers.py](../src/utils/helpers.py) `finalize_generation_output`에서 QASC는 raw natural-language answer로 유지(코드블록 추출 안 함).
+LBox full-run figure: [docs/fig_fullrun_lbox_seed20210311.png](fig_fullrun_lbox_seed20210311.png)
 
-### A-4. config → `configs/qasc_train_seed20210201.yaml` (QASC seed=20210201)
-- **완료(2026-07-04, `bee78c4`)**: [configs/qasc_train_seed20210201.yaml](../configs/qasc_train_seed20210201.yaml).
-- eval config: [configs/qasc_eval_a4b.yaml](../configs/qasc_eval_a4b.yaml).
+![lbox full train evolution](fig_fullrun_lbox_seed20210311.png)
 
-### A-5. 스모크 진화 + 관측
-- submit 래퍼 = [scripts/sbatch/submit_qasc_seed20210201_smoke.sh](../scripts/sbatch/submit_qasc_seed20210201_smoke.sh), **`--exclude=n05` 포함**.
-- 실행 명령:
-  ```bash
-  bash scripts/sbatch/submit_qasc_seed20210201_smoke.sh
-  ```
-- 로그서 관측: 스텝별 **UB %**(`STATIC UPPER BOUND`), 로스터 성장, add/noop. **UB가 baseline보다 유의미하게 높나?** MC라 baseline이 이미 높으면(예: >85%) 헤드룸 작음 → 그 자체가 결론.
+## 4. 최종 로스터
 
-### A-6. eval (홀드아웃 = validation 926)
-- **acc와 달리 test split이 있으니 test_ids.json 불필요.** `--split validation`으로 바로.
-- eval 래퍼:
-  - [scripts/sbatch/run_qasc_eval.sh](../scripts/sbatch/run_qasc_eval.sh): LUCA baseline + final roster UB.
-  - [scripts/sbatch/run_qasc_eval_routed.sh](../scripts/sbatch/run_qasc_eval_routed.sh): final roster routed top-1.
-- 측정 3종: **LUCA baseline(routed) / 최종로스터 UB(binning union) / routed top-1.** score는 `score_outputs.py`(qasc kind 자동).
+### QASC full-train roster (N=12)
 
----
+| # | 이름 | 전문분야 / strength | 단일 pass@1 |
+|---:|---|---|:---:|
+| 1 | LUCA | General baseline | 64.3 |
+| 2 | Biological Systems Specialist | Life science, ecology, physiology, organism-environment interaction | 33.2 |
+| 3 | Environmental Science Generalist | Ecology, environmental health, planetary systems, habitat effects | 70.8 |
+| 4 | Human Biology Expert | Human physiology, pathology, anatomy, human behavior/development | 77.8 |
+| 5 | Earth Science Generalist | Atmosphere, hydrosphere, planetary processes, state changes in nature | 81.7 |
+| 6 | Applied Mathematical Modeler | Quantitative natural phenomena: volume, rates, dimensions, measurements | 82.1 |
+| 7 | Cognitive Neuroscientist | Sensory perception, neural response, stimuli processing | 81.9 |
+| 8 | Microbiology Specialist | Bacteria/virus behavior, cellular structure, reproduction/classification | 80.8 |
+| 9 | General Ecology Specialist | Food chains, life cycles, organism-environment relationships | 78.8 |
+| 10 | Geological Process Specialist | Erosion, sedimentation, geological material transformation | 80.2 |
+| 11 | Zoological Biologist | Animal physiology, locomotion, instinct, life cycles | 77.8 |
+| 12 | Evolutionary Biologist | Natural selection, adaptation, survival pressure, extinction | **83.9** |
 
-# B. Legal (Lbox_open — facts→판단, EM 통합 도메인)
+QASC는 bio/ecology/earth science/human biology/math model/neuro/microbiology/geology/zoology/evolution 쪽으로 분화했다. validation 전체 기준 best expert는 Evolutionary Biologist(83.9)이고, LUCA 단독 eval보다 +24.0pp 높다.
 
-**6개 subset을 `task_type`으로 합쳐 한 도메인.** summarization(생성)·precedent_corpus(코퍼스)는 제외.
+### LBox full-train roster (N=10)
 
-### B-0. subset 매핑 (확정)
-| task_type | config(train/valid) | 입력 | 출력(gold) | 채점 |
-|---|---|---|---|---|
-| casename | casename_classification(+_plus) | facts | 죄명 string | **string EM**(공백정규화) |
-| statute | statute_classification(+_plus) | facts | 법조문 list | **set EM**(순서무관 집합 일치) |
-| ljp_criminal | ljp_criminal | facts | label.{fine_lv, imprisonment_*_lv} | **bucket EM**(파서 필요) |
-| ljp_civil | ljp_civil | facts(+gist_of_claim) | claim_acceptance_lv | **bucket EM** |
+| # | 이름 | 전문분야 / strength | 단일 pass@1 |
+|---:|---|---|:---:|
+| 1 | Judicial Precedent Classifier | 복잡한 사실관계 -> 공식 사건명/죄명 분류 | 43.2 |
+| 2 | Legal Case Typology Architect | 판례형 사건유형/공식 법률명 nomenclature 변환 | **45.1** |
+| 3 | Statutory Element Matcher | 사실요소와 조문 구성요건의 granular 매칭 | 35.6 |
+| 4 | Legal Nomenclature Purist | 대법원식 표준 사건명/죄명 canonical label | 43.6 |
+| 5 | Legal Fact Synthesis Engine | 다층 사실관계에서 복수 죄명/사건명을 통합 추출 | 39.5 |
+| 6 | Legal Provision Auditor | 누락 없는 적용 조문 exhaustive identification | 32.5 |
+| 7 | Civil Dispute Taxonomy Expert | 계약해제/손해배상/물권 등 민사 사건유형 구분 | 39.3 |
+| 8 | Judicial Labeling Precisionist | 증거/절차 맥락 제거 후 정확한 1-line 공식 label 추출 | 35.4 |
+| 9 | Legal Recidivism Analyst | 전과/상습/누범에 따른 가중 조문 탐지 | 34.9 |
+| 10 | Criminal Charge Aggregator | 여러 형사행위를 formal charge list로 집계 | 34.2 |
 
-- **단계 권장**: **Phase 1 = casename + statute만**(순수 EM, 파서 없음)으로 데이터·채점·진화·eval 전 파이프라인 완주 → Phase 2에서 ljp(양형 bucket 파서) 붙여 통합. 후임자는 Phase 1부터.
+LBox 최종 roster는 법률명/사건유형/조문요건/죄명 aggregation 중심으로 분화했다. valid 전체 기준 best expert는 Legal Case Typology Architect(45.1)다.
 
-### B-1. 데이터 준비 → `export/lbox/lbox_{train,valid}.jsonl`
-- **Phase 1 완료(2026-07-04)**: 실제 파일명은 loader 규칙에 맞춰 `lbox_train.jsonl`, `lbox_valid.jsonl`.
-- 스크립트 [scripts/build_lbox.py](../scripts/build_lbox.py). 각 config를 로드(**split=`valid`/`train`**, `load_dataset("lbox/lbox_open", cfg, split=...)`)해 통합 레코드로:
-  ```json
-  {"id": "casename_80", "task_type": "casename", "casetype": "criminal",
-   "facts": "<사실관계>", "ground_truth": "감염병의예방및관리에관한법률위반",
-   "instruction": "<task별 지시문> + 사실관계:\n<facts>", "domain": "lbox",
-   "dataset": "lbox", "scoring_kind": "lbox"}
-  ```
-  - statute면 `ground_truth`=statutes 리스트(그대로 list 저장).
-  - **task별 지시문**(B-3) 을 instruction 앞에 붙여 emit(생성 프롬프트가 task를 알게).
-  - id는 `{task_type}_{원본id}`로 충돌 방지.
-- 진화용 train = 각 task train을 합쳐 셔플. eval용 valid = 각 task valid 합침(또는 task별 따로 측정).
-- **self-consistency**: acc처럼 ref 실행 검증은 **불필요**(gold가 정답 라벨). 대신 emit 후 **gold 비어있지 않은지 / statutes가 list인지**만 체크.
-- **검증**: task_type별 1건씩 열어 facts·ground_truth·instruction 정합 확인.
+## 5. 결과
 
-### B-2. 채점기 → `score_lbox_item` (task_type 디스패치)
-- **Phase 1 완료(2026-07-04, `accde7b`)**: casename string EM, statute set EM 배선 및 유닛테스트 통과.
-- [src/evaluation/scorer.py](../src/evaluation/scorer.py):
-  ```python
-  def score_lbox_item(item, prediction):
-      t = item["task_type"]
-      if t == "casename":  # string EM
-          return 100 if _norm(pred_casename(prediction)) == _norm(item["ground_truth"]) else 0
-      if t == "statute":   # set EM
-          return 100 if set(parse_statutes(prediction)) == set(item["ground_truth"]) else 0
-      if t.startswith("ljp"):  # bucket EM (Phase 2)
-          return 100 if bucketize(prediction) == gold_bucket(item) else 0
-  ```
-  - `pred_casename`: 모델 출력에서 죄명 추출(마지막 줄/"죄명:" 뒤). `parse_statutes`: "형법 제298조" 패턴 정규식으로 집합화.
-  - **후임 주의**: 한국어 정규화(공백·중점·괄호). EM이 너무 빡세면 casename은 부분일치 대신 정규화 후 완전일치 유지(진짜 EM), 대신 프롬프트로 출력형식을 고정("죄명만 정확히 한 줄").
-- `score_one` 배선: `if kind == "lbox": return score_lbox_item(...)`. loader `scoring_kind_for_dataset`: `if n == "lbox": return "lbox"`.
-- **검증**: casename 정답/오답, statute 집합일치/부분일치(=오답) 유닛테스트.
+### 5-1. Full-run roster heldout eval
 
-### B-3. task별 지시문 (B-1에서 instruction에 삽입)
-- casename: `"다음 사실관계에 해당하는 사건명 또는 죄명을 정확히 한 줄로 답하라."`
-- statute: `"다음 사실관계에 적용되는 법조문을 모두 나열하라(예: 형법 제298조)."`
-- ljp(Phase2): `"다음 사실관계에 대한 양형(형종과 형량)을 예측하라."`
-- scout/router는 공용(`META_AGENT_PROMPT`/`MANAGER_PROMPT`). scout hard error = task 섞인 전원-오답 문제(설명만) → 로스터가 법영역/태스크로 분화될 것.
+full-train으로 새로 진화한 roster 기준 valid eval을 새로 제출했다. 아래 표는 smoke roster archive가 아니라 **seed20210211 / seed20210311 final roster** 기준으로 채울 메인 표다.
 
-### B-4. config / 진화 / eval
-- config [configs/lbox_train_seed20210301.yaml](../configs/lbox_train_seed20210301.yaml) (Legal seed=20210301) = dataset=lbox, data_dir=export/lbox, LUCA, batch50, gatefix, thinking off, tp2. 스모크 train_size 2500.
-- 진화 submit = [scripts/sbatch/submit_lbox_seed20210301_smoke.sh](../scripts/sbatch/submit_lbox_seed20210301_smoke.sh), `--exclude=n05` 포함.
-- eval: **valid split 존재** → `--split valid`, test_ids 불필요. LUCA baseline / UB(binning) / routed 3종. score_outputs가 lbox kind 자동 디스패치.
-  - [scripts/sbatch/run_lbox_eval.sh](../scripts/sbatch/run_lbox_eval.sh): LUCA baseline + final roster UB.
-  - [scripts/sbatch/run_lbox_eval_routed.sh](../scripts/sbatch/run_lbox_eval_routed.sh): final roster routed top-1.
-- **관측 포인트**: task_type별 UB도 쪼개 보면(casename vs statute) 어느 task가 역할분화 이득 큰지 보임.
+#### QASC validation 926, full-train roster
 
----
+| 지표 | LUCA 단독 | routed top-1 | routed top-2 | UB union |
+|---|---:|---:|---:|---:|
+| pass@1 (%) | 59.9 | 75.3 | **85.4** | **94.8** |
+| n / 926 | 555 | 697 | 791 | 878 |
+| 잡 | 204222 | 204221 | 204221 | 204222 |
 
-## C. 공통 체크리스트 (각 도메인 완료 기준)
-1. [x] QASC/Legal Phase 1 데이터 emit + 샘플 1건 눈으로 검증(instruction/gold 정합).
-2. [x] QASC/Lbox 채점기 유닛테스트(정답100/오답0) 통과.
-3. [ ] vanilla LUCA로 **UB 스모크** — 백본 맨몸 실력 + 헤드룸 유무.
-4. [ ] 스모크 진화(batch50, ~50스텝) — 로스터 성장·UB 궤적.
-5. [ ] eval 3종(baseline/UB/routed) 홀드아웃.
-6. [ ] `docs/HANDOVER_<domain>.md` (acc 형식: 결과표 빈칸 골격 + 로스터 figure + 병목 분석).
-7. [ ] 메모리 갱신([[project_domain_onboarding_process]]).
+- routed top-2 자체의 first pick은 74.0%(685/926), 2번째 픽이 106문제 회수(+11.4pp).
 
-## D. 예상 판정 프레임 (보고 시)
-- UB ≫ routed → 라우터 병목(코딩 재현). top-k union은 **QASC/Legal 다 EM이라 정당**(둘 중 맞으면 정답).
-- UB ≈ baseline·평탄 → 백본 천장(수학 재현) → reference 투입(QASC fact, Legal 판례 retrieval) 재검토.
-- Legal은 task_type별로 갈릴 수 있음(분류는 분화 먹고 ljp는 백본천장 등) — task별 분해해 보고.
+#### LBox Phase 1 valid 7,651, full-train roster
 
-## E. 참고 (현재 코드 자산 재사용처)
-- 채점 배선 패턴: acc의 `score_acc_item`([scorer.py](../src/evaluation/scorer.py)) + `scoring_kind_for_dataset`([loader.py](../src/data/loader.py)) 그대로 복제.
-- 진화/eval 스크립트: [run_math_evolution.sh](../scripts/sbatch/run_math_evolution.sh), [run_acc_eval.sh](../scripts/sbatch/run_acc_eval.sh), [run_acc_eval_routed.sh](../scripts/sbatch/run_acc_eval_routed.sh), [score_outputs.py](../scripts/score_outputs.py), 상한 top-k는 [score_outputs_topk.py](../scripts/score_outputs_topk.py).
-- 로스터 figure: [make_acc_roster_fig.py](../scripts/make_acc_roster_fig.py) 복제(로그 경로만 교체).
-- **seed 번호(확정)**: QASC=**20210201**, Legal=**20210301**. config/자원/제출은 사용자 OK 후.
+| 지표 | LUCA 단독 | routed top-1 | routed top-2 | UB union |
+|---|---:|---:|---:|---:|
+| pass@1 (%) | 38.5 | 39.1 | **47.7** | **56.9** |
+| n / 7,651 | 2,943 | 2,988 | 3,650 | 4,354 |
+| 잡 | 204224 | 204223 | 204223 | 204224 |
+
+- routed top-2 자체의 first pick은 39.1%(2,994/7,651), 2번째 픽이 656문제 회수(+8.6pp).
+
+### 5-2. 분해 품질
+
+| 지표 | QASC validation 926 | LBox Phase 1 valid 7,651 |
+|---|---:|---:|
+| best expert pass@1 | **83.9** (Evolutionary Biologist, 777/926) | **45.1** (Legal Case Typology Architect, 3,447/7,651) |
+| 상보성 (UB - best expert) | **+10.9pp** | **+11.9pp** |
+| 라우팅 손실 (UB - routed top-1) | **+19.5pp** (181문제) | **+17.9pp** (1,366문제) |
+| top-2 후 남은 손실 (UB - routed top-2) | **+9.4pp** (87문제) | **+9.2pp** (704문제) |
+| top-2 추가 회수 | +106문제 (+11.4pp, 자체 first-pick 대비) | +656문제 (+8.6pp, 자체 first-pick 대비) |
+| 아무도 못 푼 것 | 48 (5.2%) | 3,297 (43.1%) |
+| 전원 해결 | 183/926 (19.8%, 12인) | 1,145/7,651 (15.0%, 10인) |
+
+### 5-3. Train 전체 Labeling / Binning
+
+목표는 downstream MoE 학습용으로 **각 train 문제를 어떤 agent가 맞혔는지** 기록하는 것이다. 파일 흐름은 다음과 같다.
+
+1. `run_inference.py --pipeline binning`
+   - 최종 roster의 모든 agent가 train 전체를 풂.
+   - raw answer 저장: `binning_train_full.jsonl`.
+2. `score_binning.py`
+   - 각 agent 출력 채점.
+   - 문제 중심 라벨 저장: `binning_train_full.binned.jsonl`.
+3. `export_binning_solve_index.py`
+   - agent 중심 solve index 저장: `binning_train_full.binned.agent_solves.json`.
+
+#### QASC train labeling 완료
+
+| 지표 | 값 |
+|---|---:|
+| train n | 8,134 |
+| raw outputs | 8,134 |
+| binned labels | 8,134 |
+| experts | 12 |
+| UB union | **81.26%** |
+| solved by >=1 expert | **6,610** |
+| solved by 0 experts | 1,524 |
+| solved by all 12 experts | 1,064 |
+
+QASC 산출물:
+
+- `results/qasc/seed20210211/binning_train_full.jsonl`
+- `results/qasc/seed20210211/binning_train_full.binned.jsonl`
+- `results/qasc/seed20210211/binning_train_full.binned.summary.json`
+- `results/qasc/seed20210211/binning_train_full.binned.agent_solves.json`
+
+agent-solve index 스키마:
+
+```json
+{
+  "input": "results/qasc/seed20210211/binning_train_full.binned.jsonl",
+  "dataset": "qasc",
+  "split": "train",
+  "total": 8134,
+  "experts": ["luca", "c_54731", "..."],
+  "per_agent": {
+    "luca": {
+      "solved": [{"id": "problem_id"}],
+      "failed": [{"id": "problem_id"}],
+      "n_solved": 3770,
+      "n_failed": 4364,
+      "pass_at_1": 46.34865994590607
+    }
+  },
+  "problems": [
+    {
+      "id": "problem_id",
+      "dataset": "qasc",
+      "task_type": null,
+      "solved_by": ["luca", "c_33055"],
+      "n_solved": 2
+    }
+  ]
+}
+```
+
+#### LBox train labeling 완료
+
+| 지표 | 값 |
+|---|---:|
+| train n | 46,019 |
+| raw outputs | 46,019 |
+| binned labels | 46,019 |
+| experts | 10 |
+| UB union | **56.02%** |
+| solved by >=1 expert | **25,781** |
+| solved by 0 experts | 20,238 |
+| solved by all 10 experts | 6,863 |
+| Slurm job | 203991 |
+
+LBox 산출물:
+
+- `results/lbox/seed20210311/binning_train_full.jsonl`
+- `results/lbox/seed20210311/binning_train_full.binned.jsonl`
+- `results/lbox/seed20210311/binning_train_full.binned.summary.json`
+- `results/lbox/seed20210311/binning_train_full.binned.agent_solves.json`
+
+LBox `agent_solves.json`도 같은 스키마를 사용한다. 차이는 각 entry에 `task_type`이 붙는다는 점이다.
+
+```json
+{
+  "input": "results/lbox/seed20210311/binning_train_full.binned.jsonl",
+  "dataset": "lbox",
+  "split": "train",
+  "total": 46019,
+  "experts": ["c_29934", "c_28126", "..."],
+  "per_agent": {
+    "c_29934": {
+      "solved": [{"id": "statute_statute_classification_plus_train_12871", "task_type": "statute"}],
+      "failed": [{"id": "casename_casename_classification_train_0", "task_type": "casename"}],
+      "n_solved": 19827,
+      "n_failed": 26192,
+      "pass_at_1": 43.08437819161651
+    }
+  },
+  "problems": [
+    {
+      "id": "problem_id",
+      "dataset": "lbox",
+      "task_type": "casename",
+      "solved_by": ["c_28126", "c_24222"],
+      "n_solved": 2
+    }
+  ]
+}
+```
+
+## 6. 기존 heldout eval 결과 (archive)
+
+아래 값은 smoke roster(seed20210201 / seed20210301)로 측정한 heldout eval이다. 현재 메인 결론은 full-train roster 기준으로 바뀌었으므로 archive로만 둔다.
+
+### QASC validation 926, smoke roster
+
+| 지표 | LUCA 단독 | routed top-1 | routed top-2 | UB union |
+|---|---:|---:|---:|---:|
+| pass@1 (%) | 60.0 | 69.3 | **79.0** | **95.8** |
+| n / 926 | 556 | 642 | 732 | 887 |
+| 잡 | 202893 | 202897 | 202897 | 202893 |
+
+### LBox Phase 1 valid 500, smoke roster
+
+| 지표 | LUCA 단독 | routed top-1 | routed top-2 | UB union |
+|---|---:|---:|---:|---:|
+| pass@1 (%) | 34.6 | 38.8 | **43.6** | **52.6** |
+| n / 500 | 173 | 194 | 218 | 263 |
+| 잡 | 202895 | 202898 | 202898 | 202895 |
+
+## 7. 코드 지도
+
+- 도메인 분기: [src/utils/domains.py](../src/utils/domains.py) `task_family`, `is_text_generation_task`.
+- 출력 후처리: [src/utils/helpers.py](../src/utils/helpers.py) `finalize_generation_output` - QASC/LBox는 코드블록 추출 없이 raw answer 유지.
+- prompts:
+  - [src/prompts/baseline_prompts.py](../src/prompts/baseline_prompts.py)
+  - [src/prompts/coding.py](../src/prompts/coding.py) `build_expert_prompt` domain branch
+  - [src/prompts/meta.py](../src/prompts/meta.py) QASC/LBox scout/router prompt
+- scorer/loader:
+  - [src/evaluation/scorer.py](../src/evaluation/scorer.py) `score_qasc_item`, `score_lbox_item`
+  - [src/data/loader.py](../src/data/loader.py) local JSONL + `scoring_kind`
+- full-run configs:
+  - [configs/qasc_train_full_seed20210211.yaml](../configs/qasc_train_full_seed20210211.yaml)
+  - [configs/lbox_train_full_seed20210311.yaml](../configs/lbox_train_full_seed20210311.yaml)
+  - [configs/lbox_eval_a4b_train_binning.yaml](../configs/lbox_eval_a4b_train_binning.yaml)
+- figures:
+  - [scripts/make_qasc_lbox_fullrun_figs.py](../scripts/make_qasc_lbox_fullrun_figs.py)
+  - [docs/fig_fullrun_qasc_seed20210211.png](fig_fullrun_qasc_seed20210211.png)
+  - [docs/fig_fullrun_lbox_seed20210311.png](fig_fullrun_lbox_seed20210311.png)
+- full-train labeling:
+  - [scripts/sbatch/run_domain_full_binning.sh](../scripts/sbatch/run_domain_full_binning.sh)
+  - [scripts/export_binning_solve_index.py](../scripts/export_binning_solve_index.py)
+  - [scripts/run_inference.py](../scripts/run_inference.py) `--ignore_test_ids`, `max_prompt_chars`
+- evolution:
+  - [scripts/run_evolution.py](../scripts/run_evolution.py) `max_prompt_chars`
+  - [src/action_selector.py](../src/action_selector.py) 2-phase action gate
+  - [src/orchestrator.py](../src/orchestrator.py) action 적용 및 scout/probe
+
+## 8. 잡
+
+| 잡 | 내용 | 상태 / 측정 |
+|---|---|---|
+| 203988 | QASC full-train evolution | COMPLETE - 163 steps, final N=12 |
+| 203989 | QASC full-train binning/labeling | COMPLETE - 8,134/8,134, agent solve index 생성 |
+| 203990 | LBox full-train evolution | COMPLETE - 921 steps, final N=10 |
+| 203991 | LBox full-train binning/labeling | COMPLETE - 46,019/46,019, agent solve index 생성 |
+| 204222 | QASC full-valid eval, full-run roster | COMPLETE - validation 926, LUCA 59.9 / UB 94.8 |
+| 204221 | QASC full-valid routed eval, full-run roster | COMPLETE - validation 926, top-1 75.3 / top-2 85.4 |
+| 204224 | LBox full-valid eval, full-run roster | COMPLETE - valid 7,651, LUCA 38.5 / UB 56.9 |
+| 204223 | LBox full-valid routed eval, full-run roster | COMPLETE - valid 7,651, top-1 39.1 / top-2 47.7 |
+| 202893 | QASC smoke roster LUCA baseline + UB | ARCHIVE - LUCA 60.0 / UB 95.8 |
+| 202897 | QASC smoke roster routed top-1 + top-2 | ARCHIVE - top-1 69.3 / top-2 79.0 |
+| 202895 | LBox smoke roster LUCA baseline + UB | ARCHIVE - valid 500, LUCA 34.6 / UB 52.6 |
+| 202898 | LBox smoke roster routed top-1 + top-2 | ARCHIVE - valid 500, top-1 38.8 / top-2 43.6 |
+
+## 9. 제약/주의
+
+- **커밋 메시지: 무조건 한 줄. Co-Authored-By / Claude 이름 금지.** 커밋 전 `git fetch`로 divergence 확인, push/force는 명시 지시 있을 때만.
+- **HF 캐시는 /data5**. [common_bigmath.sh](../scripts/sbatch/common_bigmath.sh) `setup_job_env()`가 `HF_HOME`/`TRANSFORMERS_CACHE`를 `/data5`로 강제.
+- **n05 노드 전력문제로 사용 금지** -> 제출 시 `--exclude=n05`.
+- QASC split 이름은 `validation`, LBox split 이름은 `valid`.
+- train 전체 labeling에서는 `test_ids.json` 필터가 걸리면 안 된다. [scripts/sbatch/run_domain_full_binning.sh](../scripts/sbatch/run_domain_full_binning.sh)는 기본 `IGNORE_TEST_IDS=1`로 `--ignore_test_ids`를 넘긴다.
+- LBox는 긴 facts 때문에 context overflow가 날 수 있다. 현재 full-train evolution/binning config는 `max_prompt_chars: 12000`으로 앞 75% + 뒤 25%를 보존한다.
+- 전체 `pytest`는 기존 테스트 4개가 별도로 실패한다. 이번 도메인 변경 대상 테스트(`tests/test_scorer.py`, `tests/test_prompts.py`)는 통과.
+
+## 10. 다음 액션
+
+1. **MoE 학습 입력 연결**: QASC/LBox 모두 `binning_train_full.binned.agent_solves.json` 준비 완료. `per_agent[*].solved` 또는 `problems[*].solved_by` 중 downstream trainer가 쓰기 쉬운 축으로 ingestion한다.
+2. **라우터 병목 분석**: full-run roster에서도 QASC UB 94.8 vs top-2 85.4, LBox UB 56.9 vs top-2 47.7로 gap이 남는다.
+3. **LBox 정보 부족 검토**: full valid에서 아무도 못 푼 문제가 3,297/7,651(43.1%)라 retrieval/statute 후보 제공 여부를 검토한다.

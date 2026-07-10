@@ -16,17 +16,18 @@
 set -euo pipefail
 
 REPO="${REPO:-/home/jaehoonjeong/data/MetaAgentEvolution_Release}"
+SEED="${SEED:-20210301}"
+DATASET="${DATASET:-lbox}"
 # shellcheck source=scripts/sbatch/common_bigmath.sh
 source "${REPO}/scripts/sbatch/common_bigmath.sh"
 setup_job_env
 print_experiment_config
 
-DATASET="lbox"
 EVAL_CONFIG="${EVAL_CONFIG:-configs/lbox_eval_a4b.yaml}"
 LUCA_ROSTER="${LUCA_ROSTER:-configs/roster_init.json}"
 DATA_DIR="${DATA_DIR:-export/lbox}"
 FINAL_ROSTER="${RESULTS_DIR}/roster_final.json"
-EVAL_SIZE="${EVAL_SIZE:-500}"
+EVAL_SIZE="${EVAL_SIZE:-7651}"
 SPLIT="${SPLIT:-valid}"
 
 echo "=== lbox eval: config=${EVAL_CONFIG} split=${SPLIT} size=${EVAL_SIZE} data_dir=${DATA_DIR} ==="

@@ -30,6 +30,21 @@ from roster import save_roster
 from utils.llm import LLMService, llm_service_from_yaml_config
 
 
+def truncate_item_text(item: dict, max_chars: int) -> dict:
+    if not max_chars:
+        return item
+    changed = False
+    out = dict(item)
+    for key in ("instruction", "prompt_text", "prompt", "problem"):
+        val = out.get(key)
+        if isinstance(val, str) and len(val) > max_chars:
+            head = int(max_chars * 0.75)
+            tail = max_chars - head
+            out[key] = val[:head] + "\n\n[TRUNCATED_FOR_CONTEXT]\n\n" + val[-tail:]
+            changed = True
+    return out if changed else item
+
+
 def load_merged_config(base: Path, extra: Path | None) -> dict:
     if yaml is None:
         raise RuntimeError("PyYAML is required. pip install pyyaml")
@@ -110,6 +125,10 @@ def main() -> None:
     rng.shuffle(shuffled)
     train_data = shuffled[:train_size]
     test_data = shuffled[train_size:]
+    max_prompt_chars = int(cfg.get("max_prompt_chars", 0) or 0)
+    if max_prompt_chars:
+        train_data = [truncate_item_text(item, max_prompt_chars) for item in train_data]
+        logging.info("Applied max_prompt_chars=%d to evolution train inputs.", max_prompt_chars)
 
     os.makedirs(args.results_dir, exist_ok=True)
     test_ids_path = os.path.join(args.results_dir, "test_ids.json")
