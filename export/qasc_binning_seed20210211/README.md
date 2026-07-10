@@ -36,6 +36,11 @@
 ## 사용례 (⭐ 주 목적 = persona-specific SFT)
 라벨은 문제 `id`만 있고 **실제 입력(질문/facts)+정답은 원본 데이터셋**에 있음 → `id`로 조인.
 
+> ⚠️ 이 패키지엔 **라벨만** 포함(원본은 용량상 git 제외). 사용 전 **원본을 먼저 재생성**:
+> ```bash
+> python scripts/build_qasc.py   # → export/qasc/qasc_train.jsonl
+> ```
+
 ```python
 import json
 P   = "export/qasc_binning_seed20210211"
