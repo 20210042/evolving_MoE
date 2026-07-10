@@ -1,0 +1,26 @@
+# 코딩(acc) eval — top-2 routing. v1(strengths, thinking off, random few-shot) 그대로 두되
+#   라우터가 2명 선택 → 둘 다 생성 → 실행채점에서 둘 중 통과하면 정답(union).
+#   추정: 무작위 top-2 ≈ 88%, smart 상한 = UB 92.8. v1 top-1(84.4)과 비교.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "acc"
+data_dir: "export/acc_selfconsistent"
+split: "train"
+enable_thinking: false
+
+# --- top-2 routing (나머지는 v1과 동일) ---
+router_use_description: false
+router_enable_thinking: false
+router_few_shot: true
+router_top_k: 2
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

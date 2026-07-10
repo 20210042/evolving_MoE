@@ -26,14 +26,18 @@
 - 최종 로스터 5명 = 전부 실패유형: ProceduralExecutionVerifier / TypographicalErrorDetective / BoundaryConditionSpecialist / ConstraintIntegrityValidator / ContextualIntentRecoverer.
 - 진화: 잡 185974 TIMEOUT→185975 resume, ~52h, step 2488 완주. 로스터 수 1~8 진동(평균 4.1).
 
-### seed16 vs 17 비교 (A4B, test 500, 동일 LUCA 시작) — [EXPERIMENT_LOG §12-4](EXPERIMENT_LOG.md)
+### 수학 도메인 결과 매트릭스 (A4B, test 500, 동일 LUCA 시작) — [EXPERIMENT_LOG §12-4](EXPERIMENT_LOG.md)
 
-| 지표 | LUCA | base 진화 | 문제본문+풀이과정 | Δ |
+| 지표 | LUCA (1인) | seed16 topic (5인) | seed17 failure (5인) | seed20 saturated (**15인**) |
 |---|---|---|---|---|
-| routed pass@1 | 78.0 | 78.2 | 76.8 | −1.4 |
-| **UB union** | — | 81.0 | **82.2** | **+1.2** |
-| 상보성(UB−best) | — | +3.6 | +4.8 | +1.2 |
-| 단독으로 푼 문제(n=1) | — | 1.4% | 2.2% | +0.8 |
+| 로스터 크기 | 1 | 5 | 5 | **15** |
+| routed pass@1 | 78.0 | 78.2 | 76.8 | 76.0 |
+| **UB union** | — | 81.0 | 82.2 | **83.0** |
+| 상보성 (UB−best) | — | +3.6 | +4.8 | +4.6 |
+| 단독으로 푼 문제 (n=1) | — | 1.4% | 2.2% | 1.8% |
+| 아무도 못 풂 (backbone-hard) | — | — | — | 17% (85/500) |
+
+- **saturated 결론**: 로스터를 5→**15**로 3배 불려도 **UB는 81→83 (+1~2pp)뿐** = 강한 diminishing returns → **천장 ≈ 백본(~83%)**. 프롬프트-레벨 분화만으론 backbone-hard 17%를 못 뚫음. routed(76.0)는 UB(83.0)를 −7pp 못 거둠 = 라우터 병목(코딩과 동형). seed20 UB는 ub_eval per-agent solo를 post-hoc union(`ub_eval/binning_merged.jsonl`).
 
 - **판정**: 실패유형 분해가 분해 *품질*(UB·상보성·단독유일·천장 4지표)은 일관되게 우수 = 덜 중복·더 상보적. **단 정확도(routed)는 오히려 ↓** — route-to-one이 UB 헤드룸을 못 거둠(병목=추출, 중복).
 - **라우팅 검증**: 라우터에 system_prompt 설명 노출시켜도 routed 76.8 불변 → 라우팅 *정보 부족*이 아니라 *중복*이 원인. ([routing_inference.py](../src/pipelines/routing_inference.py) `_roster_json` fallback 추가됨, 커밋 dd32e0e.)

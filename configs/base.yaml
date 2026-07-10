@@ -52,9 +52,19 @@ add_only: false
 #                            (default off = snap zero-shot pick).
 #   router_few_shot        : append random past-routing examples (nondeterministic;
 #                            set false for a clean, reproducible routing prompt).
+#   router_few_shot_retrieval : replace random examples with the top-k exclusive_solves
+#                            (each expert's unique niche) most similar to the current
+#                            problem — deterministic, discriminative, and leaner.
+#   router_retrieval_k     : how many retrieved niche examples to show (default 5).
 router_use_description: false
 router_enable_thinking: false
 router_few_shot: true
+router_few_shot_retrieval: false
+router_retrieval_k: 5
+#   router_top_k          : route to k experts per problem; each generates → scoring
+#                           accepts if ANY passes (union). Legit for coding (execution
+#                           picks the winner). 1 = current route-to-one.
+router_top_k: 1
 
 # Action gate
 action_gate:
