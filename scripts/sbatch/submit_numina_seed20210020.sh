@@ -23,10 +23,11 @@ N_RESUME=2      # 포화 로스터가 커서 스텝당 느림 → 48h 초과 예
 
 # ────────────────────────────────────────────────────────────────
 submit_one() {  # $1=resume_flag  $2=dependency_jobid(optional)
-    local rflag="$1" dep="$2" depopt=""
+    local rflag="$1" dep="$2" depopt="" exclopt=""
     [ -n "$dep" ] && depopt="--dependency=afternotok:${dep}"
+    [ -n "${EXCLUDE:-}" ] && exclopt="--exclude=${EXCLUDE}"   # e.g. EXCLUDE=n05 (전력문제 노드 제외)
     SEED=${SEED} DATASET=${DATASET} TRAIN_SIZE=${TRAIN_SIZE} MAX_EPOCHS=${MAX_EPOCHS} BATCH_SIZE=${BATCH_SIZE} EVOL_CONFIG=${EVOL_CFG} \
-      sbatch --parsable --job-name=mae_evolve_seed20 ${depopt} \
+      sbatch --parsable --job-name=mae_evolve_seed20 ${depopt} ${exclopt} \
         --gres=gpu:PRO6000:${GPUS} --cpus-per-task=${CPUS} --mem=${MEM} --time=${TIME} \
         --output="${REPO}/logs/%x.%j.out" --error="${REPO}/logs/%x.%j.err" \
         "${REPO}/scripts/sbatch/run_math_evolution.sh" ${rflag}

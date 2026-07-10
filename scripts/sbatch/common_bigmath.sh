@@ -27,6 +27,11 @@ setup_job_env() {
     # 52G model into the home quota and the engine dies at load).
     export HF_HOME="${HF_HOME:-/data5/jaehoonjeong/.cache/huggingface}"
     export TRANSFORMERS_CACHE="${TRANSFORMERS_CACHE:-/data5/jaehoonjeong/.cache/huggingface}"
+    # HF offline is opt-in (default online): online nodes (n03/n04) do a revision check fine.
+    # For an offline node, submit with HF_HUB_OFFLINE=1 to force cache-only.
+    export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-0}"
+    export TRANSFORMERS_OFFLINE="${TRANSFORMERS_OFFLINE:-0}"
+    export HF_DATASETS_OFFLINE="${HF_DATASETS_OFFLINE:-0}"
     mkdir -p "${REPO}/logs"
 }
 
