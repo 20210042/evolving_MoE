@@ -1,0 +1,19 @@
+# 코딩 도메인(acc) eval config — 1 GPU(tp=1). seed20210101 최종 로스터 UB + LUCA baseline 평가용.
+#   acc_test.jsonl 없음 → split=train으로 acc_train.jsonl 로드 후 test_ids.json(홀드아웃 13636)으로 필터.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "acc"
+data_dir: "export/acc_selfconsistent"
+split: "train"
+enable_thinking: false
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

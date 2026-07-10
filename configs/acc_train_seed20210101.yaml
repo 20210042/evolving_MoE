@@ -1,0 +1,31 @@
+# seed20210101: 코딩 도메인 1차 — QuantCat/TACO self-consistent 수정본 + gfg 복구(export/acc_selfconsistent).
+#   표준 레시피 = seed18 방식 = windowed-deletion gatefix + topic scout(문제 설명만; failure/exclusive 없음).
+#   init = LUCA 단독. batch 50(하드에러 ~20-25/스텝 목표), UB 스모크 후 배치 최종결정.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "acc"
+data_dir: "export/acc_selfconsistent"      # get_dataset가 acc_train.jsonl 로드
+split: "train"
+train_size: 2500           # SMOKE(50스텝×batch50) — UB·하드에러·로스터 성장 관측. 풀런시 16136로.
+epochs: 1
+batch_size: 50
+max_lives: 5
+enable_thinking: false                      # (확정 필요) 코딩도 OFF로 시작
+shared_contribution_exemption: false
+roster_init_path: "configs/roster_init.json"   # LUCA 단독
+
+# gatefix (seed18 표준)
+deletion_window: 16        # ≈ 800/batch(50)
+deletion_floor: 0.0        # seed18 literal과 동일하게 0으로 먼저(비대해지는지 코딩서도 관측)
+delete_cooldown: 8
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false
