@@ -36,3 +36,5 @@ wandb/
 
 # API keys
 .env
+# junk: backup + pycache leftover
+src/meta_agent_evo/
