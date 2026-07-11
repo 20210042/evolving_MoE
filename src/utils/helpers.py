@@ -1,9 +1,9 @@
 import json
 import logging
+import random
 import re
 
 import torch
-from transformers import set_seed
 
 from utils.domains import is_text_generation_task
 
@@ -179,7 +179,12 @@ def extract_math_answer(text: str) -> str:
 
 def set_all_seeds(seed: int):
     """CPU와 CUDA 모든 시드를 고정한다."""
-    set_seed(seed)
+    random.seed(seed)
+    try:
+        import numpy as np
+        np.random.seed(seed)
+    except Exception:
+        pass
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     if torch.cuda.is_available():
