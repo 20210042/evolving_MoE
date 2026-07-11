@@ -186,8 +186,11 @@ def set_all_seeds(seed: int):
     except Exception:
         pass
     torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    if torch.cuda.is_available():
+    # Do not initialize CUDA here. vLLM starts worker processes after this call;
+    # touching CUDA in the parent can make those workers fail with
+    # "Cannot re-initialize CUDA in forked subprocess".
+    if torch.cuda.is_initialized():
+        torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
     logger.info(f"모든 시드 고정: {seed} (CPU + CUDA deterministic)")
