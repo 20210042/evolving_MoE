@@ -7,6 +7,7 @@ import logging
 import os
 import random
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from action_selector import ActionDecision, ActionGateConfig, select_action
@@ -16,10 +17,16 @@ from prompts.coding import build_expert_prompt
 from roster import assign_candidate_id, ensure_roster, normalize_persona_fields, save_roster
 from scout import scout_new_persona
 from step_logger import StepLogContext, StepLogger
-from utils.helpers import extract_code_block
+from utils.domains import task_family
+from utils.helpers import finalize_generation_output
 from war import compute_war_scores, pick_worst_agent
 
 _SCORE_WORKERS = min(4, os.cpu_count() or 1)
+# Wall-clock guard for parallel scoring. A single pathological math_verify comparison
+# can hang a worker past the library's own timeout; without this the run freezes
+# forever (as_completed waits on the dead future). Budget per pair + a floor.
+_SCORE_PER_PAIR_TIMEOUT = float(os.environ.get("SCORE_PER_PAIR_TIMEOUT", "5.0"))
+_SCORE_MIN_TIMEOUT = float(os.environ.get("SCORE_MIN_TIMEOUT", "180.0"))
 
 
 def _score_pair(
@@ -56,17 +63,53 @@ class GMEvolutionOrchestrator:
         dataset_name: str = "livecodebench",
         seed: int = 42,
         score_workers: int = _SCORE_WORKERS,
+        enable_thinking: bool = True,
+        use_exclusive_solves: bool = False,
+        use_approach_persona: bool = False,
+        shared_contribution_exemption: bool = True,
+        failure_mode_scout: bool = False,
+        deletion_window: int = 0,
+        deletion_floor: float = 0.0,
+        delete_cooldown: int = 0,
+        add_only: bool = False,
     ):
         self.agent = agent
         self.roster_path = roster_path
         self.roster = ensure_roster(roster_path)
+        self.enable_thinking = enable_thinking
+        self.use_exclusive_solves = use_exclusive_solves
+        self.use_approach_persona = use_approach_persona
+        # When True (default = legacy): an agent that solved ANY problem (even shared)
+        # keeps its life even with WAR=0. When False: only an exclusive contribution
+        # (WAR>0) or an all-zero batch protects the life → redundant agents decay and
+        # become eviction-eligible. Data: shared exemption alone froze eviction to 0
+        # candidates across seed05–12; turning it off restores the seed04 regime.
+        self.shared_contribution_exemption = shared_contribution_exemption
+        # failure-mode scout: attach one random failed attempt to each hard error so
+        # the scout types the recurring mistake instead of the topic (seed17+).
+        self.failure_mode_scout = failure_mode_scout
+        self._fm_rng = random.Random(seed)
         self.max_lives = max_lives
+        # Windowed deletion (deletion_window>0): the whole removal path — eviction
+        # eligibility (lives), worst ordering, and the delete trigger — keys off one
+        # accumulated unique-solve rate over the last `deletion_window` batches,
+        # instead of instantaneous single-batch WAR/mcl + the two lives exemptions.
+        # 0 = OFF = legacy behavior, byte-identical. delete_cooldown rate-limits
+        # deletes (≤1 per K steps) to damp the overshoot-top cascade.
+        self.deletion_window = deletion_window
+        self.deletion_floor = deletion_floor
+        self.delete_cooldown = delete_cooldown
+        self._last_delete_step = -(10**9)
+        # Saturated run: never delete/swap → roster grows to the add-penalty fixed point.
+        self.add_only = add_only
         for p in self.roster:
             p.setdefault("total_war", 0)
             p.setdefault("active_steps", 0)
             p.setdefault("average_war", 0.0)
             p.setdefault("lives", self.max_lives)
             p.setdefault("routing_history", [])
+            p.setdefault("exclusive_solves", [])
+            p.setdefault("recent_unique", [])
         self.action_cfg = action_cfg or ActionGateConfig()
         self.max_refine_iters = max_refine_iters
         self.lcb_timeout = lcb_timeout
@@ -128,11 +171,31 @@ class GMEvolutionOrchestrator:
                 results[(pid, cid)] = sc
             return results
 
-        with ProcessPoolExecutor(max_workers=workers) as pool:
-            futures = {pool.submit(_score_pair, a): (a[0]["id"], a[5]) for a in score_args}
-            for fut in as_completed(futures):
+        # Hard wall-clock cap: if a worker hangs (e.g. math_verify comparison stuck in
+        # sympy past its own timeout), kill it and default the unfinished pairs to 0.0
+        # (== the math_verify timeout outcome) instead of freezing the whole run.
+        timeout_s = max(_SCORE_MIN_TIMEOUT, _SCORE_PER_PAIR_TIMEOUT * len(score_args) / workers)
+        pool = ProcessPoolExecutor(max_workers=workers)
+        futures = {pool.submit(_score_pair, a): (a[0]["id"], a[5]) for a in score_args}
+        try:
+            for fut in as_completed(futures, timeout=timeout_s):
                 pid, cid, sc = fut.result()
                 results[(pid, cid)] = sc
+        except FuturesTimeoutError:
+            unfinished = [futures[f] for f in futures if not f.done()]
+            logging.error(
+                "Scoring wall-clock timeout (%.0fs): %d/%d pairs unfinished -> scored 0.0 "
+                "(likely hung math_verify comparison)",
+                timeout_s, len(unfinished), len(futures),
+            )
+        finally:
+            # never block on a hung worker: force-kill live processes, don't wait.
+            for proc in list(getattr(pool, "_processes", {}).values()):
+                if proc.is_alive():
+                    proc.kill()
+            pool.shutdown(wait=False, cancel_futures=True)
+        for pair in futures.values():
+            results.setdefault(pair, 0.0)
         return results
 
     def run_batch(
@@ -152,6 +215,7 @@ class GMEvolutionOrchestrator:
             pid = item["id"]
             instruction = item.get("instruction", "")
             ds = item.get("dataset") or self.dataset_name
+            dom = item.get("domain")
             starter = item.get("starter_code")
             for player in self.roster:
                 cid = player["id"]
@@ -163,14 +227,23 @@ class GMEvolutionOrchestrator:
                         dataset=ds,
                         model_name=model_name,
                         starter_code=starter,
+                        approach=player.get("approach"),
+                        domain=dom,
                     )
                 )
                 pair_order.append((pid, cid))
 
-        gen_out = self.agent.chat_batch(gen_msgs, enable_thinking=True)
+        gen_out = self.agent.chat_batch(gen_msgs, enable_thinking=self.enable_thinking)
+        by_id = {b["id"]: b for b in batch_data}
         codes: Dict[Tuple[str, str], str] = {}
         for pair, raw in zip(pair_order, gen_out):
-            codes[pair] = extract_code_block(raw) or raw
+            pid, cid = pair
+            item = by_id[pid]
+            codes[pair] = finalize_generation_output(
+                raw,
+                dataset=item.get("dataset") or self.dataset_name,
+                domain=item.get("domain"),
+            )
 
         scores = self._score_pairs_parallel(batch_data, codes)
 
@@ -189,11 +262,28 @@ class GMEvolutionOrchestrator:
 
             if not any_solved:
                 clean_desc = item.get("prompt_text") or instruction
-                tests_str = "\n".join(item.get("test_list", []))
-                hard_errors_texts[problem_id] = (
-                    f"Problem: {clean_desc}\n"
-                    f"Tests:\n{tests_str}\n"
-                )
+                family = task_family(dataset=item.get("dataset") or self.dataset_name, domain=item.get("domain"))
+                if family == "math":
+                    if self.failure_mode_scout:
+                        attempts = [
+                            codes[(problem_id, p["id"])]
+                            for p in self.roster
+                            if (problem_id, p["id"]) in codes
+                        ]
+                        if attempts:
+                            clean_desc = (
+                                f"{clean_desc}\n--- A failed attempt ---\n"
+                                f"{self._fm_rng.choice(attempts)}"
+                            )
+                    hard_errors_texts[problem_id] = clean_desc
+                elif family == "coding":
+                    tests_str = "\n".join(item.get("test_list", []))
+                    hard_errors_texts[problem_id] = (
+                        f"{clean_desc}\n"
+                        f"Tests:\n{tests_str}"
+                    )
+                else:
+                    hard_errors_texts[problem_id] = clean_desc
 
         return squad_results, hard_errors_texts
 
@@ -214,9 +304,10 @@ class GMEvolutionOrchestrator:
             dataset=ds_probe,
             model_name=model_name,
             starter_code=item.get("starter_code"),
+            domain=item.get("domain"),
         )
-        raw = self.agent.chat(msg, enable_thinking=True)
-        return extract_code_block(raw) or raw
+        raw = self.agent.chat(msg, enable_thinking=self.enable_thinking)
+        return finalize_generation_output(raw, dataset=ds_probe, domain=item.get("domain"))
 
     def _update_routing_memory(self, batch_data: List[Dict], squad_results: Dict[str, Set[str]]) -> None:
         for item in batch_data:
@@ -251,6 +342,13 @@ class GMEvolutionOrchestrator:
         )
         logging.info("WAR Scores: %s", war_scores)
 
+        all_zero_war = war_scores and all(v == 0 for v in war_scores.values())
+        if all_zero_war:
+            logging.info("All-zero WAR batch — skipping lives penalty (collective failure).")
+
+        win = self.deletion_window
+        batch_n = len(batch_data)
+        unique_rate_map: Dict[str, float] = {}
         for p in self.roster:
             p_id = p["id"]
             if p_id in war_scores:
@@ -258,10 +356,47 @@ class GMEvolutionOrchestrator:
                 p["total_war"] = p.get("total_war", 0) + current_score
                 p["active_steps"] = p.get("active_steps", 0) + 1
                 p["average_war"] = p["total_war"] / p["active_steps"]
-                if current_score > 0:
-                    p["lives"] = self.max_lives
+                if win > 0:
+                    # Window mode: accumulate the per-batch unique-solve count (== WAR
+                    # score) over a sliding window and key lives off the sustained
+                    # unique-rate, not one unlucky batch. Newborns get a full-window
+                    # grace period; exemptions are unnecessary (a collective-fail or
+                    # shared-only batch simply lowers everyone's rate equally).
+                    ru = p.setdefault("recent_unique", [])
+                    ru.append(current_score)
+                    del ru[:-win]
+                    rate = sum(ru) / (len(ru) * batch_n) if ru and batch_n > 0 else 0.0
+                    unique_rate_map[p_id] = rate
+                    if len(ru) < win:
+                        pass  # grace: not enough history to judge redundancy
+                    elif rate > self.deletion_floor:
+                        p["lives"] = min(self.max_lives, p.get("lives", self.max_lives) + 1)
+                    else:
+                        p["lives"] = max(0, p.get("lives", self.max_lives) - 1)
                 else:
-                    p["lives"] = max(0, p.get("lives", self.max_lives) - 1)
+                    agent_solved_any = bool(squad_results.get(p_id, set()))
+                    if current_score > 0:
+                        p["lives"] = self.max_lives
+                    elif all_zero_war:
+                        pass  # batch-level collective failure — no individual penalty
+                    elif self.shared_contribution_exemption and agent_solved_any:
+                        pass  # solved shared problems — not an individual failure (toggleable)
+                    else:
+                        p["lives"] = max(0, p.get("lives", self.max_lives) - 1)
+
+        # Accumulate exclusive solve history per agent (problems only that agent solved).
+        roster_by_id = {p["id"]: p for p in self.roster}
+        for item in batch_data:
+            pid = item["id"]
+            solvers = [cid for cid, solved_set in squad_results.items() if pid in solved_set]
+            if len(solvers) == 1:
+                p = roster_by_id.get(solvers[0])
+                if p is not None:
+                    text = (item.get("prompt_text") or item.get("instruction", ""))[:200]
+                    p.setdefault("exclusive_solves", [])
+                    if text not in p["exclusive_solves"]:
+                        p["exclusive_solves"].append(text)
+                    p["exclusive_solves"] = p["exclusive_solves"][-10:]
 
         save_roster(self.roster_path, self.roster)
 
@@ -270,6 +405,7 @@ class GMEvolutionOrchestrator:
             self.roster,
             tiebreak=self.war_tiebreak,
             rng=rng,
+            unique_rate_map=(unique_rate_map if win > 0 else None),
         )
         logging.info("Worst Agent for Eviction: %s", worst_agent)
         logging.info("Total Hard Errors: %s", len(hard_errors_texts))
@@ -298,8 +434,26 @@ class GMEvolutionOrchestrator:
 
         self._update_routing_memory(batch_data, squad_results)
 
-        hard_errors_combined = "\n\n---\n\n".join(hard_errors_texts.values())
-        new_persona = scout_new_persona(self.agent, self.roster, hard_errors_combined)
+        hard_errors_combined = "\n".join(
+            f"{i+1}. {txt}" for i, txt in enumerate(hard_errors_texts.values())
+        )
+
+        exclusive_solves_map: Optional[Dict[str, List[str]]] = None
+        if self.use_exclusive_solves:
+            exclusive_solves_map = {
+                p.get("name", p.get("persona_name", p["id"])): p.get("exclusive_solves", [])
+                for p in self.roster
+            }
+
+        new_persona = scout_new_persona(
+            self.agent, self.roster, hard_errors_combined,
+            dataset_name=self.dataset_name,
+            enable_thinking=self.enable_thinking,
+            exclusive_solves_map=exclusive_solves_map,
+            use_approach_persona=self.use_approach_persona,
+            domain=(batch_data[0].get("domain") if batch_data else None),
+            failure_mode=self.failure_mode_scout,
+        )
         if not new_persona or "system_prompt" not in new_persona:
             logging.warning("Failed to scout new persona. Skipping.")
             return
@@ -311,7 +465,22 @@ class GMEvolutionOrchestrator:
         by_id = {b["id"]: b for b in batch_data}
         new_pass_ids: Set[str] = set()
 
-        probe_items = [by_id[q] for q in probe_hard if q in by_id]
+        # Hole-aware swap (prof feedback #3): also probe the newface on the worst
+        # agent's NICHE (problems only the worst solved). If a swap evicts the worst,
+        # that niche becomes a hole; select_action only allows the swap if the newface
+        # recovers it. These ids are disjoint from probe_hard (worst solved them), so
+        # adding them to the probe doesn't change gh_add (which intersects probe_hard).
+        worst_unique_ids: List[str] = []
+        if worst_agent:
+            worst_solves = set(squad_results.get(worst_agent, set()))
+            other_solves: Set[str] = set()
+            for rid, solves in squad_results.items():
+                if rid != worst_agent:
+                    other_solves.update(solves)
+            worst_unique_ids = [q for q in (worst_solves - other_solves) if q in by_id]
+
+        probe_ids = probe_hard + [q for q in worst_unique_ids if q not in hard_errors_texts]
+        probe_items = [by_id[q] for q in probe_ids if q in by_id]
         if probe_items:
             probe_msgs = []
             for item in probe_items:
@@ -322,11 +491,17 @@ class GMEvolutionOrchestrator:
                         dataset=item.get("dataset") or self.dataset_name,
                         model_name=self.agent.llm.model_name,
                         starter_code=item.get("starter_code"),
+                        approach=new_persona.get("approach"),
+                        domain=item.get("domain"),
                     )
                 )
-            probe_out = self.agent.chat_batch(probe_msgs, enable_thinking=True)
+            probe_out = self.agent.chat_batch(probe_msgs, enable_thinking=self.enable_thinking)
             for item, raw in zip(probe_items, probe_out):
-                code = extract_code_block(raw) or raw
+                code = finalize_generation_output(
+                    raw,
+                    dataset=item.get("dataset") or self.dataset_name,
+                    domain=item.get("domain"),
+                )
                 if pass_at_threshold(self._score(item, code)):
                     new_pass_ids.add(item["id"])
 
@@ -338,15 +513,36 @@ class GMEvolutionOrchestrator:
             new_pass_ids=new_pass_ids,
             batch_size=len(batch_data),
             cfg=self.action_cfg,
+            worst_unique_rate=(
+                unique_rate_map.get(worst_agent) if (win > 0 and worst_agent) else None
+            ),
+            add_only=self.add_only,
         )
 
+        # Down-stroke damping: rate-limit deletes (≤1 per delete_cooldown steps) so the
+        # overshoot top doesn't cascade-collapse. Swaps keep size, so they're exempt.
+        if (
+            self.delete_cooldown > 0
+            and decision.action == "delete"
+            and (self._step_for_log - self._last_delete_step) < self.delete_cooldown
+        ):
+            logging.info(
+                "Delete suppressed by cooldown (since last=%d < %d).",
+                self._step_for_log - self._last_delete_step,
+                self.delete_cooldown,
+            )
+            decision.action = "noop"
+
         logging.info(
-            "Action gate: %s | U=%s | MCL(worst)≈%.3f | new_pass=%s/%s",
+            "Action gate: %s | U=%s | MCL(worst)≈%.3f | new_pass=%s/%s | niche_recover=%s/%s%s",
             decision.action,
             decision.utility,
             decision.mcl_worst,
             len(new_pass_ids),
             len(probe_hard),
+            decision.recovered_count,
+            decision.worst_unique_count,
+            " | SWAP→ADD demote: niche not recovered" if decision.demoted_swap else "",
         )
 
         if decision.action == "noop":
@@ -374,6 +570,7 @@ class GMEvolutionOrchestrator:
         elif decision.action == "delete":
             self.roster = [r for r in self.roster if r["id"] != worst_agent]
             save_roster(self.roster_path, self.roster)
+            self._last_delete_step = self._step_for_log
             logging.info("Commit DELETE: removed worst agent %s", worst_agent)
         elif decision.action == "swap":
             self.roster = [r for r in self.roster if r["id"] != worst_agent]
@@ -432,6 +629,7 @@ class GMEvolutionOrchestrator:
         record = {
             "upper_bound_pct": upper_bound_rate,
             "war": war_scores,
+            "squad_solves": {cid: sorted(pids) for cid, pids in squad_results.items()},
             "worst_eject_candidate": worst_agent,
             "hard_error_n": len(hard_errors_texts),
             "probe": {"hard_n": len(probe_hard), "stab_n": 0},
@@ -440,6 +638,9 @@ class GMEvolutionOrchestrator:
             "marginal_hard_gain_add": decision.marginal_hard_gain_add,
             "marginal_hard_gain_swap_extra": 0.0,
             "mcl_worst_est": decision.mcl_worst,
+            "worst_unique_n": decision.worst_unique_count,
+            "niche_recovered_n": decision.recovered_count,
+            "swap_demoted_to_add": decision.demoted_swap,
             "decision": decision.action,
             "roster_after": [p.get("id") for p in self.roster],
         }

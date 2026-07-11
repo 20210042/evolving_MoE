@@ -1,0 +1,15 @@
+dataset: "bigmath"
+split: "train"
+train_size: 300
+epochs: 5
+batch_size: 50
+max_lives: 5
+enable_thinking: true   # seed06 arm 복원: Thinking ON (solver + scout + router), 텍스트 NON-REDUNDANCY 규칙
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 128
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

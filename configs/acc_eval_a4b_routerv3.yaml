@@ -1,0 +1,28 @@
+# 코딩(acc) eval — Router v3. v1(strengths, thinking off) 유지 + few-shot을 검색기반으로.
+#   v2(description)는 Polyglot 자석효과(25.6→49.8%)로 무효 → strengths 유지가 낫다.
+#   v3 = strengths + thinking OFF + retrieval few-shot(exclusive_solves 중 문제와 유사한 top-k).
+#   few-shot만 단일 변수로 v1(84.4)과 A/B. exclusive_solves는 200자 저장이라 오히려 더 짧음(≈k×200).
+model: "google/gemma-4-26B-A4B-it"
+dataset: "acc"
+data_dir: "export/acc_selfconsistent"
+split: "train"
+enable_thinking: false
+
+# --- Router v3: strengths + retrieval few-shot ---
+router_use_description: false
+router_enable_thinking: false
+router_few_shot: true
+router_few_shot_retrieval: true
+router_retrieval_k: 5
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

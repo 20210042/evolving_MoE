@@ -1,0 +1,23 @@
+# QASC eval — top-2 routing. Router selects 2 experts; scoring uses union EM.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "qasc"
+data_dir: "export/qasc"
+split: "validation"
+enable_thinking: false
+
+router_use_description: false
+router_enable_thinking: false
+router_few_shot: true
+router_top_k: 2
+
+llm:
+  max_model_len: 16384
+  max_tokens: 1024
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

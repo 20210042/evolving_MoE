@@ -1,0 +1,14 @@
+dataset: "bigmath"
+split: "train"
+train_size: 50000
+epochs: 1
+batch_size: 50
+max_lives: 5
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 128
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

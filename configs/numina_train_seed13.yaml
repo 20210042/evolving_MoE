@@ -1,0 +1,23 @@
+# seed20210013: = seed10(control) + shared 기여 면제 OFF (도태 부활 ablation).
+#   동기: shared 면제가 단독 킬러 — seed05부터 seed12까지 eviction 후보 0건(데이터 검증).
+#   shared 면제만 끄면 WAR=0(독점 기여 없음) 에이전트가 lives를 잃어 도태 대상이 됨(= seed04 체제).
+#   all-zero WAR 면제는 유지(cascade 안전판), max_lives 5 유지(seed02/03/04가 5에서 정상 도태),
+#   hole-aware swap은 코드 전역이라 자동 적용 → 이제 후보가 생겨 비로소 작동.
+#   나머지(persona V2/exclusive_solves, Thinking OFF, λ=0.05)는 seed10과 동일.
+dataset: "numina_cot"
+split: "train"
+train_size: 300
+epochs: 5
+batch_size: 50
+max_lives: 5
+enable_thinking: false
+use_exclusive_solves: true
+shared_contribution_exemption: false   # ← 유일한 변경점 (기본 true)
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 128
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

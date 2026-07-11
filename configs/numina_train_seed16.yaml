@@ -1,0 +1,26 @@
+# seed20210016: MoE 백본(26B-A4B) 전체 분화 — numina train 전체(62185) 위에서 진화.
+#   아키텍처 = seed15 확정(V1 scout[atomicity] × shared 면제 OFF[도태]). 백본만 31B→26B-A4B, batch 100, 2 GPU.
+#   목적: 이 도메인에서 MoE 백본이 느끼는 최적 분류(전문가 분화)를 전체셋으로 찾기.
+#   48h 초과 가능 → roster snapshot 저장되므로 --resume으로 이어감.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "numina_cot"
+split: "train"
+train_size: 62185
+epochs: 1
+batch_size: 100
+max_lives: 5
+enable_thinking: false
+shared_contribution_exemption: false   # 도태 ON (V1×OFF)
+# (use_exclusive_solves 없음 → scout V1 atomicity)
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

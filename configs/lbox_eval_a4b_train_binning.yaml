@@ -1,0 +1,21 @@
+# LBox Open Phase 1 train full-binning config.
+# Some train facts exceed the 16k context window after prompt wrapping; keep
+# beginning and ending context so full-train MoE labels can be produced.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "lbox"
+data_dir: "export/lbox"
+split: "train"
+enable_thinking: false
+max_prompt_chars: 12000
+
+llm:
+  max_model_len: 16384
+  max_tokens: 2048
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

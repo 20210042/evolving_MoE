@@ -1,0 +1,20 @@
+# seed20210014: numina + scout V1(atomicity), shared 면제 ON.  (2x2: V1 × shared-ON)
+#   = seed12와 동일하되 scout만 V2→V1. use_exclusive_solves 없음 → scout가 V1(atomicity 규칙) 사용.
+#   shared_contribution_exemption 기본값(true) = ON → 큰 로스터. 백본은 base.yaml(gemma-4-31B-it).
+dataset: "numina_cot"
+split: "train"
+train_size: 300
+epochs: 5
+batch_size: 50
+max_lives: 5
+enable_thinking: false
+# (use_exclusive_solves 미설정 → 기본 false → scout V1)
+# (shared_contribution_exemption 미설정 → 기본 true → 면제 ON)
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 128
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

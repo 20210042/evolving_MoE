@@ -2,10 +2,12 @@ import json
 import logging
 import re
 
+import torch
+from transformers import set_seed
+
+from utils.domains import is_text_generation_task
+
 logger = logging.getLogger(__name__)
-
-
-OPTION_LABEL_RE = re.compile(r"^\s*([A-H])\s*[:.)]\s*(.+?)\s*$")
 
 
 def strip_thinking_channels(text: str) -> str:
@@ -87,6 +89,19 @@ def extract_code_block(text: str) -> str:
     return code.strip()
 
 
+def finalize_generation_output(
+    text: str,
+    *,
+    dataset: str | None = None,
+    domain: str | None = None,
+) -> str:
+    """Return raw natural-language answers for EM/math tasks, code for coding tasks."""
+    cleaned = strip_thinking_channels(text or "")
+    if is_text_generation_task(dataset=dataset, domain=domain):
+        return cleaned
+    return extract_code_block(cleaned) or cleaned
+
+
 def check_stop_condition(feedback: str) -> bool:
     feedback_lower = feedback.lower()
 
@@ -130,9 +145,7 @@ def extract_math_answer(text: str) -> str:
     if not text:
         return ""
     
-
-    
-    ## boxed match
+    ## boxed match (1순위)
     boxed: list[str] = []
     i = 0
     while i < len(text):
@@ -152,77 +165,20 @@ def extract_math_answer(text: str) -> str:
         i = idx + 1
     if boxed:
         return boxed[-1].strip()
-    
-    
-    ## final answer match
+
+    ## final answer match (2순위)
     final_answer_mathces = re.findall(r"Final Answer:\s*(.+?)(?:\n|$)", text, re.IGNORECASE)
     if final_answer_mathces:
-        return final_answer_mathces[-1].strip()
-    
-    
+        candidate = re.sub(r"^\*+|\*+$", "", final_answer_mathces[-1]).strip()
+        if candidate:
+            return candidate
+
     ## fallback to original text
     return text.strip()
 
 
-def extract_math_options(problem_text: str, min_options: int = 4) -> dict[str, str]:
-    """Extract multiple-choice options from a math problem.
-
-    Supports line-based options such as ``A: ...`` or ``B) ...``. Returns an
-    empty dict unless at least A-D are present by default.
-    """
-    options: dict[str, str] = {}
-    for line in str(problem_text or "").splitlines():
-        match = OPTION_LABEL_RE.match(line)
-        if match:
-            options[match.group(1)] = match.group(2).strip()
-
-    required = set("ABCD"[:min_options])
-    if not required.issubset(options):
-        return {}
-    return options
-
-
-def extract_option_letter(answer: str) -> str | None:
-    """Return the leading option letter from answers like ``C`` or ``C: ...``."""
-    answer = str(answer or "").strip()
-    patterns = [
-        r"^\$?\s*([A-H])\s*\$?$",
-        r"^\\text\{\s*([A-H])\s*[:.)]?\s*\}$",
-        r"^\\text\{\s*([A-H])\s*[:.)]?\s*\}\s*",
-        r"^\\textbf\{\s*\(?([A-H])\)?\s*\}",
-        r"^\(?\s*([A-H])\s*\)?\s*[:.)]\s*",
-    ]
-    for pattern in patterns:
-        match = re.match(pattern, answer)
-        if match:
-            return match.group(1)
-    return None
-
-
-def strip_option_prefix(answer: str) -> str:
-    """Remove a leading multiple-choice label while preserving the answer text."""
-    answer = str(answer or "").strip()
-    patterns = [
-        r"^\\text\{\s*[A-H]\s*[:.)]\s*(.*?)\s*\}$",
-        r"^\\text\{\s*[A-H]\s*[:.)]?\s*\}\s*(.+)$",
-        r"^\\textbf\{\s*\(?[A-H]\)?\s*\}\s*(.*)$",
-        r"^\(?\s*[A-H]\s*\)?\s*[:.)]\s*(.+)$",
-    ]
-    for pattern in patterns:
-        match = re.match(pattern, answer)
-        if match:
-            stripped = match.group(1).strip()
-            if stripped:
-                return stripped
-    return answer
-
-
-
 def set_all_seeds(seed: int):
     """CPU와 CUDA 모든 시드를 고정한다."""
-    import torch
-    from transformers import set_seed
-
     set_seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)

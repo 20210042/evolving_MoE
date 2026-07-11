@@ -47,13 +47,14 @@ def pick_worst_agent(
     *,
     tiebreak: str = "random",
     rng: random.Random | None = None,
+    unique_rate_map: Dict[str, float] | None = None,
 ) -> str | None:
     rng = rng or random.Random(0)
     active_ids = set(war_scores.keys())
-    
+
     # Candidates for eviction: only agents whose lives are <= 0
     candidates = [
-        p for p in roster 
+        p for p in roster
         if p.get("id") in active_ids and p.get("lives", 3) <= 0
     ]
 
@@ -61,7 +62,12 @@ def pick_worst_agent(
         return None
 
     def sort_key(p: Dict[str, Any]):
-        avg_war = p.get("average_war", 0.0)
+        # Window mode unifies the worst-pick on the same accumulated unique-rate the
+        # lives/delete gate use; legacy mode keeps the running average_war ordering.
+        if unique_rate_map is not None:
+            avg_war = unique_rate_map.get(p.get("id", ""), 0.0)
+        else:
+            avg_war = p.get("average_war", 0.0)
         active_steps = p.get("active_steps", 0)
         pid = p.get("id", "")
 

@@ -1,0 +1,32 @@
+# seed20210018: 게이트 제거(deletion) 로직 수정 — seed16(주제 scout) + windowed deletion.
+#   seed16과 프롬프트·아키텍처 전부 동일(26B-A4B, numina train 전체, V1 atomicity × shared 면제 OFF).
+#   딱 게이트만 바꿈: 단일배치 mcl/lives 면제 → 누적 unique-rate 윈도로 통일(노이즈 삭제 제거).
+#   목적: 로스터 크기 limit-cycle 진동(seed16 ~3↔8, 주기~15스텝) 완화 + 멤버십 안정성.
+#   비교: seed16(OFF) vs seed18(ON), 프롬프트 무변.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "numina_cot"
+split: "train"
+train_size: 62185
+epochs: 1
+batch_size: 100
+max_lives: 5
+enable_thinking: false
+shared_contribution_exemption: false   # window 모드에선 미사용(누적 윈도가 흡수)
+# (use_exclusive_solves 없음 → scout V1 atomicity)
+
+# Windowed deletion (게이트 수정 핵심)
+deletion_window: 8      # ≈800문제 윈도(batch 100). grace=8스텝.
+deletion_floor: 0.0     # 윈도 동안 단독해결 0일 때만 lives 감소(가장 보수적)
+delete_cooldown: 5      # 삭제 ≤1회/5스텝 — 연쇄 급락 완충
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

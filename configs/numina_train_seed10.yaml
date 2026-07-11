@@ -1,0 +1,17 @@
+# seed20210010 (control): NuminaMath, verbal-RL scout (exclusive_solves), 현행 persona(identity+strengths), Thinking OFF
+dataset: "numina_cot"   # ⚠️ NuminaMath loader 키 — 협업자 merge 후 실제 키로 교체
+split: "train"
+train_size: 300
+epochs: 5
+batch_size: 50
+max_lives: 5
+enable_thinking: false
+use_exclusive_solves: true
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 128
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

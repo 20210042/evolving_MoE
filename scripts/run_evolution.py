@@ -30,6 +30,21 @@ from roster import save_roster
 from utils.llm import LLMService, llm_service_from_yaml_config
 
 
+def truncate_item_text(item: dict, max_chars: int) -> dict:
+    if not max_chars:
+        return item
+    changed = False
+    out = dict(item)
+    for key in ("instruction", "prompt_text", "prompt", "problem"):
+        val = out.get(key)
+        if isinstance(val, str) and len(val) > max_chars:
+            head = int(max_chars * 0.75)
+            tail = max_chars - head
+            out[key] = val[:head] + "\n\n[TRUNCATED_FOR_CONTEXT]\n\n" + val[-tail:]
+            changed = True
+    return out if changed else item
+
+
 def load_merged_config(base: Path, extra: Path | None) -> dict:
     if yaml is None:
         raise RuntimeError("PyYAML is required. pip install pyyaml")
@@ -40,6 +55,13 @@ def load_merged_config(base: Path, extra: Path | None) -> dict:
             over = yaml.safe_load(f)
         cfg.update({k: v for k, v in over.items() if v is not None})
     return cfg
+
+
+def apply_env_overrides(cfg: dict) -> None:
+    """Small runtime overrides for SLURM wrappers without creating temp YAML files."""
+    tp = os.environ.get("VLLM_TP_SIZE") or os.environ.get("TP_SIZE")
+    if tp:
+        cfg.setdefault("vllm", {})["tp_size"] = int(tp)
 
 
 def main() -> None:
@@ -71,6 +93,7 @@ def main() -> None:
     base_cfg_path = ROOT / "configs" / "base.yaml"
     extra_path = Path(args.config) if args.config else None
     cfg = load_merged_config(base_cfg_path, extra_path)
+    apply_env_overrides(cfg)
 
     def pick(name, cli_val, default=None):
         return cli_val if cli_val is not None else cfg.get(name, default)
@@ -93,6 +116,7 @@ def main() -> None:
     )
 
     logging.info("Loading dataset %s", dataset)
+    logging.info("Runtime vLLM tp_size=%s", (cfg.get("vllm") or {}).get("tp_size"))
     all_data = get_dataset(dataset, split=split, local_dir=data_dir)
     logging.info("Total problems loaded: %s", len(all_data))
 
@@ -101,6 +125,10 @@ def main() -> None:
     rng.shuffle(shuffled)
     train_data = shuffled[:train_size]
     test_data = shuffled[train_size:]
+    max_prompt_chars = int(cfg.get("max_prompt_chars", 0) or 0)
+    if max_prompt_chars:
+        train_data = [truncate_item_text(item, max_prompt_chars) for item in train_data]
+        logging.info("Applied max_prompt_chars=%d to evolution train inputs.", max_prompt_chars)
 
     os.makedirs(args.results_dir, exist_ok=True)
     test_ids_path = os.path.join(args.results_dir, "test_ids.json")
@@ -175,6 +203,15 @@ def main() -> None:
         run_id=run_id,
         dataset_name=dataset,
         seed=seed,
+        enable_thinking=bool(cfg.get("enable_thinking", True)),
+        use_exclusive_solves=bool(cfg.get("use_exclusive_solves", False)),
+        use_approach_persona=bool(cfg.get("use_approach_persona", False)),
+        shared_contribution_exemption=bool(cfg.get("shared_contribution_exemption", True)),
+        failure_mode_scout=bool(cfg.get("failure_mode_scout", False)),
+        deletion_window=int(cfg.get("deletion_window", 0)),
+        deletion_floor=float(cfg.get("deletion_floor", 0.0)),
+        delete_cooldown=int(cfg.get("delete_cooldown", 0)),
+        add_only=bool(cfg.get("add_only", False)),
     )
 
     step_count = 0

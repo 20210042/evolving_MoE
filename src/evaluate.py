@@ -17,15 +17,24 @@ import wandb
 from transformers import HfArgumentParser
 
 from data import get_dataset
-from evaluation.metrics import exact_match_score, token_f1_score, numerical_match_score, math_verify_score, mc_score
+from evaluation.metrics import (
+    exact_match_score,
+    mc_score,
+    math_verify_score,
+    numerical_match_score,
+    token_f1_score,
+)
 from evaluation.scorer import score_one
+from prompts.coding import build_baseline_prompt
 from prompts.math import build_generation_prompt as build_math_prompt
+from utils.domains import task_family
 from utils.helpers import extract_math_answer, set_all_seeds
 from utils.llm import LLMService
 
 logger = logging.getLogger(__name__)
 
-MATH_DATASETS = {"bigmath", "math", "numina_cot"}     ## 수학 데이터셋이냐 코딩 데이터셋이냐에 따라 메트릭이 달라짐.
+MATH_DATASETS = {"bigmath", "math", "numina_cot"}
+
 
 @dataclass
 class ModelArguments:
@@ -56,6 +65,14 @@ class DataArguments:
     test_dataset: str = field(
         default="bigmath",
         metadata={"help": "평가 데이터셋 이름."},
+    )
+    split: str = field(
+        default="test",
+        metadata={"help": "평가 split. QASC/LBox 로컬 jsonl은 <dataset>_<split>.jsonl을 찾음."},
+    )
+    data_dir: Optional[str] = field(
+        default=None,
+        metadata={"help": "로컬 데이터 디렉토리. QASC/LBox는 보통 export/qasc, export/lbox."},
     )
     categories: Optional[List[str]] = field(
         default=None,
@@ -97,11 +114,7 @@ class ExtraArguments:
         default="evolving-moe",
         metadata={"help": "WandB 프로젝트 이름."},
     )
-    
-    seed: int = field(
-        default=42,
-        metadata={"help": "모든 시드 고정"}
-    )
+    seed: int = field(default=42, metadata={"help": "모든 시드 고정"})
     enable_thinking: bool = field(
         default=False,
         metadata={"help": "reasoning 활성화. vllm/hf: chat template enable_thinking=True, api: reasoning_effort=medium."},
@@ -112,22 +125,20 @@ class ExtraArguments:
     )
 
 
-
-
-def evaluate_item(item: dict, prediction: str, is_math_dataset: bool=True) -> dict:
+def evaluate_item(item: dict, prediction: str, is_math_dataset: bool = True) -> dict:
     if is_math_dataset:
         extracted = extract_math_answer(prediction)
         problem_text = item.get("instruction", "")
         ground_truth = item["ground_truth"]
-        
+
         em = exact_match_score(extracted, ground_truth)
         numerical = numerical_match_score(extracted, ground_truth)
         math_verify = math_verify_score(extracted, ground_truth)
         multiple_choice = mc_score(extracted, ground_truth, problem_text)
         combined = 1.0 if max(em, numerical, math_verify, multiple_choice) >= 1.0 else 0.0
         token_f1 = token_f1_score(extracted, ground_truth)
-        
-        scores = {
+
+        return {
             "extracted_answer": extracted,
             "em_score": em,
             "token_f1_score": token_f1,
@@ -137,9 +148,7 @@ def evaluate_item(item: dict, prediction: str, is_math_dataset: bool=True) -> di
             "combined_score": combined,
         }
 
-    else:
-        scores = {"pass_score": score_one(item, prediction)}
-    return scores
+    return {"pass_score": score_one(item, prediction)}
 
 
 def _safe_filename_component(value: str) -> str:
@@ -167,19 +176,31 @@ def build_output_path(output_dir: str, dataset_name: str, model_name: str, lora_
     return os.path.join(output_dir, filename)
 
 
+def build_eval_prompt(item: dict, dataset_name: str, model_name: str, fixed_math_category: str | None = None):
+    dataset_key = (item.get("dataset") or dataset_name).lower()
+    family = task_family(dataset=dataset_key, domain=item.get("domain"))
+    instruction = item["instruction"]
 
+    if family == "math":
+        metadata = {"category": fixed_math_category} if fixed_math_category else item
+        return build_math_prompt(instruction, metadata=metadata)
 
+    return build_baseline_prompt(
+        instruction,
+        dataset=dataset_key,
+        model_name=model_name,
+        starter_code=item.get("starter_code"),
+        domain=item.get("domain"),
+    )
 
 
 def main():
-    # 인자 처리
     parser = HfArgumentParser(
         (ModelArguments, DataArguments, ExtraArguments),
         description="Evaluate Script",
     )
     model_args, data_args, extra_args = parser.parse_args_into_dataclasses()
 
-    # 로그 및 시드 설정
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
@@ -188,48 +209,39 @@ def main():
     )
 
     set_all_seeds(seed=extra_args.seed)
-    
-    # wandb
     wandb_run = wandb.init(project=extra_args.wandb_project, name=extra_args.wandb_run_name)
-    
-    
-    
-    # 데이터셋 로드
-    logger.info(f"데이터셋 로딩: {data_args.test_dataset}")
+
+    logger.info("데이터셋 로딩: %s/%s", data_args.test_dataset, data_args.split)
     items_list = get_dataset(
         name=data_args.test_dataset,
-        split="test",
-        local_dir=None,
+        split=data_args.split,
+        local_dir=data_args.data_dir,
         categories=data_args.categories,
         data_ratio=data_args.data_ratio,
+        seed=extra_args.seed,
     )
-    logger.info(f"총 {len(items_list)}개 예제 로드 완료.")
-    
-    
-    
-    # 모델 + LoRA 로드
+    logger.info("총 %d개 예제 로드 완료.", len(items_list))
+
     logger.info("=" * 60)
     logger.info("평가 설정")
-    logger.info(f"  모델       : {model_args.model_name_or_path}")
-    logger.info(f"  LoRA       : {model_args.finetuned_lora_path or '없음'}")
-    logger.info(f"  inference mode  : {extra_args.inference_mode}")
-    logger.info(f"  enable thinking  : {extra_args.enable_thinking}")
-    logger.info(f"  데이터셋   : {data_args.test_dataset} (ratio={data_args.data_ratio})")
-    logger.info(f"  max_tokens : {extra_args.max_new_tokens}")
-    logger.info(f"  temperature: {extra_args.temperature if extra_args.inference_mode != 'api' else 'N/A (api)'}")
-    logger.info(f"  출력 디렉토리: {extra_args.output_dir}")
-    logger.info(f"  job id     : {_job_id_for_output()}")
+    logger.info("  모델       : %s", model_args.model_name_or_path)
+    logger.info("  LoRA       : %s", model_args.finetuned_lora_path or "없음")
+    logger.info("  inference mode  : %s", extra_args.inference_mode)
+    logger.info("  enable thinking : %s", extra_args.enable_thinking)
+    logger.info("  데이터셋   : %s/%s (ratio=%s)", data_args.test_dataset, data_args.split, data_args.data_ratio)
+    logger.info("  data_dir   : %s", data_args.data_dir or "HF/default")
+    logger.info("  max_tokens : %s", extra_args.max_new_tokens)
+    logger.info("  출력 디렉토리: %s", extra_args.output_dir)
+    logger.info("  job id     : %s", _job_id_for_output())
     logger.info("=" * 60)
-    logger.info(f"모델 로딩: {model_args.model_name_or_path} (mode={extra_args.inference_mode})")
+
     llm = LLMService(
         model_name=model_args.model_name_or_path,
         mode=extra_args.inference_mode,
         max_model_len=extra_args.max_model_len,
         lora_path=model_args.finetuned_lora_path,
     )
-    
-    
-    # 출력 파일 경로 설정
+
     os.makedirs(extra_args.output_dir, exist_ok=True)
     out_path = build_output_path(
         extra_args.output_dir,
@@ -237,9 +249,8 @@ def main():
         model_args.model_name_or_path,
         model_args.finetuned_lora_path,
     )
-    logger.info(f"결과 파일: {out_path}")
+    logger.info("결과 파일: %s", out_path)
 
-    # 이미 처리된 ID 로드 (재시작 시 이어서 진행)
     done_ids: set = set()
     if os.path.exists(out_path):
         with open(out_path, "r", encoding="utf-8") as f:
@@ -248,35 +259,33 @@ def main():
                     done_ids.add(json.loads(line)["id"])
                 except Exception:
                     pass
-        logger.info(f"기존 결과 {len(done_ids)}개 발견 — 건너뜀.")
+        logger.info("기존 결과 %d개 발견 - 건너뜀.", len(done_ids))
 
     items_todo = [item for item in items_list if item["id"] not in done_ids]
-    logger.info(f"처리할 항목: {len(items_todo)}개 / 전체: {len(items_list)}개")
+    logger.info("처리할 항목: %d개 / 전체: %d개", len(items_todo), len(items_list))
 
-    is_math = data_args.test_dataset.lower() in MATH_DATASETS
-    is_math_dataset = data_args.test_dataset.lower() in {"math", "bigmath", "numina_cot"}
-    use_numina_category_prompt = bool(extra_args.use_category_prompt) and data_args.test_dataset.lower() == "numina_cot"
-    fixed_category_prompt_metadata = None
-    if use_numina_category_prompt:
-        fixed_category_prompt_metadata = {"category": extra_args.use_category_prompt}
-    logger.info(f"카테고리별 system prompt 사용: {use_numina_category_prompt}")
-    logger.info(f"카테고리별 system prompt 고정값: {extra_args.use_category_prompt or '없음'}")
+    dataset_key = data_args.test_dataset.lower()
+    family = task_family(dataset=dataset_key, domain=(items_list[0].get("domain") if items_list else None))
+    is_math_dataset = family == "math"
+    use_numina_category_prompt = bool(extra_args.use_category_prompt) and dataset_key == "numina_cot"
+    logger.info("task family: %s", family)
+    logger.info("카테고리별 system prompt 고정값: %s", extra_args.use_category_prompt or "없음")
 
-    # 청크 단위로 예측 → 즉시 append
     chunk_size = 1000
     with open(out_path, "a", encoding="utf-8") as out_f:
         for chunk_start in range(0, len(items_todo), chunk_size):
             chunk = items_todo[chunk_start : chunk_start + chunk_size]
             messages_chunk = [
-                build_math_prompt(
-                    item["instruction"],
-                    metadata=fixed_category_prompt_metadata,
-                ) if is_math
-                else [{"role": "user", "content": item["instruction"]}]
+                build_eval_prompt(
+                    item,
+                    dataset_name=data_args.test_dataset,
+                    model_name=model_args.model_name_or_path,
+                    fixed_math_category=(extra_args.use_category_prompt if use_numina_category_prompt else None),
+                )
                 for item in chunk
             ]
 
-            logger.info(f"예측 중: {chunk_start + 1}~{chunk_start + len(chunk)} / {len(items_todo)}")
+            logger.info("예측 중: %d~%d / %d", chunk_start + 1, chunk_start + len(chunk), len(items_todo))
             predictions = llm.chat_batch(
                 messages_chunk,
                 max_tokens=extra_args.max_new_tokens,
@@ -292,12 +301,13 @@ def main():
                     "prediction": prediction,
                     "ground_truth": item["ground_truth"],
                     "category": item.get("category") or item.get("categories", []),
+                    "dataset": item.get("dataset") or data_args.test_dataset,
+                    "domain": item.get("domain"),
                     **scores,
                 }, ensure_ascii=False) + "\n")
             out_f.flush()
-            logger.info(f"청크 저장 완료: {chunk_start + len(chunk)}/{len(items_todo)}")
+            logger.info("청크 저장 완료: %d/%d", chunk_start + len(chunk), len(items_todo))
 
-    # 전체 결과 로드 (기존 + 새로 처리한 것)
     results = []
     with open(out_path, "r", encoding="utf-8") as f:
         for line in f:
@@ -305,36 +315,25 @@ def main():
                 results.append(json.loads(line))
             except Exception:
                 pass
-    
-    
-    # 집계 + 로깅
+
+    if not results:
+        logger.warning("결과가 없습니다: %s", out_path)
+        return
+
     def _avg(rows: list, key: str) -> float:
         return sum(r[key] for r in rows) / len(rows)
 
     def _wandb_key(name: str) -> str:
         return str(name).strip().lower().replace(" ", "_")
 
-    def _metric_table(run_name: str, num_examples: int, scores: dict) -> wandb.Table:
-        return wandb.Table(
-            data=[[run_name, num_examples, *[scores[k] for k in score_keys]]],
-            columns=["run", "num_examples", *score_keys],
-        )
-
     score_keys = [k for k in results[0] if k.endswith("_score")]
-        
-
-    # 전체 평균
     overall = {k: _avg(results, k) for k in score_keys}
     summary_dict = {
         "overall/num_examples": len(results),
         **{f"overall/{k}": v for k, v in overall.items()},
     }
-    table_dict = {
-        "overall/metrics_table": _metric_table(extra_args.wandb_run_name, len(results), overall),
-    }
-    logger.info(f"[전체] {len(results)}개  " + "  ".join(f"{k}={v:.4f}" for k, v in overall.items()))
+    logger.info("[전체] %d개  %s", len(results), "  ".join(f"{k}={v:.4f}" for k, v in overall.items()))
 
-    # 카테고리별 평균
     cat_groups: dict = defaultdict(list)
     for r in results:
         cats = r.get("category", [])
@@ -343,20 +342,17 @@ def main():
         for cat in cats:
             cat_groups[cat].append(r)
 
-    if cat_groups:
-        logger.info("── 카테고리별 ──")
-        for cat in sorted(cat_groups):
-            rows = cat_groups[cat]
-            cat_avg = {k: _avg(rows, k) for k in score_keys}
-            cat_key = _wandb_key(cat)
-            summary_dict[f"{cat_key}/num_examples"] = len(rows)
-            summary_dict.update({f"{cat_key}/{k}": v for k, v in cat_avg.items()})
-            table_dict[f"{cat_key}/metrics_table"] = _metric_table(extra_args.wandb_run_name, len(rows), cat_avg)
-            logger.info(f"  [{cat}] {len(rows)}개  " + "  ".join(f"{k}={v:.4f}" for k, v in cat_avg.items()))
+    for cat in sorted(cat_groups):
+        rows = cat_groups[cat]
+        cat_avg = {k: _avg(rows, k) for k in score_keys}
+        cat_key = _wandb_key(cat)
+        summary_dict[f"{cat_key}/num_examples"] = len(rows)
+        summary_dict.update({f"{cat_key}/{k}": v for k, v in cat_avg.items()})
+        logger.info("  [%s] %d개  %s", cat, len(rows), "  ".join(f"{k}={v:.4f}" for k, v in cat_avg.items()))
 
     wandb_run.summary.update(summary_dict)
-    wandb.log(table_dict)
-    logger.info(f"결과 저장: {out_path}")
+    wandb.log(summary_dict)
+    logger.info("결과 저장: %s", out_path)
 
 
 if __name__ == "__main__":

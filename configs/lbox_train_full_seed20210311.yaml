@@ -1,0 +1,29 @@
+# seed20210311: LBox Open Phase 1 full-train evolution over all 46,019 train examples.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "lbox"
+data_dir: "export/lbox"
+split: "train"
+train_size: 46019
+epochs: 1
+batch_size: 50
+max_lives: 5
+enable_thinking: false
+shared_contribution_exemption: false
+roster_init_path: "configs/roster_init.json"
+max_prompt_chars: 12000
+
+deletion_window: 16
+deletion_floor: 0.0
+delete_cooldown: 8
+
+llm:
+  max_model_len: 16384
+  max_tokens: 2048
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

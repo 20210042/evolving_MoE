@@ -1,0 +1,18 @@
+# 26B-A4B MoE 백본 eval config — seed15 최종 로스터를 numina train 전체에 per-expert 평가용.
+# (evolution은 31B로 했고, 여기선 분류 결과를 빠른 A4B 백본으로 전체셋에 기록.)
+model: "google/gemma-4-26B-A4B-it"
+dataset: "numina_cot"
+split: "train"
+enable_thinking: false
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

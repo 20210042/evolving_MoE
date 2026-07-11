@@ -39,3 +39,6 @@ wandb/
 
 # Jongbin's research journal
 journals/
+
+# junk: backup + pycache leftover
+src/meta_agent_evo/

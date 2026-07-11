@@ -1,0 +1,29 @@
+# seed20210017: failure-mode scout ablation (seed16 + 실패유형 진화).
+#   seed16과 동일(26B-A4B, numina train 전체, V1 atomicity × shared 면제 OFF[도태])에서
+#   딱 두 가지만 바꿈: ①scout가 하드에러당 랜덤 오답 1개를 함께 보고 '주제'가 아니라
+#   '반복되는 실패유형'으로 전문가를 정의(failure_mode_scout) ②batch 100→25(실패 클러스터 응집).
+#   목적: 분해 축을 topic→failure로 바꾸면 비중복/상보성이 늘어나는지 seed16과 A/B.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "numina_cot"
+split: "train"
+train_size: 62185
+epochs: 1
+batch_size: 25
+max_lives: 5
+enable_thinking: false
+shared_contribution_exemption: false   # 도태 ON (seed16과 동일)
+failure_mode_scout: true               # ← seed17 핵심: 실패유형 scout
+# (use_exclusive_solves 없음 → scout는 failure-mode 분기 사용)
+
+llm:
+  max_model_len: 32768   # failure-mode scout는 하드에러+오답을 한 프롬프트에 모아 길어짐.
+                         # 모델 native=262144 지원. 16384이면 scout 호출이 컨텍스트 초과로 죽음(검증됨).
+  max_tokens: 8192
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

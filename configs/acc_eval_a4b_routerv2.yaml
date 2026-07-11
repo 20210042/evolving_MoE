@@ -1,0 +1,26 @@
+# 코딩(acc) eval — Router v2. acc_eval_a4b.yaml와 동일하되 라우터 개선 3종 ON.
+#   진단(seed20210101): routed 84.4% vs UB 92.8% → 순수 라우팅 손실 42문제(8.4pp).
+#   v2 = (1) strengths→description, (2) 라우팅 thinking ON, (3) few-shot 제거(재현성).
+#   같은 최종 로스터·홀드아웃 500에서 v1(84.4)과 A/B.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "acc"
+data_dir: "export/acc_selfconsistent"
+split: "train"
+enable_thinking: false
+
+# --- Router v2 ---
+router_use_description: true
+router_enable_thinking: true
+router_few_shot: false
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

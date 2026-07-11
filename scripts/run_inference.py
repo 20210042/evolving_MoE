@@ -23,7 +23,22 @@ if str(SRC) not in sys.path:
 from agents.base import Agent
 from data.loader import get_dataset
 from pipelines.routing_inference import GMRoutingPipeline
-from utils.llm import LLMService
+from utils.llm import LLMService, llm_service_from_yaml_config
+
+
+def truncate_item_text(item: dict, max_chars: int) -> dict:
+    if not max_chars:
+        return item
+    changed = False
+    out = dict(item)
+    for key in ("instruction", "prompt_text", "prompt", "problem"):
+        val = out.get(key)
+        if isinstance(val, str) and len(val) > max_chars:
+            head = int(max_chars * 0.75)
+            tail = max_chars - head
+            out[key] = val[:head] + "\n\n[TRUNCATED_FOR_CONTEXT]\n\n" + val[-tail:]
+            changed = True
+    return out if changed else item
 
 
 def main() -> None:
@@ -36,8 +51,11 @@ def main() -> None:
         "--pipeline",
         type=str,
         default="evolved",
-        choices=["evolved", "raw", "self-refine"],
-        help="evolved=GMRoutingPipeline (roster required), raw=1-pass, self-refine=2-turn",
+        choices=["evolved", "raw", "self-refine", "binning"],
+        help=(
+            "evolved=GMRoutingPipeline (roster required), raw=1-pass, "
+            "self-refine=2-turn, binning=all roster experts solve every problem (no routing)"
+        ),
     )
     parser.add_argument(
         "--roster_path",
@@ -60,10 +78,16 @@ def main() -> None:
         help="Chunk size for batched vLLM inference",
     )
     parser.add_argument("--config", type=str, default=None, help="Optional YAML override")
+    parser.add_argument("--max_items", type=int, default=None, help="Cap eval set size (for fast epoch evals)")
+    parser.add_argument(
+        "--ignore_test_ids",
+        action="store_true",
+        help="Use the requested split as-is; do not filter via test_ids.json.",
+    )
     args = parser.parse_args()
 
-    if args.pipeline == "evolved" and args.roster_path is None:
-        parser.error("--roster_path is required when --pipeline=evolved")
+    if args.pipeline in ("evolved", "binning") and args.roster_path is None:
+        parser.error(f"--roster_path is required when --pipeline={args.pipeline}")
 
     base_cfg_path = ROOT / "configs" / "base.yaml"
     cfg = {}
@@ -101,14 +125,18 @@ def main() -> None:
     all_data = get_dataset(args.dataset, split=args.split, local_dir=data_dir)
     logging.info("Loaded %s problems.", len(all_data))
 
-    # test_ids.json: evolution 홀드아웃 목록 필터링
-    test_paths = [
-        Path(args.output_file).resolve().parent / "test_ids.json",
-        Path("results") / f"{args.dataset}/seed{args.seed}" / "test_ids.json",
-        Path("results") / f"mbpp/seed{args.seed}" / "test_ids.json",  # legacy
-        Path("results") / "test_ids.json",
-    ]
-    test_ids_path = next((p for p in test_paths if p.is_file()), None)
+    # test_ids.json: evolution 홀드아웃 목록 필터링. Full train-labeling jobs must
+    # disable this, otherwise they silently score only the evolution holdout subset.
+    test_ids_path = None
+    if not args.ignore_test_ids:
+        test_paths = [
+            Path(args.output_file).resolve().parent / "test_ids.json",
+            Path("results") / f"{args.dataset}/seed{args.seed}" / "test_ids.json",
+            Path("results") / f"mbpp/seed{args.seed}" / "test_ids.json",  # legacy
+            Path("results") / "test_ids.json",
+        ]
+        test_ids_path = next((p for p in test_paths if p.is_file()), None)
+
     if test_ids_path is not None:
         raw = json.loads(test_ids_path.read_text(encoding="utf-8"))
         test_ids = {str(x) for x in raw}
@@ -131,31 +159,81 @@ def main() -> None:
             logging.info("test_ids.json is empty; using all %s problems.", len(test_data))
     else:
         test_data = all_data
-        logging.info("No test_ids.json found; using all %s problems.", len(test_data))
+        if args.ignore_test_ids:
+            logging.info("Ignoring test_ids.json; using all %s problems from split=%s.", len(test_data), args.split)
+        else:
+            logging.info("No test_ids.json found; using all %s problems.", len(test_data))
+
+    if args.max_items and len(test_data) > args.max_items:
+        test_data = test_data[: args.max_items]
+        logging.info("Capped to %d items (--max_items).", args.max_items)
+
+    max_prompt_chars = int(cfg.get("max_prompt_chars", 0) or 0)
+    if max_prompt_chars:
+        test_data = [truncate_item_text(item, max_prompt_chars) for item in test_data]
+        logging.info("Applied max_prompt_chars=%d to inference inputs.", max_prompt_chars)
 
     llm = llm_service_from_yaml_config(str(model_name), cfg)
     agent = Agent(llm, role="Inference_Agent")
 
+    domain = "coding"
+    if test_data:
+        domain = test_data[0].get("domain", "coding")
+
     if args.pipeline == "raw":
         from pipelines.baselines import RawPipeline
-        pipeline = RawPipeline(agent, domain="coding")
+        pipeline = RawPipeline(agent, domain=domain)
         logging.info("Pipeline: Raw (1-pass, no persona)")
     elif args.pipeline == "self-refine":
         from pipelines.baselines import SelfRefinePipeline
-        pipeline = SelfRefinePipeline(agent, domain="coding", max_refine_iters=max_refine_iters)
+        pipeline = SelfRefinePipeline(agent, domain=domain, max_refine_iters=max_refine_iters)
         logging.info("Pipeline: Self-Refine (%d iters, no persona)", max_refine_iters)
+    elif args.pipeline == "binning":
+        from pipelines.binning_inference import BinningPipeline
+        pipeline = BinningPipeline(
+            agent,
+            roster_path=args.roster_path,
+            domain=domain,
+            gen_enable_thinking=bool(cfg.get("enable_thinking", True)),
+        )
+        logging.info(
+            "Pipeline: Binning (all roster experts, no routing; roster=%s, infer_batch_size=%d)",
+            args.roster_path,
+            infer_batch_size,
+        )
     else:
+        router_use_description = bool(cfg.get("router_use_description", False))
+        router_enable_thinking = bool(cfg.get("router_enable_thinking", False))
+        router_few_shot = bool(cfg.get("router_few_shot", True))
+        router_few_shot_retrieval = bool(cfg.get("router_few_shot_retrieval", False))
+        router_retrieval_k = int(cfg.get("router_retrieval_k", 5))
+        router_top_k = int(cfg.get("router_top_k", 1))
         pipeline = GMRoutingPipeline(
             agent,
             scouting_report_path=args.roster_path,
-            domain="coding",
+            domain=domain,
             routing_memory_path=str(Path(args.output_file).resolve().parent / "routing_memory.json"),
             max_refine_iters=max_refine_iters,
+            gen_enable_thinking=bool(cfg.get("enable_thinking", True)),
+            router_use_description=router_use_description,
+            router_enable_thinking=router_enable_thinking,
+            router_few_shot=router_few_shot,
+            router_few_shot_retrieval=router_few_shot_retrieval,
+            router_retrieval_k=router_retrieval_k,
+            router_top_k=router_top_k,
         )
         logging.info(
-            "Pipeline: Evolved GMRoutingPipeline one-step (roster=%s, infer_batch_size=%d)",
+            "Pipeline: Evolved GMRoutingPipeline one-step (roster=%s, infer_batch_size=%d, gen_thinking=%s | "
+            "router: description=%s thinking=%s few_shot=%s retrieval=%s k=%d top_k=%d)",
             args.roster_path,
             infer_batch_size,
+            bool(cfg.get("enable_thinking", True)),
+            router_use_description,
+            router_enable_thinking,
+            router_few_shot,
+            router_few_shot_retrieval,
+            router_retrieval_k,
+            router_top_k,
         )
 
     processed_ids = set()

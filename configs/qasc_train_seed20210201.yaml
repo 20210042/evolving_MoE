@@ -1,0 +1,29 @@
+# seed20210201: QASC science multiple-choice — bare question/options, no facts.
+# Standard seed18 recipe: LUCA init, thinking off, windowed deletion gatefix.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "qasc"
+data_dir: "export/qasc"
+split: "train"
+train_size: 2500
+epochs: 1
+batch_size: 50
+max_lives: 5
+enable_thinking: false
+shared_contribution_exemption: false
+roster_init_path: "configs/roster_init.json"
+
+deletion_window: 16
+deletion_floor: 0.0
+delete_cooldown: 8
+
+llm:
+  max_model_len: 16384
+  max_tokens: 1024
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false
