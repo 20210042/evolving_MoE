@@ -29,7 +29,6 @@ from prompts.coding import build_baseline_prompt
 from prompts.math import build_generation_prompt as build_math_prompt
 from utils.domains import task_family
 from utils.helpers import extract_math_answer, set_all_seeds
-from utils.llm import LLMService
 
 logger = logging.getLogger(__name__)
 
@@ -234,6 +233,8 @@ def main():
     logger.info("  출력 디렉토리: %s", extra_args.output_dir)
     logger.info("  job id     : %s", _job_id_for_output())
     logger.info("=" * 60)
+
+    from utils.llm import LLMService
 
     llm = LLMService(
         model_name=model_args.model_name_or_path,
