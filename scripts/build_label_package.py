@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Wrap full-train binning outputs into a self-contained handoff package for the
-collaborator (weight-level MoE / persona-SFT). Mirrors export/numina_binning_seed16/.
+collaborator (weight-level MoE / per-expert SFT). Mirrors export/numina_binning_seed16/.
+
+Per-expert SFT 합의(2026-07-13): system prompt는 도메인 baseline GEN 프롬프트로 통일,
+expert별로 "그 expert가 맞춘 문제"만 학습 데이터로 분리. 페르소나는 학습에 쓰지 않음.
 
 Produces export/<domain>_binning_seed<seed>/:
   binning_labels.jsonl   per-problem {id, solved_by[], n_solved, per_expert{id:0|1}}
@@ -100,32 +103,45 @@ def main() -> None:
 {tbl}
 전체 system_prompt은 `agent_mapping.json` 참조.
 
-## 사용례 (⭐ 주 목적 = persona-specific SFT)
+## 사용례 (⭐ 주 목적 = per-expert SFT: system prompt는 baseline GEN으로 통일, 보는 데이터만 분리)
 라벨은 문제 `id`만 있고 **실제 입력(질문/facts)+정답은 원본 데이터셋**에 있음 → `id`로 조인.
+**페르소나(system_prompt)는 학습에 쓰지 않음**(MoE 병합 이슈로 합의) — `agent_mapping.json`의
+system_prompt는 라벨이 어떤 전문가에서 나왔는지 해석하는 참고용.
 
 > ⚠️ 이 패키지엔 **라벨만** 포함(원본은 용량상 git 제외). 사용 전 **원본을 먼저 재생성**:
 > ```bash
 > python scripts/build_{a.domain}.py   # → {a.source}
 > ```
 
+러너블 경로 (권장): `src/train_sft.py`가 이 패키지를 직접 읽음.
+```bash
+python src/train_sft.py --label_package {out.as_posix()} --expert_id c_xxxx \\
+    --eval_dataset {a.domain} --eval_split validation --data_dir export/{a.domain} ...
+```
+
+수동 조립 시(동일 로직):
 ```python
 import json
+from prompts import baseline_prompts as bp                 # PYTHONPATH=src
+GEN_SYS, GEN_USER = bp.{a.domain.upper()}_GEN_SYSTEM, bp.{a.domain.upper()}_GEN_USER
+
 P   = "{out.as_posix()}"
 labels = [json.loads(l) for l in open(f"{{P}}/binning_labels.jsonl")]
 agents = json.load(open(f"{{P}}/agent_mapping.json"))      # agent_id -> name/system_prompt/strengths/pass@1
 src    = {{json.loads(l)["id"]: json.loads(l)              # id로 원본(입력+gold) 조인
           for l in open("{a.source}")}}
 
-# ⭐ (a) persona-specific SFT 학습셋: "그 전문가가 맞춘 문제 + 그 전문가 system_prompt를 페르소나로"
+# ⭐ (a) per-expert SFT 학습셋: "그 전문가가 맞춘 문제만 + system은 baseline GEN으로 통일"
 def expert_sft_set(aid):
-    persona = agents[aid]["system_prompt"]
     for r in labels:
         if r["per_expert"].get(aid) == 1:               # 이 전문가가 맞춘 문제만
             it = src[r["id"]]
             gold = it["ground_truth"]
             if isinstance(gold, list):                  # lbox statute 등은 set → 문자열화
                 gold = ", ".join(gold)
-            yield {{"system": persona, "input": it["instruction"], "output": gold}}
+            yield {{"system": GEN_SYS,
+                    "input": GEN_USER.format(instruction=it["instruction"]),
+                    "output": gold}}
 
 # 예: 최고 성능 전문가의 SFT 데이터 만들기
 best = max(agents, key=lambda a: agents[a]["train_pass_at_1"])

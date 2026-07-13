@@ -91,6 +91,10 @@ class DataArguments:
         default=None,
         metadata={"help": "label_package 라벨과 id-join할 원본 train jsonl. 생략 시 summary.json의 source_train_jsonl."},
     )
+    max_n_solved: Optional[int] = field(
+        default=None,
+        metadata={"help": "label_package 필터: n_solved <= 이 값인 문제만 사용(전원이 푸는 쉬운 공통문제 제외). None이면 전부."},
+    )
 
 
 @dataclass
@@ -215,6 +219,8 @@ def build_expert_label_dataset(
     source_jsonl: str | None,
     data_ratio: float,
     seed: Optional[int],
+    model_name: str,
+    max_n_solved: Optional[int] = None,
 ) -> tuple[Dataset, str, int]:
     package = Path(package_dir)
     labels_path = package / "binning_labels.jsonl"
@@ -226,16 +232,18 @@ def build_expert_label_dataset(
 
     mapping = json.load(open(mapping_path, encoding="utf-8"))
     chosen = resolve_expert_id(mapping, expert_id)
-    persona = mapping[chosen].get("system_prompt") or mapping[chosen].get("strengths") or mapping[chosen].get("name") or chosen
 
     src_path = source_path_from_package(package, source_jsonl)
     source_rows = {str(r["id"]): r for r in _load_jsonl(src_path)}
     labels = _load_jsonl(labels_path)
+    dataset_name = str(labels[0].get("dataset") or "") if labels else ""
 
     selected = [
         source_rows[str(r["id"])]
         for r in labels
-        if int((r.get("per_expert") or {}).get(chosen, 0)) == 1 and str(r["id"]) in source_rows
+        if int((r.get("per_expert") or {}).get(chosen, 0)) == 1
+        and (max_n_solved is None or int(r.get("n_solved", 0)) <= max_n_solved)
+        and str(r["id"]) in source_rows
     ]
     if seed is not None:
         import random
@@ -244,13 +252,12 @@ def build_expert_label_dataset(
     if data_ratio < 1.0:
         selected = selected[: max(1, int(len(selected) * data_ratio))]
 
+    # 합의(2026-07-13): 프롬프트는 baseline GEN으로 통일(페르소나 미사용, eval과 동일 경로),
+    # expert 간 차이는 학습 데이터 분할뿐.
     rows = []
     for item in selected:
         rows.append({
-            "prompt": [
-                {"role": "system", "content": persona},
-                {"role": "user", "content": item["instruction"]},
-            ],
+            "prompt": build_prompt_messages(item, dataset_name, model_name),
             "completion": [{"role": "assistant", "content": stringify_completion(item.get("solution", item["ground_truth"]))}],
         })
     return Dataset.from_list(rows), chosen, len(selected)
@@ -289,8 +296,10 @@ def main():
             source_jsonl=data_args.source_jsonl,
             data_ratio=data_args.data_ratio,
             seed=sft_config.seed,
+            model_name=model_args.model_name_or_path,
+            max_n_solved=data_args.max_n_solved,
         )
-        logger.info("전문가 SFT 학습셋: expert=%s, examples=%d", chosen_expert, n_rows)
+        logger.info("전문가 SFT 학습셋: expert=%s, examples=%d, max_n_solved=%s", chosen_expert, n_rows, data_args.max_n_solved)
     else:
         logger.info("학습 데이터셋 로딩: %s/%s", data_args.train_dataset, data_args.train_split)
         train_dataset = build_regular_hf_dataset(
