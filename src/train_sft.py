@@ -8,7 +8,7 @@ from typing import Any, List, Optional
 
 import torch
 from datasets import Dataset
-from peft import LoraConfig, PeftModel
+from peft import LoraConfig, PeftModel, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
 from trl import SFTConfig, SFTTrainer
 
@@ -366,6 +366,13 @@ def main():
             task_type="CAUSAL_LM",
             bias="none",
         )
+
+    # ZeRO-3의 coalesced all-gather는 혼합 dtype 파라미터를 거부한다(TypeError).
+    # TRL 기본 경로는 어댑터를 fp32로 캐스팅하므로, deepspeed일 때는 어댑터를
+    # 베이스와 같은 dtype으로 직접 만들어 넘긴다.
+    if sft_peft_config is not None and sft_config.deepspeed:
+        model = get_peft_model(model, sft_peft_config, autocast_adapter_dtype=False)
+        sft_peft_config = None
 
     trainer = SFTTrainer(
         model=model,
