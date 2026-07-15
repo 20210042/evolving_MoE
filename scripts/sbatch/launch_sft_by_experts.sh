@@ -1,6 +1,7 @@
 #!/bin/bash
 # 최종 로스터 전원 per-expert SFT 일괄 제출.
-# 기본은 직렬 체인(afterany): 앞 잡이 끝나야 다음 시작 → 동시 GPU 사용은 잡 1개분(2장)뿐.
+# 기본은 rolling chain: 첫 expert 잡 1개만 제출하고, 각 잡이 시작 시점에 다음 잡을
+# 스스로 제출(afterany) → 큐에는 항상 러닝 1개 + 대기 1개만 보이고 GPU도 잡 1개분만 사용.
 # 사용: [MAX_N_SOLVED=10] [EXPERT_IDS="c_33055 luca"] [SERIAL=0] ./launch_sft_by_experts.sh [LABEL_PACKAGE]
 #   LABEL_PACKAGE 기본값: export/qasc_binning_seed20210211
 #   EXPERT_IDS 생략 시 agent_mapping.json의 로스터 전원. SERIAL=0이면 전부 병렬 제출.
@@ -21,16 +22,18 @@ fi
 echo "=== package: ${LABEL_PACKAGE} / max_n_solved: ${MAX_N_SOLVED:-none} / serial: ${SERIAL} ==="
 echo "=== experts: ${EXPERT_IDS} ==="
 
-PREV_JOB_ID=""
-for EXPERT_ID in ${EXPERT_IDS}; do
-    DEP_FLAG=()
-    if [ "${SERIAL}" = "1" ] && [ -n "${PREV_JOB_ID}" ]; then
-        DEP_FLAG=(--dependency="afterany:${PREV_JOB_ID}")
-    fi
-    JOB_ID="$(sbatch --parsable --job-name="sft_expert_${EXPERT_ID}" \
-        "${DEP_FLAG[@]}" \
-        --export=ALL,LABEL_PACKAGE="${LABEL_PACKAGE}",EXPERT_ID="${EXPERT_ID}",MAX_N_SOLVED="${MAX_N_SOLVED}" \
-        "${TRAIN_SCRIPT}")"
-    echo "--- submitted expert: ${EXPERT_ID} (job ${JOB_ID}${PREV_JOB_ID:+, after ${PREV_JOB_ID}})"
-    PREV_JOB_ID="${JOB_ID}"
-done
+if [ "${SERIAL}" = "1" ]; then
+    set -- ${EXPERT_IDS}
+    FIRST="$1"; shift
+    REST="$*"
+    JOB_ID="$(LABEL_PACKAGE="${LABEL_PACKAGE}" EXPERT_ID="${FIRST}" MAX_N_SOLVED="${MAX_N_SOLVED}" \
+        REMAINING_EXPERTS="${REST}" \
+        sbatch --parsable --job-name="sft_expert_${FIRST}" --export=ALL "${TRAIN_SCRIPT}")"
+    echo "--- submitted expert: ${FIRST} (job ${JOB_ID}); 나머지 $#개는 rolling chain으로 자동 제출: ${REST:-없음}"
+else
+    for EXPERT_ID in ${EXPERT_IDS}; do
+        JOB_ID="$(LABEL_PACKAGE="${LABEL_PACKAGE}" EXPERT_ID="${EXPERT_ID}" MAX_N_SOLVED="${MAX_N_SOLVED}" \
+            sbatch --parsable --job-name="sft_expert_${EXPERT_ID}" --export=ALL "${TRAIN_SCRIPT}")"
+        echo "--- submitted expert: ${EXPERT_ID} (job ${JOB_ID})"
+    done
+fi

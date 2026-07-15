@@ -61,6 +61,18 @@ DEEPSPEED_CONFIG="$REPO/configs/deepspeed_zero3.json"
 NPROC_PER_NODE="${NPROC_PER_NODE:-${SLURM_GPUS_ON_NODE:-2}}"
 GRADIENT_ACCUMULATION_STEPS="${GRADIENT_ACCUMULATION_STEPS:-4}"
 
+# rolling chain: 시작 시점에 다음 expert 잡 하나만 제출(afterany:자기 자신).
+# 전체를 미리 걸어두지 않으므로 큐에는 항상 러닝 1개 + 대기 1개만 보인다.
+if [ -n "${REMAINING_EXPERTS:-}" ] && [ -n "${SLURM_JOB_ID:-}" ]; then
+    read -r NEXT_EXPERT NEXT_REMAINING <<< "${REMAINING_EXPERTS}"
+    echo "=== rolling chain: 다음 expert ${NEXT_EXPERT} 제출 (afterany:${SLURM_JOB_ID}) ==="
+    EXPERT_ID="${NEXT_EXPERT}" REMAINING_EXPERTS="${NEXT_REMAINING:-}" RUN_NAME="" OUTPUT_DIR="" \
+        sbatch --job-name="sft_expert_${NEXT_EXPERT}" \
+        --dependency="afterany:${SLURM_JOB_ID}" \
+        --export=ALL \
+        "${REPO}/scripts/sbatch/train_sft_by_expert.sh"
+fi
+
 echo "=== expert SFT 시작: ${DOMAIN}/${EXPERT_ID} (max_n_solved=${MAX_N_SOLVED:-none}) / 출력: ${OUTPUT_DIR} ==="
 echo "=== GPUs: ${NPROC_PER_NODE}, GA: ${GRADIENT_ACCUMULATION_STEPS}, CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-unset} ==="
 
