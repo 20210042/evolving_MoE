@@ -8,9 +8,6 @@ from typing import Any, List, Optional
 
 import torch
 from datasets import Dataset
-from peft import LoraConfig, PeftModel
-from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
-from trl import SFTConfig, SFTTrainer
 
 from data import get_dataset
 from prompts.coding import build_baseline_prompt
@@ -19,6 +16,33 @@ from utils.domains import task_family
 from utils.helpers import set_all_seeds
 
 logger = logging.getLogger(__name__)
+
+LUCA_SYSTEM_PROMPT = "You are a helpful assistant."
+PROMPT_SYSTEM_CHOICES = {"baseline", "luca"}
+
+
+def _ensure_accelerate_clear_device_cache() -> None:
+    try:
+        import accelerate.utils.memory as accelerate_memory
+    except ImportError:
+        return
+    if hasattr(accelerate_memory, "clear_device_cache"):
+        return
+
+    def clear_device_cache(garbage_collection: bool = False) -> None:
+        if garbage_collection:
+            import gc
+            gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    accelerate_memory.clear_device_cache = clear_device_cache
+
+
+_ensure_accelerate_clear_device_cache()
+from peft import LoraConfig, PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
+from trl import SFTConfig, SFTTrainer
 
 
 @dataclass
@@ -95,6 +119,14 @@ class DataArguments:
 
 @dataclass
 class ExtraArguments:
+    prompt_system: str = field(
+        default="baseline",
+        metadata={"help": "SFT prompt system 선택: baseline | luca."},
+    )
+    luca_roster_path: str = field(
+        default="configs/roster_init.json",
+        metadata={"help": "prompt_system=luca일 때 LUCA system_prompt를 읽을 roster json 경로."},
+    )
     train_sft_with_lora: bool = field(
         default=False,
         metadata={"help": "LoRA 사용 여부 (Parameter-Efficient Fine-Tuning)."},
@@ -119,6 +151,33 @@ class ExtraArguments:
         default="evolving-moe-sft",
         metadata={"help": "WandB 프로젝트 이름."},
     )
+    wandb_entity: str = field(
+        default="jongbin-kr-skiml_moe",
+        metadata={"help": "WandB entity 이름."},
+    )
+
+
+def load_luca_system_prompt(roster_path: str | None = None) -> str:
+    if not roster_path:
+        return LUCA_SYSTEM_PROMPT
+    path = Path(roster_path)
+    if not path.is_file():
+        return LUCA_SYSTEM_PROMPT
+    try:
+        payload = json.load(open(path, encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return LUCA_SYSTEM_PROMPT
+    agents = payload.get("agents") if isinstance(payload, dict) else None
+    if not isinstance(agents, list):
+        return LUCA_SYSTEM_PROMPT
+    for agent in agents:
+        if not isinstance(agent, dict):
+            continue
+        if str(agent.get("id", "")).lower() == "luca" or str(agent.get("name", "")).lower() == "luca":
+            prompt = agent.get("system_prompt")
+            if isinstance(prompt, str) and prompt.strip():
+                return prompt.strip()
+    return LUCA_SYSTEM_PROMPT
 
 
 def stringify_completion(value: Any) -> str:
@@ -129,22 +188,41 @@ def stringify_completion(value: Any) -> str:
     return str(value)
 
 
-def build_prompt_messages(item: dict, dataset_name: str, model_name: str) -> list[dict] | str:
+def _override_system_prompt(messages: list[dict] | str, system_prompt: str) -> list[dict] | str:
+    if not isinstance(messages, list):
+        return messages
+    if messages and messages[0].get("role") == "system":
+        return [{"role": "system", "content": system_prompt}, *messages[1:]]
+    return [{"role": "system", "content": system_prompt}, *messages]
+
+
+def build_prompt_messages(
+    item: dict,
+    dataset_name: str,
+    model_name: str,
+    *,
+    prompt_system: str = "baseline",
+    luca_system_prompt: str = LUCA_SYSTEM_PROMPT,
+) -> list[dict] | str:
     dataset_key = (item.get("dataset") or dataset_name).lower()
     family = task_family(dataset=dataset_key, domain=item.get("domain"))
     instruction = item["instruction"]
 
     if family == "math":
         metadata = item if dataset_key == "numina_cot" else None
-        return build_math_prompt(instruction, metadata=metadata)
+        messages = build_math_prompt(instruction, metadata=metadata)
+    else:
+        messages = build_baseline_prompt(
+            instruction,
+            dataset=dataset_key,
+            model_name=model_name,
+            starter_code=item.get("starter_code"),
+            domain=item.get("domain"),
+        )
 
-    return build_baseline_prompt(
-        instruction,
-        dataset=dataset_key,
-        model_name=model_name,
-        starter_code=item.get("starter_code"),
-        domain=item.get("domain"),
-    )
+    if prompt_system == "luca":
+        return _override_system_prompt(messages, luca_system_prompt)
+    return messages
 
 
 def build_regular_hf_dataset(
@@ -156,6 +234,8 @@ def build_regular_hf_dataset(
     data_ratio: float = 1.0,
     seed: Optional[int] = None,
     categories: Optional[List[str]] = None,
+    prompt_system: str = "baseline",
+    luca_system_prompt: str = LUCA_SYSTEM_PROMPT,
 ) -> Dataset:
     items = get_dataset(
         name,
@@ -169,7 +249,13 @@ def build_regular_hf_dataset(
     rows = []
     for item in items:
         rows.append({
-            "prompt": build_prompt_messages(item, name, model_name),
+            "prompt": build_prompt_messages(
+                item,
+                name,
+                model_name,
+                prompt_system=prompt_system,
+                luca_system_prompt=luca_system_prompt,
+            ),
             "completion": [{"role": "assistant", "content": stringify_completion(item.get("solution", item["ground_truth"]))}],
         })
     return Dataset.from_list(rows)
@@ -262,12 +348,16 @@ def main():
         description="SFT Training Script",
     )
     model_args, data_args, extra_args, sft_config = parser.parse_args_into_dataclasses()
+    extra_args.prompt_system = (extra_args.prompt_system or "baseline").lower()
+    if extra_args.prompt_system not in PROMPT_SYSTEM_CHOICES:
+        parser.error(f"--prompt_system must be one of {sorted(PROMPT_SYSTEM_CHOICES)}")
+    luca_system_prompt = load_luca_system_prompt(extra_args.luca_roster_path)
 
     sft_config.report_to = ["wandb"]
-    os.environ.setdefault("WANDB_PROJECT", extra_args.wandb_project)
-    os.environ.setdefault("WANDB_ENTITY", "jongbin-kr-skiml_moe")
+    os.environ["WANDB_PROJECT"] = extra_args.wandb_project
+    os.environ["WANDB_ENTITY"] = extra_args.wandb_entity
     if sft_config.run_name:
-        os.environ.setdefault("WANDB_RUN_NAME", sft_config.run_name)
+        os.environ["WANDB_RUN_NAME"] = sft_config.run_name
 
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -301,6 +391,8 @@ def main():
             data_ratio=data_args.data_ratio,
             seed=sft_config.seed,
             categories=data_args.categories,
+            prompt_system=extra_args.prompt_system,
+            luca_system_prompt=luca_system_prompt,
         )
         chosen_expert = None
     logger.info("학습 데이터셋: %d개 예제", len(train_dataset))
@@ -313,6 +405,8 @@ def main():
         data_dir=data_args.eval_data_dir or data_args.data_dir,
         seed=sft_config.seed,
         categories=data_args.categories,
+        prompt_system=extra_args.prompt_system,
+        luca_system_prompt=luca_system_prompt,
     )
     logger.info("평가 데이터셋: %d개 예제", len(eval_dataset))
 
@@ -377,6 +471,9 @@ def main():
         extra_args.sft_lora_rank,
         extra_args.sft_lora_alpha,
     )
+    logger.info("  prompt_system: %s", extra_args.prompt_system)
+    if extra_args.prompt_system == "luca":
+        logger.info("  LUCA system prompt: %s", luca_system_prompt)
     logger.info("  학습 데이터셋: %s, 예제 수: %d", data_args.label_package or data_args.train_dataset, len(train_dataset))
     if chosen_expert:
         logger.info("  expert_id: %s", chosen_expert)

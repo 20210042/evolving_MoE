@@ -24,6 +24,8 @@ MODEL_NAME="${MODEL_NAME:-meta-llama/Llama-3.1-8B-Instruct}"
 LORA_PATH="${LORA_PATH:-__NONE__}"
 RUN_NAME="${RUN_NAME:-eval_$(basename "${LORA_PATH}")}"
 TEST_DATASET="${TEST_DATASET:-numina_cot}"
+SPLIT="${SPLIT:-test}"
+DATA_DIR="${DATA_DIR:-}"
 DATA_RATIO="${DATA_RATIO:-1.0}"
 INFERENCE_MODE="${INFERENCE_MODE:-vllm}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-32768}"
@@ -34,6 +36,7 @@ WANDB_PROJECT="${WANDB_PROJECT:-eval_numina_cot}"
 SEED="${SEED:-42}"
 ENABLE_THINKING="${ENABLE_THINKING:-false}"
 USE_CATEGORY_PROMPT="${USE_CATEGORY_PROMPT:-false}"
+PROMPT_SYSTEM="${PROMPT_SYSTEM:-baseline}"
 
 LORA_FLAG=()
 if [ "${LORA_PATH}" != "__NONE__" ] && [ -n "${LORA_PATH}" ]; then
@@ -54,18 +57,28 @@ if [ -n "${USE_CATEGORY_PROMPT}" ] && [ "${USE_CATEGORY_PROMPT}" != "false" ] &&
     CATEGORY_PROMPT_FLAG=(--use_category_prompt "${USE_CATEGORY_PROMPT}")
 fi
 
+DATA_DIR_FLAG=()
+if [ -n "${DATA_DIR}" ]; then
+    DATA_DIR_FLAG=(--data_dir "${DATA_DIR}")
+fi
+
 echo "=== 평가 시작: ${RUN_NAME} ==="
 echo "MODEL_NAME=${MODEL_NAME}"
 echo "LORA_PATH=${LORA_PATH}"
 echo "TEST_DATASET=${TEST_DATASET}"
+echo "SPLIT=${SPLIT}"
+echo "DATA_DIR=${DATA_DIR}"
 echo "CONDA_ENV=${CONDA_ENV}"
 echo "USE_CATEGORY_PROMPT=${USE_CATEGORY_PROMPT}"
+echo "PROMPT_SYSTEM=${PROMPT_SYSTEM}"
 echo "SLURM_JOB_ID=${SLURM_JOB_ID:-unknown}"
 
 srun --chdir="$REPO" python "$REPO/src/evaluate.py" \
     --model_name_or_path "${MODEL_NAME}" \
     "${LORA_FLAG[@]}" \
     --test_dataset "${TEST_DATASET}" \
+    --split "${SPLIT}" \
+    "${DATA_DIR_FLAG[@]}" \
     --data_ratio "${DATA_RATIO}" \
     --inference_mode "${INFERENCE_MODE}" \
     --max_model_len "${MAX_MODEL_LEN}" \
@@ -74,6 +87,7 @@ srun --chdir="$REPO" python "$REPO/src/evaluate.py" \
     --output_dir "${OUTPUT_DIR}" \
     --wandb_run_name "${RUN_NAME}" \
     --wandb_project "${WANDB_PROJECT}" \
+    --prompt_system "${PROMPT_SYSTEM}" \
     "${THINKING_FLAG[@]}" \
     "${CATEGORY_PROMPT_FLAG[@]}" \
     --seed "${SEED}"

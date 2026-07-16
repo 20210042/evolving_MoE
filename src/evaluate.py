@@ -5,6 +5,7 @@ import re
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import List, Optional
 
 try:
@@ -29,11 +30,12 @@ from prompts.coding import build_baseline_prompt
 from prompts.math import build_generation_prompt as build_math_prompt
 from utils.domains import task_family
 from utils.helpers import extract_math_answer, set_all_seeds
-from utils.llm import LLMService
 
 logger = logging.getLogger(__name__)
 
 MATH_DATASETS = {"bigmath", "math", "numina_cot"}
+LUCA_SYSTEM_PROMPT = "You are a helpful assistant."
+PROMPT_SYSTEM_CHOICES = {"baseline", "luca", "category"}
 
 
 @dataclass
@@ -114,6 +116,10 @@ class ExtraArguments:
         default="evolving-moe",
         metadata={"help": "WandB 프로젝트 이름."},
     )
+    wandb_entity: str = field(
+        default="jongbin-kr-skiml_moe",
+        metadata={"help": "WandB entity 이름."},
+    )
     seed: int = field(default=42, metadata={"help": "모든 시드 고정"})
     enable_thinking: bool = field(
         default=False,
@@ -121,7 +127,15 @@ class ExtraArguments:
     )
     use_category_prompt: Optional[str] = field(
         default=None,
-        metadata={"help": "numina_cot 평가 시 전체 run에 고정해서 사용할 category persona 이름."},
+        metadata={"help": "category prompt 모드에서 전체 run에 고정할 math category 이름. 생략 시 item metadata 사용."},
+    )
+    prompt_system: str = field(
+        default="baseline",
+        metadata={"help": "system prompt 선택: baseline | luca | category."},
+    )
+    luca_roster_path: str = field(
+        default="configs/roster_init.json",
+        metadata={"help": "prompt_system=luca일 때 LUCA system_prompt를 읽을 roster json 경로."},
     )
 
 
@@ -168,30 +182,91 @@ def _job_id_for_output() -> str:
     )
 
 
-def build_output_path(output_dir: str, dataset_name: str, model_name: str, lora_path: str | None = None) -> str:
+def build_output_path(
+    output_dir: str,
+    dataset_name: str,
+    model_name: str,
+    lora_path: str | None = None,
+    prompt_system: str | None = None,
+) -> str:
     model_component = _safe_filename_component(lora_path or model_name)
     dataset_component = _safe_filename_component(dataset_name)
+    prompt_component = _safe_filename_component(prompt_system or "baseline")
     job_id = _safe_filename_component(_job_id_for_output())
-    filename = f"{dataset_component}_{model_component}_{job_id}.jsonl"
+    filename = f"{dataset_component}_{model_component}_{prompt_component}_{job_id}.jsonl"
     return os.path.join(output_dir, filename)
 
 
-def build_eval_prompt(item: dict, dataset_name: str, model_name: str, fixed_math_category: str | None = None):
+def load_luca_system_prompt(roster_path: str | None = None) -> str:
+    """Load LUCA's system prompt from the original roster file, with a stable fallback."""
+    if not roster_path:
+        return LUCA_SYSTEM_PROMPT
+
+    path = Path(roster_path)
+    if not path.is_absolute():
+        path = Path.cwd() / path
+    try:
+        roster = json.load(open(path, encoding="utf-8"))
+    except Exception as exc:
+        logger.warning("LUCA roster를 읽지 못해 기본값 사용: %s (%s)", path, exc)
+        return LUCA_SYSTEM_PROMPT
+
+    if not isinstance(roster, list):
+        logger.warning("LUCA roster 형식이 list가 아니어서 기본값 사용: %s", path)
+        return LUCA_SYSTEM_PROMPT
+
+    for agent in roster:
+        if not isinstance(agent, dict):
+            continue
+        if str(agent.get("id", "")).lower() == "luca" or str(agent.get("name", "")).lower() == "luca":
+            prompt = str(agent.get("system_prompt") or "").strip()
+            return prompt or LUCA_SYSTEM_PROMPT
+
+    logger.warning("LUCA agent를 roster에서 찾지 못해 기본값 사용: %s", path)
+    return LUCA_SYSTEM_PROMPT
+
+
+def _override_system_prompt(messages, system_prompt: str):
+    if isinstance(messages, list) and messages and messages[0].get("role") == "system":
+        return [{"role": "system", "content": system_prompt}, *messages[1:]]
+    if isinstance(messages, list):
+        return [{"role": "system", "content": system_prompt}, *messages]
+    return messages
+
+
+def build_eval_prompt(
+    item: dict,
+    dataset_name: str,
+    model_name: str,
+    fixed_math_category: str | None = None,
+    prompt_system: str = "baseline",
+    luca_system_prompt: str = LUCA_SYSTEM_PROMPT,
+):
     dataset_key = (item.get("dataset") or dataset_name).lower()
     family = task_family(dataset=dataset_key, domain=item.get("domain"))
     instruction = item["instruction"]
+    prompt_system = (prompt_system or "baseline").lower()
+    if prompt_system not in PROMPT_SYSTEM_CHOICES:
+        raise ValueError(f"Unknown prompt_system={prompt_system!r}; choose one of {sorted(PROMPT_SYSTEM_CHOICES)}")
 
     if family == "math":
+        if prompt_system == "luca":
+            return _override_system_prompt(build_math_prompt(instruction, metadata=item), luca_system_prompt)
         metadata = {"category": fixed_math_category} if fixed_math_category else item
+        if prompt_system == "baseline":
+            metadata = None
         return build_math_prompt(instruction, metadata=metadata)
 
-    return build_baseline_prompt(
+    messages = build_baseline_prompt(
         instruction,
         dataset=dataset_key,
         model_name=model_name,
         starter_code=item.get("starter_code"),
         domain=item.get("domain"),
     )
+    if prompt_system == "luca":
+        return _override_system_prompt(messages, luca_system_prompt)
+    return messages
 
 
 def main():
@@ -200,6 +275,9 @@ def main():
         description="Evaluate Script",
     )
     model_args, data_args, extra_args = parser.parse_args_into_dataclasses()
+    extra_args.prompt_system = (extra_args.prompt_system or "baseline").lower()
+    if extra_args.prompt_system not in PROMPT_SYSTEM_CHOICES:
+        parser.error(f"--prompt_system must be one of {sorted(PROMPT_SYSTEM_CHOICES)}")
 
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -209,7 +287,13 @@ def main():
     )
 
     set_all_seeds(seed=extra_args.seed)
-    wandb_run = wandb.init(project=extra_args.wandb_project, name=extra_args.wandb_run_name)
+    os.environ["WANDB_ENTITY"] = extra_args.wandb_entity
+    os.environ["WANDB_PROJECT"] = extra_args.wandb_project
+    wandb_run = wandb.init(
+        entity=extra_args.wandb_entity,
+        project=extra_args.wandb_project,
+        name=extra_args.wandb_run_name,
+    )
 
     logger.info("데이터셋 로딩: %s/%s", data_args.test_dataset, data_args.split)
     items_list = get_dataset(
@@ -231,9 +315,20 @@ def main():
     logger.info("  데이터셋   : %s/%s (ratio=%s)", data_args.test_dataset, data_args.split, data_args.data_ratio)
     logger.info("  data_dir   : %s", data_args.data_dir or "HF/default")
     logger.info("  max_tokens : %s", extra_args.max_new_tokens)
+    logger.info("  prompt system: %s", extra_args.prompt_system)
+    if extra_args.prompt_system == "luca":
+        logger.info("  LUCA roster: %s", extra_args.luca_roster_path)
+    elif extra_args.prompt_system == "category":
+        logger.info("  category prompt fixed value: %s", extra_args.use_category_prompt or "item metadata")
     logger.info("  출력 디렉토리: %s", extra_args.output_dir)
     logger.info("  job id     : %s", _job_id_for_output())
     logger.info("=" * 60)
+
+    luca_system_prompt = load_luca_system_prompt(extra_args.luca_roster_path)
+    if extra_args.prompt_system == "luca":
+        logger.info("LUCA system prompt: %s", luca_system_prompt)
+
+    from utils.llm import LLMService
 
     llm = LLMService(
         model_name=model_args.model_name_or_path,
@@ -248,6 +343,7 @@ def main():
         data_args.test_dataset,
         model_args.model_name_or_path,
         model_args.finetuned_lora_path,
+        extra_args.prompt_system,
     )
     logger.info("결과 파일: %s", out_path)
 
@@ -267,9 +363,9 @@ def main():
     dataset_key = data_args.test_dataset.lower()
     family = task_family(dataset=dataset_key, domain=(items_list[0].get("domain") if items_list else None))
     is_math_dataset = family == "math"
-    use_numina_category_prompt = bool(extra_args.use_category_prompt) and dataset_key == "numina_cot"
+    use_fixed_category_prompt = bool(extra_args.use_category_prompt) and extra_args.prompt_system == "category"
     logger.info("task family: %s", family)
-    logger.info("카테고리별 system prompt 고정값: %s", extra_args.use_category_prompt or "없음")
+    logger.info("system prompt 선택: %s", extra_args.prompt_system)
 
     chunk_size = 1000
     with open(out_path, "a", encoding="utf-8") as out_f:
@@ -280,7 +376,9 @@ def main():
                     item,
                     dataset_name=data_args.test_dataset,
                     model_name=model_args.model_name_or_path,
-                    fixed_math_category=(extra_args.use_category_prompt if use_numina_category_prompt else None),
+                    fixed_math_category=(extra_args.use_category_prompt if use_fixed_category_prompt else None),
+                    prompt_system=extra_args.prompt_system,
+                    luca_system_prompt=luca_system_prompt,
                 )
                 for item in chunk
             ]
@@ -303,6 +401,12 @@ def main():
                     "category": item.get("category") or item.get("categories", []),
                     "dataset": item.get("dataset") or data_args.test_dataset,
                     "domain": item.get("domain"),
+                    "prompt_system": extra_args.prompt_system,
+                    "system_prompt": (
+                        messages[0].get("content")
+                        if isinstance(messages, list) and messages and messages[0].get("role") == "system"
+                        else None
+                    ),
                     **scores,
                 }, ensure_ascii=False) + "\n")
             out_f.flush()
