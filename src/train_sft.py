@@ -95,6 +95,10 @@ class DataArguments:
         default=None,
         metadata={"help": "label_package 필터: n_solved <= 이 값인 문제만 사용(전원이 푸는 쉬운 공통문제 제외). None이면 전부."},
     )
+    min_n_solved: Optional[int] = field(
+        default=None,
+        metadata={"help": "label_package 필터: n_solved >= 이 값인 문제만 사용. shared 어댑터(공통 core) 학습용."},
+    )
 
 
 @dataclass
@@ -221,6 +225,7 @@ def build_expert_label_dataset(
     seed: Optional[int],
     model_name: str,
     max_n_solved: Optional[int] = None,
+    min_n_solved: Optional[int] = None,
 ) -> tuple[Dataset, str, int]:
     package = Path(package_dir)
     labels_path = package / "binning_labels.jsonl"
@@ -231,18 +236,25 @@ def build_expert_label_dataset(
         raise FileNotFoundError(f"Missing {mapping_path}")
 
     mapping = json.load(open(mapping_path, encoding="utf-8"))
-    chosen = resolve_expert_id(mapping, expert_id)
+    # shared 어댑터: 특정 expert가 아니라 "공통 core"(n_solved>=min) 전부 학습.
+    # per_expert 필터 없이 n_solved 밴드만으로 선택.
+    is_shared = str(expert_id).lower() in ("shared", "common")
+    chosen = "shared" if is_shared else resolve_expert_id(mapping, expert_id)
 
     src_path = source_path_from_package(package, source_jsonl)
     source_rows = {str(r["id"]): r for r in _load_jsonl(src_path)}
     labels = _load_jsonl(labels_path)
     dataset_name = str(labels[0].get("dataset") or "") if labels else ""
 
+    def _band_ok(ns: int) -> bool:
+        return (max_n_solved is None or ns <= max_n_solved) and \
+               (min_n_solved is None or ns >= min_n_solved)
+
     selected = [
         source_rows[str(r["id"])]
         for r in labels
-        if int((r.get("per_expert") or {}).get(chosen, 0)) == 1
-        and (max_n_solved is None or int(r.get("n_solved", 0)) <= max_n_solved)
+        if (is_shared or int((r.get("per_expert") or {}).get(chosen, 0)) == 1)
+        and _band_ok(int(r.get("n_solved", 0)))
         and str(r["id"]) in source_rows
     ]
     if seed is not None:
@@ -298,8 +310,10 @@ def main():
             seed=sft_config.seed,
             model_name=model_args.model_name_or_path,
             max_n_solved=data_args.max_n_solved,
+            min_n_solved=data_args.min_n_solved,
         )
-        logger.info("전문가 SFT 학습셋: expert=%s, examples=%d, max_n_solved=%s", chosen_expert, n_rows, data_args.max_n_solved)
+        logger.info("전문가 SFT 학습셋: expert=%s, examples=%d, max_n_solved=%s, min_n_solved=%s",
+                    chosen_expert, n_rows, data_args.max_n_solved, data_args.min_n_solved)
     else:
         logger.info("학습 데이터셋 로딩: %s/%s", data_args.train_dataset, data_args.train_split)
         train_dataset = build_regular_hf_dataset(

@@ -36,6 +36,7 @@ if [ -z "${LABEL_PACKAGE}" ] || [ -z "${EXPERT_ID}" ]; then
     exit 1
 fi
 MAX_N_SOLVED="${MAX_N_SOLVED:-}"
+MIN_N_SOLVED="${MIN_N_SOLVED:-}"   # shared 어댑터(EXPERT_ID=shared)용: n_solved>=이 값만 학습
 
 # export/<domain>_binning_seed<seed> → domain / seed
 PKG_BASE="$(basename "${LABEL_PACKAGE}")"
@@ -53,6 +54,20 @@ CAP_FLAG=()
 if [ -n "${MAX_N_SOLVED}" ]; then
     CAP_SUFFIX="_cap${MAX_N_SOLVED}"
     CAP_FLAG=(--max_n_solved "${MAX_N_SOLVED}")
+fi
+if [ -n "${MIN_N_SOLVED}" ]; then
+    CAP_SUFFIX="${CAP_SUFFIX}_min${MIN_N_SOLVED}"
+    CAP_FLAG+=(--min_n_solved "${MIN_N_SOLVED}")
+fi
+# 코딩(acc)처럼 시퀀스가 긴 도메인용. 미설정 시 TRL 기본(1024) 유지 = QASC 기존 동작 불변.
+LEN_FLAG=()
+if [ -n "${MAX_LENGTH:-}" ]; then
+    LEN_FLAG=(--max_length "${MAX_LENGTH}")
+fi
+# 긴 시퀀스에서 메모리 확보용(미설정 시 기존 동작 유지)
+GC_FLAG=()
+if [ -n "${GRAD_CKPT:-}" ]; then
+    GC_FLAG=(--gradient_checkpointing "${GRAD_CKPT}")
 fi
 
 RUN_NAME="${RUN_NAME:-sft_llama3_${DOMAIN}_seed${BIN_SEED}${CAP_SUFFIX}_${EXPERT_ID}}"
@@ -84,6 +99,8 @@ srun --ntasks=1 --gpus-per-task="${NPROC_PER_NODE}" --chdir="$REPO" \
     --label_package "${LABEL_PACKAGE}" \
     --expert_id "${EXPERT_ID}" \
     "${CAP_FLAG[@]}" \
+    "${LEN_FLAG[@]}" \
+    "${GC_FLAG[@]}" \
     --eval_dataset "${DOMAIN}" \
     --eval_split "${EVAL_SPLIT}" \
     --data_dir "export/${DOMAIN}" \
