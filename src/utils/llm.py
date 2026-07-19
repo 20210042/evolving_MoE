@@ -5,6 +5,14 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Mapping, MutableMapping, Optional, Sequence, Union
 
+# pyarrow를 vllm보다 먼저 로드해야 한다. sklearn/scipy 설치(2026-07-15) 이후
+# vllm 엔진 import 체인이 이들의 번들 네이티브 라이브러리를 먼저 올리면
+# 마지막에 로드되는 pyarrow가 segfault한다(로드 순서 충돌, n03/n04/로그인 노드 재현).
+try:
+    import pyarrow  # noqa: F401
+except ImportError:
+    pass
+
 try:
     from vllm import LLM, SamplingParams
     from vllm.lora.request import LoRARequest
