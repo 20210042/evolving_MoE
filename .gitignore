@@ -42,3 +42,6 @@ journals/
 
 # junk: backup + pycache leftover
 src/meta_agent_evo/
+
+# 생성 자산(build_acc_sft_assets.py로 재생성 가능, 190MB)
+export/acc/
