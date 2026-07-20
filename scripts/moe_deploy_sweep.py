@@ -5,7 +5,10 @@
 '한 번' 생성한 답을 채점(EM). 앵커 = Jongbin 공유 dense fine-tuned Llama3 baseline(87.15%).
 pair별 병합 어댑터는 방법 무관 동일 → (pair,문제) 단위 메모이즈로 중복 생성 제거.
 
-출력: results/qasc/seed20210211/deploy_sweep_vs_dense.md
+라우팅 방법 12개가 전부 이 파일에 있다(methods dict). confidence/answer-prob 계열은
+MCQA 전용이라 오픈 QA 데이터셋에서는 자동으로 목록에서 빠진다.
+
+Usage: python scripts/moe_deploy_sweep.py --dataset qasc [--ckpt ... --out ...]
 """
 import json
 import sys
@@ -16,37 +19,42 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-REPO = Path("/data5/jaehoonjeong/MetaAgentEvolution_Release")
-sys.path.insert(0, str(REPO / "src"))
-from prompts import baseline_prompts as bp  # noqa: E402
-from evaluation.scorer import score_qasc_item  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import router_common as rc  # noqa: E402
+
+REPO = rc.REPO
+from evaluation.scorer import score_one  # noqa: E402
 
 import argparse
 
 _ap = argparse.ArgumentParser()
-_ap.add_argument("--ckpt", default=str(REPO / "checkpoints/expert_sft/qasc_seed20210211_cap10"))
-_ap.add_argument("--binned", default=str(REPO / "results/qasc/seed20210211/inference_validation_lora13.binned.jsonl"))
-_ap.add_argument("--conf", default=str(REPO / "results/embed_viz_test/qasc_validation_lora_conf.npz"))
-_ap.add_argument("--out", default=str(REPO / "results/qasc/seed20210211/deploy_sweep_vs_dense.md"))
+rc.add_dataset_arg(_ap)
+_ap.add_argument("--ckpt", default=None)
+_ap.add_argument("--binned", required=True,
+                 help="배포에 쓸 solve 매트릭스 (per-expert binned jsonl)")
+_ap.add_argument("--conf", default=None, help="expert confidence npz (MCQA 전용)")
+_ap.add_argument("--dense", required=True, help="앵커로 쓸 dense SFT baseline jsonl")
+_ap.add_argument("--out", required=True, help="결과 마크다운 경로")
 _ap.add_argument("--label", default="Evolved MoE", help="조건 이름(표 제목)")
+_ap.add_argument("--max_new", type=int, default=None,
+                 help="생성 토큰 수. 기본: MCQA 8, 그 외 128")
 _A = _ap.parse_args()
 
-O = REPO / "results/embed_viz_test"
+sp = rc.spec(_A.dataset)
+MCQA = sp.answer_letters is not None
+O = rc.FEAT_DIR
 BINNED = Path(_A.binned)
-SRC = REPO / "export/qasc/qasc_validation.jsonl"
-DENSE = Path("/home/jaehoonjeong/data/MetaAgentEvolution_Release/"
-             "qasc_sft_llama3_finetuned_qasc_baseline_eval300_ep9_baseline_208314.jsonl")
-BASE = "meta-llama/Llama-3.1-8B-Instruct"
-CKPT = Path(_A.ckpt)
+SRC = REPO / sp.src[sp.eval_split]
+DENSE = Path(_A.dense)
+BASE = sp.base_model
+CKPT = Path(_A.ckpt) if _A.ckpt else REPO / sp.ckpt
 OUT = Path(_A.out)
-BATCH, MAXLEN, MAXNEW = 48, 1024, 8
+# MCQA는 답 글자 하나면 되지만 생성형 도메인은 더 필요하다.
+BATCH, MAXLEN = 48, 1024
+MAXNEW = _A.max_new if _A.max_new is not None else (8 if MCQA else 128)
 DEV = "cuda"
 np.random.seed(0)
 torch.manual_seed(0)
-
-
-def ids_json(p):
-    return [str(x) for x in json.load(open(p))]
 
 
 # ---- 정답지 / 소스 ----
@@ -56,36 +64,32 @@ EX = sorted(binned[0]["per_expert"])
 S = np.array([[r["per_expert"].get(e, 0) for e in EX] for r in binned], np.float32)
 N, E = S.shape
 src = {str(json.loads(l)["id"]): json.loads(l) for l in open(SRC, encoding="utf-8")}
-best_single = 100 * S.mean(0).max()
-oracle_union = 100 * (S.sum(1) > 0).mean()
+best_single, oracle_union = rc.baselines(S)
 dense_rows = [json.loads(l) for l in open(DENSE, encoding="utf-8")]
 dense_acc = 100 * np.mean([float(r["pass_score"]) > 0 for r in dense_rows])
 
 
 def align(fp, ip):
+    """특징 행렬을 binned 순서(bids)에 맞춘다."""
     F = np.load(fp)
-    fid = ids_json(ip)
-    idx = {p: i for i, p in enumerate(fid)}
+    idx = {p: i for i, p in enumerate(rc.load_ids(ip))}
     return np.array([F[idx[p]] for p in bids], np.float32)
 
 
 # ---- feature ----
-cd = np.load(_A.conf, allow_pickle=True)
-c_ids = [str(x) for x in cd["ids"]]
-c_ex = [str(x) for x in cd["experts"]]
-ci = {p: i for i, p in enumerate(c_ids)}
-cj = {e: j for j, e in enumerate(c_ex)}
-CONF = np.array([[cd["conf"][ci[p], cj[e]] for e in EX] for p in bids], np.float32)
-PRED = np.array([[cd["pred"][ci[p], cj[e]] for e in EX] for p in bids], np.int64)
-HS = align(O / "qasc_validation_hs_mean.npy", O / "qasc_validation_hs_ids.json")
-ANS = align(O / "qasc_validation_ansprob.npy", O / "qasc_validation_ansprob_ids.json")
-EMB = align(O / "qasc_val_emb.npy", REPO / "export/qasc/qasc_validation.jsonl") \
-    if False else None
-# emb는 qasc_validation.jsonl 순서
-emb_raw = np.load(O / "qasc_val_emb.npy")
-emb_ids = [str(json.loads(l)["id"]) for l in open(SRC, encoding="utf-8")]
-eidx = {p: i for i, p in enumerate(emb_ids)}
-EMB = np.array([emb_raw[eidx[p]] for p in bids], np.float32)
+HS = align(rc.feat_path(sp, sp.eval_split, "hs_mean"), rc.feat_path(sp, sp.eval_split, "hs_ids"))
+_emb_npy, _emb_ids = rc.emb_paths(sp, "eval")
+EMB = align(_emb_npy, _emb_ids)
+CONF = PRED = ANS = None
+if MCQA:
+    conf_npz = Path(_A.conf) if _A.conf else rc.feat_path(sp, sp.eval_split, "conf")
+    cd = np.load(conf_npz, allow_pickle=True)
+    ci = {p: i for i, p in enumerate(str(x) for x in cd["ids"])}
+    cj = {e: j for j, e in enumerate(str(x) for x in cd["experts"])}
+    CONF = np.array([[cd["conf"][ci[p], cj[e]] for e in EX] for p in bids], np.float32)
+    PRED = np.array([[cd["pred"][ci[p], cj[e]] for e in EX] for p in bids], np.int64)
+    ANS = align(rc.feat_path(sp, sp.eval_split, "ansprob"),
+                rc.feat_path(sp, sp.eval_split, "ansprob_ids"))
 
 
 def top2(score):
@@ -96,7 +100,7 @@ def zc(X):
     return (X - X.mean(0, keepdims=True)) / (X.std(0, keepdims=True) + 1e-6)
 
 
-def rc(X):
+def rankc(X):    # 예전 이름은 rc — router_common 모듈명과 충돌해서 바꿨다
     return np.argsort(np.argsort(X, 0), 0).astype(np.float32)
 
 
@@ -140,40 +144,46 @@ def cv_logits(X, ep=120, seeds=(0, 1, 2), folds=5):
 
 
 print("학습 라우터 CV 중...", flush=True)
-mlp_log = {"MLP hidden-state": cv_logits(HS), "MLP encoder-emb": cv_logits(EMB),
-           "MLP answer-prob": cv_logits(ANS), "MLP confidence": cv_logits(CONF),
-           "MLP hs+conf": cv_logits(np.concatenate([HS, CONF], 1))}
-
-# pred-agreement
-agree = np.zeros((N, E), np.float32)
-for i in range(N):
-    v = np.zeros(8, np.float32)
-    for e in range(E):
-        v[PRED[i, e]] += CONF[i, e]
-    plur = v.argmax()
-    for e in range(E):
-        agree[i, e] = (1.0 if PRED[i, e] == plur else 0.0) + 0.01 * CONF[i, e]
+mlp_log = {"MLP hidden-state": cv_logits(HS), "MLP encoder-emb": cv_logits(EMB)}
+if MCQA:
+    mlp_log["MLP answer-prob"] = cv_logits(ANS)
+    mlp_log["MLP confidence"] = cv_logits(CONF)
+    mlp_log["MLP hs+conf"] = cv_logits(np.concatenate([HS, CONF], 1))
 
 prior = S.mean(0, keepdims=True)
 rng = np.random.default_rng(0)
 rand2 = np.array([rng.choice(E, 2, replace=False) for _ in range(N)])
-oracle_score = S * 10 + CONF
 
 # ---- 방법 → top-2 (N,2) 픽 ----
+# 도메인 무관 4종. 나머지 8종은 confidence/답분포에 의존해 MCQA에서만 붙는다.
 methods = {
     "random-2": rand2,
-    "confidence (raw)": top2(CONF),
-    "confidence (z-norm)": top2(zc(CONF)),
-    "confidence (rank)": top2(rc(CONF)),
-    "confidence + prior": top2(zc(CONF) + 3.0 * zc(np.repeat(prior, N, 0))),
-    "pred-agreement": top2(agree),
     "MLP hidden-state": top2(mlp_log["MLP hidden-state"]),
     "MLP encoder-emb": top2(mlp_log["MLP encoder-emb"]),
-    "MLP answer-prob": top2(mlp_log["MLP answer-prob"]),
-    "MLP confidence": top2(mlp_log["MLP confidence"]),
-    "MLP hs+conf": top2(mlp_log["MLP hs+conf"]),
-    "oracle top-2": top2(oracle_score),
 }
+if MCQA:
+    # pred-agreement: 확신 가중 다수결 답에 동의하는 expert를 우대
+    n_letters = len(sp.answer_letters)
+    agree = np.zeros((N, E), np.float32)
+    for i in range(N):
+        v = np.zeros(n_letters, np.float32)
+        for e in range(E):
+            v[PRED[i, e]] += CONF[i, e]
+        plur = v.argmax()
+        for e in range(E):
+            agree[i, e] = (1.0 if PRED[i, e] == plur else 0.0) + 0.01 * CONF[i, e]
+    methods.update({
+        "confidence (raw)": top2(CONF),
+        "confidence (z-norm)": top2(zc(CONF)),
+        "confidence (rank)": top2(rankc(CONF)),
+        "confidence + prior": top2(zc(CONF) + 3.0 * zc(np.repeat(prior, N, 0))),
+        "pred-agreement": top2(agree),
+        "MLP answer-prob": top2(mlp_log["MLP answer-prob"]),
+        "MLP confidence": top2(mlp_log["MLP confidence"]),
+        "MLP hs+conf": top2(mlp_log["MLP hs+conf"]),
+    })
+# oracle은 tie-break에만 confidence를 쓰므로 없으면 solve 매트릭스만으로 정한다.
+methods["oracle top-2"] = top2(S * 10 + (CONF if MCQA else 0.0))
 
 # ==== 모델 로드 (1회) ====
 print("모델 로드...", flush=True)
@@ -191,10 +201,13 @@ for e in EX[1:]:
 model.eval()
 
 
+_GEN_SYS, _GEN_USER = sp.gen
+
+
 def prompt(i):
     r = src[i]
-    msgs = [{"role": "system", "content": bp.QASC_GEN_SYSTEM},
-            {"role": "user", "content": bp.QASC_GEN_USER.format(instruction=r["instruction"])}]
+    msgs = [{"role": "system", "content": _GEN_SYS},
+            {"role": "user", "content": _GEN_USER.format(instruction=r["instruction"])}]
     return tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
 
 
@@ -246,10 +259,11 @@ for an, idxset in need.items():
 
 
 def score_text(i, text):
-    r = src[bids[i]]
-    item = {"id": bids[i], "dataset": "qasc", "ground_truth": r["ground_truth"],
-            "scoring_kind": "qasc", "instruction": r.get("instruction", "")}
-    return 1 if score_qasc_item(item, text) > 0 else 0
+    """원본 레코드를 그대로 넘겨 scoring_kind 디스패치를 탄다(도메인 무관)."""
+    r = dict(src[bids[i]])
+    r.setdefault("dataset", sp.name)
+    r.setdefault("scoring_kind", sp.name)
+    return 1 if score_one(r, text) > 0 else 0
 
 
 # ---- 방법별 정확도 ----
@@ -260,17 +274,19 @@ for m in methods:
     print(f"  [{m}] {results[m]:.1f}%", flush=True)
 
 # ==== 출력 ====
-order = ["random-2", "confidence (raw)", "confidence (z-norm)", "confidence (rank)",
-         "confidence + prior", "pred-agreement", "MLP hidden-state", "MLP encoder-emb",
-         "MLP answer-prob", "MLP confidence", "MLP hs+conf", "oracle top-2"]
+order = [m for m in
+         ["random-2", "confidence (raw)", "confidence (z-norm)", "confidence (rank)",
+          "confidence + prior", "pred-agreement", "MLP hidden-state", "MLP encoder-emb",
+          "MLP answer-prob", "MLP confidence", "MLP hs+conf", "oracle top-2"]
+         if m in results]
 lines = [
-    f"# QASC End-to-End 배포: {_A.label} (top-2 0.5 병합) vs Dense fine-tuned Llama3",
+    f"# {sp.name.upper()} End-to-End 배포: {_A.label} (top-2 0.5 병합) vs Dense SFT",
     "",
-    f"- **앵커 (Dense fine-tuned Llama3, ep9 baseline)**: **{dense_acc:.2f}%** ({DENSE.name})",
+    f"- **앵커 (Dense SFT baseline)**: **{dense_acc:.2f}%** ({DENSE.name})",
     f"- 조건: **{_A.label}** (experts={E}) · 참조: best-single(solve) {best_single:.1f}% · oracle-union {oracle_union:.1f}%",
-    f"- 방식: 라우팅 방법이 고른 top-2 어댑터를 linear 0.5/0.5로 병합 → 926문제 실제 생성 → EM 채점",
+    f"- 방식: 라우팅 방법이 고른 top-2 어댑터를 linear 0.5/0.5로 병합 → {N}문제 실제 생성 → EM 채점",
     "",
-    "| 라우팅 방법 | 배포 정확도(%) | vs Dense(87.15) |",
+    f"| 라우팅 방법 | 배포 정확도(%) | vs Dense({dense_acc:.2f}) |",
     "|---|---|---|",
 ]
 for m in order:
