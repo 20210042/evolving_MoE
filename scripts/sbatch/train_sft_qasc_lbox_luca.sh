@@ -42,6 +42,10 @@ NUM_TRAIN_EPOCHS="${NUM_TRAIN_EPOCHS:-3}"
 MAX_STEPS="${MAX_STEPS:-}"
 PUSH_TO_HUB="${PUSH_TO_HUB:-false}"
 HUB_MODEL_ID="${HUB_MODEL_ID:-}"
+LABEL_PACKAGE="${LABEL_PACKAGE:-}"
+EXPERT_ID="${EXPERT_ID:-}"
+SOURCE_JSONL="${SOURCE_JSONL:-}"
+ALL_SOLVED_RATIO="${ALL_SOLVED_RATIO:-1.0}"
 
 EXTRA_TRAIN_ARGS=()
 if [[ -n "${DEEPSPEED_CONFIG}" ]]; then
@@ -50,6 +54,14 @@ fi
 if [[ -n "${MAX_STEPS}" ]]; then
     EXTRA_TRAIN_ARGS+=(--max_steps "${MAX_STEPS}")
     EXTRA_TRAIN_ARGS+=(--load_best_model_at_end false)
+fi
+if [[ -n "${LABEL_PACKAGE}" ]]; then
+    EXTRA_TRAIN_ARGS+=(--label_package "${LABEL_PACKAGE}")
+    EXTRA_TRAIN_ARGS+=(--expert_id "${EXPERT_ID}")
+    EXTRA_TRAIN_ARGS+=(--all_solved_ratio "${ALL_SOLVED_RATIO}")
+    if [[ -n "${SOURCE_JSONL}" ]]; then
+        EXTRA_TRAIN_ARGS+=(--source_jsonl "${SOURCE_JSONL}")
+    fi
 fi
 if [[ "${PUSH_TO_HUB}" == "true" || "${PUSH_TO_HUB}" == "True" ]]; then
     EXTRA_TRAIN_ARGS+=(--push_to_hub True)
@@ -63,6 +75,7 @@ mkdir -p logs/qasc_lbox_sft
 echo "=== QASC/LBox LUCA SFT 시작 ==="
 echo "=== dataset=${DATASET} prompt_system=${PROMPT_SYSTEM} train=${TRAIN_SPLIT} eval=${EVAL_SPLIT} data_dir=${DATA_DIR} ==="
 echo "=== run=${RUN_NAME} output=${OUTPUT_DIR} ==="
+echo "=== label_package=${LABEL_PACKAGE:-none} expert=${EXPERT_ID:-none} all_solved_ratio=${ALL_SOLVED_RATIO} ==="
 echo "=== GPUs=${NPROC_PER_NODE} GA=${GRADIENT_ACCUMULATION_STEPS} CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-unset} ==="
 
 srun --ntasks=1 --gpus-per-task="${NPROC_PER_NODE}" --chdir="$REPO" \
