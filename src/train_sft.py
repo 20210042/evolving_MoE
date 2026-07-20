@@ -115,10 +115,6 @@ class DataArguments:
         default=None,
         metadata={"help": "label_package 라벨과 id-join할 원본 train jsonl. 생략 시 summary.json의 source_train_jsonl."},
     )
-    all_solved_ratio: float = field(
-        default=1.0,
-        metadata={"help": "모든 expert가 푼 예제(n_solved == n_experts)의 유지 비율 (0.0~1.0)."},
-    )
 
 
 @dataclass
@@ -304,7 +300,6 @@ def build_expert_label_dataset(
     expert_id: str | None,
     source_jsonl: str | None,
     data_ratio: float,
-    all_solved_ratio: float,
     seed: Optional[int],
 ) -> tuple[Dataset, str, int]:
     package = Path(package_dir)
@@ -317,45 +312,23 @@ def build_expert_label_dataset(
 
     mapping = json.load(open(mapping_path, encoding="utf-8"))
     chosen = resolve_expert_id(mapping, expert_id)
-    if not 0.0 <= all_solved_ratio <= 1.0:
-        raise ValueError(f"--all_solved_ratio must be in [0, 1], got {all_solved_ratio}")
     persona = mapping[chosen].get("system_prompt") or mapping[chosen].get("strengths") or mapping[chosen].get("name") or chosen
 
     src_path = source_path_from_package(package, source_jsonl)
     source_rows = {str(r["id"]): r for r in _load_jsonl(src_path)}
     labels = _load_jsonl(labels_path)
 
-    n_experts = len(mapping)
-    specialized, all_solved = [], []
-    for label in labels:
-        if int((label.get("per_expert") or {}).get(chosen, 0)) != 1:
-            continue
-        item = source_rows.get(str(label["id"]))
-        if item is None:
-            continue
-        if int(label.get("n_solved", 0)) == n_experts:
-            all_solved.append(item)
-        else:
-            specialized.append(item)
-
-    import random
-    expert_seed = (seed or 0) + sum(ord(char) for char in chosen)
-    rng = random.Random(expert_seed)
-    rng.shuffle(all_solved)
-    kept_all_solved = all_solved[: int(len(all_solved) * all_solved_ratio)]
-    selected = specialized + kept_all_solved
-    rng.shuffle(selected)
+    selected = [
+        source_rows[str(r["id"])]
+        for r in labels
+        if int((r.get("per_expert") or {}).get(chosen, 0)) == 1 and str(r["id"]) in source_rows
+    ]
+    if seed is not None:
+        import random
+        rng = random.Random(seed)
+        rng.shuffle(selected)
     if data_ratio < 1.0:
         selected = selected[: max(1, int(len(selected) * data_ratio))]
-    logger.info(
-        "expert=%s: specialized=%d, all_solved=%d -> kept=%d (ratio=%.3f), total=%d",
-        chosen,
-        len(specialized),
-        len(all_solved),
-        len(kept_all_solved),
-        all_solved_ratio,
-        len(selected),
-    )
 
     rows = []
     for item in selected:
@@ -405,7 +378,6 @@ def main():
             expert_id=data_args.expert_id,
             source_jsonl=data_args.source_jsonl,
             data_ratio=data_args.data_ratio,
-            all_solved_ratio=data_args.all_solved_ratio,
             seed=sft_config.seed,
         )
         logger.info("전문가 SFT 학습셋: expert=%s, examples=%d", chosen_expert, n_rows)
