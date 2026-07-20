@@ -19,6 +19,11 @@ logger = logging.getLogger(__name__)
 
 LUCA_SYSTEM_PROMPT = "You are a helpful assistant."
 PROMPT_SYSTEM_CHOICES = {"baseline", "luca"}
+EXPERT_DATA_MODES = {
+    "roster_expert_with_unanimous_sampling",
+    "roster_expert_with_low_consensus_solved",
+    "shared_with_high_consensus_solved",
+}
 
 
 def _ensure_accelerate_clear_device_cache() -> None:
@@ -107,17 +112,47 @@ class DataArguments:
         default=None,
         metadata={"help": "전문가별 SFT용 export/<domain>_binning_seed*/ 패키지 경로."},
     )
-    expert_id: Optional[str] = field(
-        default=None,
-        metadata={"help": "label_package에서 사용할 expert id. 'best'면 train_pass_at_1 최고 전문가."},
-    )
     source_jsonl: Optional[str] = field(
         default=None,
         metadata={"help": "label_package 라벨과 id-join할 원본 train jsonl. 생략 시 summary.json의 source_train_jsonl."},
     )
-    all_solved_ratio: float = field(
+    expert_data_mode: str = field(
+        default="roster_expert_with_unanimous_sampling",
+        metadata={
+            "help": (
+                "학습 데이터 선택 모드: roster_expert_with_unanimous_sampling, "
+                "roster_expert_with_low_consensus_solved, shared_with_high_consensus_solved."
+            )
+        },
+    )
+    expert_id: Optional[str] = field(
+        default=None,
+        metadata={"help": "roster_expert_* 모드에서 사용할 expert id. shared_* 모드에서는 무시됨."},
+    )
+
+    # roster_expert_with_unanimous_sampling mode only.
+    unanimous_solved_sampling_ratio: float = field(
         default=1.0,
         metadata={"help": "모든 expert가 푼 예제(n_solved == n_experts)의 유지 비율 (0.0~1.0)."},
+    )
+
+    # roster_expert_with_low_consensus_solved mode only.
+    low_consensus_max_solved: int = field(
+        default=7,
+        metadata={"help": "해당 expert가 푼 예제 중 유지할 최대 n_solved."},
+    )
+
+    # shared_with_high_consensus_solved mode only.
+    high_consensus_min_solved: int = field(
+        default=8,
+        metadata={"help": "공통 expert 학습에 포함할 최소 n_solved."},
+    )
+    shared_system_prompt: str = field(
+        default=(
+            "You are a Korean legal classification generalist. Given Korean legal facts, return the exact "
+            "requested case name, charge, or statutory provision in the required one-line format without explanation."
+        ),
+        metadata={"help": "shared 모드에서 사용할 system prompt."},
     )
 
 
@@ -304,9 +339,24 @@ def build_expert_label_dataset(
     expert_id: str | None,
     source_jsonl: str | None,
     data_ratio: float,
-    all_solved_ratio: float,
+    unanimous_solved_sampling_ratio: float,
+    expert_data_mode: str,
+    low_consensus_max_solved: int,
+    high_consensus_min_solved: int,
+    shared_system_prompt: str,
     seed: Optional[int],
 ) -> tuple[Dataset, str, int]:
+    """Build one SFT dataset from a roster label package.
+
+    Modes are intentionally mutually exclusive:
+    - roster_expert_with_unanimous_sampling: selected roster expert's solved
+      set, with unanimous examples capped by ``unanimous_solved_sampling_ratio``.
+    - roster_expert_with_low_consensus_solved: examples solved by ``expert_id``
+      with ``n_solved <= low_consensus_max_solved``.
+    - shared_with_high_consensus_solved: all examples with
+      ``n_solved >= high_consensus_min_solved``; no roster expert id is used
+      and the returned id is ``shared_consensus``.
+    """
     package = Path(package_dir)
     labels_path = package / "binning_labels.jsonl"
     mapping_path = package / "agent_mapping.json"
@@ -316,44 +366,70 @@ def build_expert_label_dataset(
         raise FileNotFoundError(f"Missing {mapping_path}")
 
     mapping = json.load(open(mapping_path, encoding="utf-8"))
-    chosen = resolve_expert_id(mapping, expert_id)
-    if not 0.0 <= all_solved_ratio <= 1.0:
-        raise ValueError(f"--all_solved_ratio must be in [0, 1], got {all_solved_ratio}")
-    persona = mapping[chosen].get("system_prompt") or mapping[chosen].get("strengths") or mapping[chosen].get("name") or chosen
+    mode = (expert_data_mode or "roster_expert_with_unanimous_sampling").lower()
+    if mode not in EXPERT_DATA_MODES:
+        raise ValueError(f"--expert_data_mode must be one of {sorted(EXPERT_DATA_MODES)}, got {expert_data_mode!r}")
+    if not 0.0 <= unanimous_solved_sampling_ratio <= 1.0:
+        raise ValueError(
+            "--unanimous_solved_sampling_ratio must be in [0, 1], "
+            f"got {unanimous_solved_sampling_ratio}"
+        )
+    n_experts = len(mapping)
+    if not 1 <= low_consensus_max_solved <= n_experts:
+        raise ValueError(
+            f"--low_consensus_max_solved must be in [1, {n_experts}], got {low_consensus_max_solved}"
+        )
+    if not 1 <= high_consensus_min_solved <= n_experts:
+        raise ValueError(
+            f"--high_consensus_min_solved must be in [1, {n_experts}], got {high_consensus_min_solved}"
+        )
+
+    if mode == "shared_with_high_consensus_solved":
+        chosen = "shared_consensus"
+        persona = shared_system_prompt
+    else:
+        chosen = resolve_expert_id(mapping, expert_id)
+        persona = mapping[chosen].get("system_prompt") or mapping[chosen].get("strengths") or mapping[chosen].get("name") or chosen
 
     src_path = source_path_from_package(package, source_jsonl)
     source_rows = {str(r["id"]): r for r in _load_jsonl(src_path)}
     labels = _load_jsonl(labels_path)
 
-    n_experts = len(mapping)
     specialized, all_solved = [], []
     for label in labels:
-        if int((label.get("per_expert") or {}).get(chosen, 0)) != 1:
-            continue
         item = source_rows.get(str(label["id"]))
         if item is None:
             continue
-        if int(label.get("n_solved", 0)) == n_experts:
-            all_solved.append(item)
-        else:
-            specialized.append(item)
+        n_solved = int(label.get("n_solved", 0))
+        if mode == "shared_with_high_consensus_solved":
+            if n_solved >= high_consensus_min_solved:
+                specialized.append(item)
+        elif int((label.get("per_expert") or {}).get(chosen, 0)) == 1:
+            if mode == "roster_expert_with_low_consensus_solved":
+                if n_solved <= low_consensus_max_solved:
+                    specialized.append(item)
+            elif n_solved == n_experts:
+                all_solved.append(item)
+            else:
+                specialized.append(item)
 
     import random
     expert_seed = (seed or 0) + sum(ord(char) for char in chosen)
     rng = random.Random(expert_seed)
     rng.shuffle(all_solved)
-    kept_all_solved = all_solved[: int(len(all_solved) * all_solved_ratio)]
+    kept_all_solved = all_solved[: int(len(all_solved) * unanimous_solved_sampling_ratio)]
     selected = specialized + kept_all_solved
     rng.shuffle(selected)
     if data_ratio < 1.0:
         selected = selected[: max(1, int(len(selected) * data_ratio))]
     logger.info(
-        "expert=%s: specialized=%d, all_solved=%d -> kept=%d (ratio=%.3f), total=%d",
+        "expert=%s mode=%s: selected=%d, all_solved=%d -> kept=%d (ratio=%.3f), total=%d",
         chosen,
+        mode,
         len(specialized),
         len(all_solved),
         len(kept_all_solved),
-        all_solved_ratio,
+        unanimous_solved_sampling_ratio,
         len(selected),
     )
 
@@ -405,7 +481,11 @@ def main():
             expert_id=data_args.expert_id,
             source_jsonl=data_args.source_jsonl,
             data_ratio=data_args.data_ratio,
-            all_solved_ratio=data_args.all_solved_ratio,
+            unanimous_solved_sampling_ratio=data_args.unanimous_solved_sampling_ratio,
+            expert_data_mode=data_args.expert_data_mode,
+            low_consensus_max_solved=data_args.low_consensus_max_solved,
+            high_consensus_min_solved=data_args.high_consensus_min_solved,
+            shared_system_prompt=data_args.shared_system_prompt,
             seed=sft_config.seed,
         )
         logger.info("전문가 SFT 학습셋: expert=%s, examples=%d", chosen_expert, n_rows)

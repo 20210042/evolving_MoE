@@ -43,9 +43,21 @@ MAX_STEPS="${MAX_STEPS:-}"
 PUSH_TO_HUB="${PUSH_TO_HUB:-false}"
 HUB_MODEL_ID="${HUB_MODEL_ID:-}"
 LABEL_PACKAGE="${LABEL_PACKAGE:-}"
-EXPERT_ID="${EXPERT_ID:-}"
 SOURCE_JSONL="${SOURCE_JSONL:-}"
-ALL_SOLVED_RATIO="${ALL_SOLVED_RATIO:-1.0}"
+
+# Dataset selection modes for roster-labelled SFT:
+#   roster_expert_with_unanimous_sampling: EXPERT_ID's solved set, sample unanimous rows.
+#   roster_expert_with_low_consensus_solved: EXPERT_ID's solved rows with low n_solved.
+#   shared_with_high_consensus_solved:      high n_solved rows; EXPERT_ID is ignored.
+EXPERT_DATA_MODE="${EXPERT_DATA_MODE:-roster_expert_with_unanimous_sampling}"
+EXPERT_ID="${EXPERT_ID:-}"
+
+# roster_expert_with_unanimous_sampling mode only.
+UNANIMOUS_SOLVED_SAMPLING_RATIO="${UNANIMOUS_SOLVED_SAMPLING_RATIO:-1.0}"
+
+# low/high consensus modes only. The LBox 10-expert setup uses 7 and 8.
+LOW_CONSENSUS_MAX_SOLVED="${LOW_CONSENSUS_MAX_SOLVED:-7}"
+HIGH_CONSENSUS_MIN_SOLVED="${HIGH_CONSENSUS_MIN_SOLVED:-8}"
 
 EXTRA_TRAIN_ARGS=()
 if [[ -n "${DEEPSPEED_CONFIG}" ]]; then
@@ -57,11 +69,27 @@ if [[ -n "${MAX_STEPS}" ]]; then
 fi
 if [[ -n "${LABEL_PACKAGE}" ]]; then
     EXTRA_TRAIN_ARGS+=(--label_package "${LABEL_PACKAGE}")
-    EXTRA_TRAIN_ARGS+=(--expert_id "${EXPERT_ID}")
-    EXTRA_TRAIN_ARGS+=(--all_solved_ratio "${ALL_SOLVED_RATIO}")
     if [[ -n "${SOURCE_JSONL}" ]]; then
         EXTRA_TRAIN_ARGS+=(--source_jsonl "${SOURCE_JSONL}")
     fi
+    EXTRA_TRAIN_ARGS+=(--expert_data_mode "${EXPERT_DATA_MODE}")
+    case "${EXPERT_DATA_MODE}" in
+        roster_expert_with_unanimous_sampling)
+            EXTRA_TRAIN_ARGS+=(--expert_id "${EXPERT_ID}")
+            EXTRA_TRAIN_ARGS+=(--unanimous_solved_sampling_ratio "${UNANIMOUS_SOLVED_SAMPLING_RATIO}")
+            ;;
+        roster_expert_with_low_consensus_solved)
+            EXTRA_TRAIN_ARGS+=(--expert_id "${EXPERT_ID}")
+            EXTRA_TRAIN_ARGS+=(--low_consensus_max_solved "${LOW_CONSENSUS_MAX_SOLVED}")
+            ;;
+        shared_with_high_consensus_solved)
+            EXTRA_TRAIN_ARGS+=(--high_consensus_min_solved "${HIGH_CONSENSUS_MIN_SOLVED}")
+            ;;
+        *)
+            echo "ERROR: unknown EXPERT_DATA_MODE=${EXPERT_DATA_MODE}" >&2
+            exit 2
+            ;;
+    esac
 fi
 if [[ "${PUSH_TO_HUB}" == "true" || "${PUSH_TO_HUB}" == "True" ]]; then
     EXTRA_TRAIN_ARGS+=(--push_to_hub True)
@@ -75,7 +103,7 @@ mkdir -p logs/qasc_lbox_sft
 echo "=== QASC/LBox LUCA SFT 시작 ==="
 echo "=== dataset=${DATASET} prompt_system=${PROMPT_SYSTEM} train=${TRAIN_SPLIT} eval=${EVAL_SPLIT} data_dir=${DATA_DIR} ==="
 echo "=== run=${RUN_NAME} output=${OUTPUT_DIR} ==="
-echo "=== label_package=${LABEL_PACKAGE:-none} expert=${EXPERT_ID:-none} all_solved_ratio=${ALL_SOLVED_RATIO} ==="
+echo "=== label_package=${LABEL_PACKAGE:-none} expert=${EXPERT_ID:-none} mode=${EXPERT_DATA_MODE} low_max=${LOW_CONSENSUS_MAX_SOLVED} high_min=${HIGH_CONSENSUS_MIN_SOLVED} ==="
 echo "=== GPUs=${NPROC_PER_NODE} GA=${GRADIENT_ACCUMULATION_STEPS} CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-unset} ==="
 
 srun --ntasks=1 --gpus-per-task="${NPROC_PER_NODE}" --chdir="$REPO" \
