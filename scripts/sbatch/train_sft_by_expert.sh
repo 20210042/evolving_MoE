@@ -69,6 +69,13 @@ GC_FLAG=()
 if [ -n "${GRAD_CKPT:-}" ]; then
     GC_FLAG=(--gradient_checkpointing "${GRAD_CKPT}")
 fi
+# 학습셋은 label_package의 source_train_jsonl에서 오지만 per-epoch eval은 data_dir에서
+# 온다. 코퍼스를 새로 만든 경우(export/acc_v2) 여기로 홀드아웃을 지정해야 옛 누수
+# validation으로 평가하지 않는다. 미설정 시 기존 동작 유지.
+EVAL_DIR_FLAG=()
+if [ -n "${EVAL_DATA_DIR:-}" ]; then
+    EVAL_DIR_FLAG=(--eval_data_dir "${EVAL_DATA_DIR}")
+fi
 
 RUN_NAME="${RUN_NAME:-sft_llama3_${DOMAIN}_seed${BIN_SEED}${CAP_SUFFIX}_${EXPERT_ID}}"
 OUTPUT_DIR="${OUTPUT_DIR:-checkpoints/expert_sft/${DOMAIN}_seed${BIN_SEED}${CAP_SUFFIX}/${EXPERT_ID}}"
@@ -104,6 +111,7 @@ srun --ntasks=1 --gpus-per-task="${NPROC_PER_NODE}" --chdir="$REPO" \
     --eval_dataset "${DOMAIN}" \
     --eval_split "${EVAL_SPLIT}" \
     --data_dir "export/${DOMAIN}" \
+    "${EVAL_DIR_FLAG[@]}" \
     --data_ratio 1.0 \
     --seed 42 \
     --train_sft_with_lora true \
