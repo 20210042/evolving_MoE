@@ -3,7 +3,7 @@
 #SBATCH --gres=gpu:PRO6000:1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=32G
-#SBATCH --time=12:00:00
+#SBATCH --time=48:00:00
 #SBATCH --exclude=n05
 #SBATCH --output=/home/jaehoonjeong/data/MetaAgentEvolution_Release/logs/%x.%j.out
 #SBATCH --error=/home/jaehoonjeong/data/MetaAgentEvolution_Release/logs/%x.%j.err
@@ -46,7 +46,10 @@ fi
 echo "=== Full binning: dataset=${DATASET} split=${SPLIT} seed=${SEED} ==="
 echo "=== config=${EVAL_CONFIG} roster=${ROSTER} data_dir=${DATA_DIR} size=${EVAL_SIZE:-all} infer_batch=${IBS} ==="
 
-rm -f "${OUT}" "${OUT%.jsonl}.binned.jsonl" "${OUT%.jsonl}.binned.summary.json" "${OUT%.jsonl}.binned.agent_solves.json"
+# RESUME=1이면 기존 OUT을 지우지 않음 — run_inference.py가 id 기준으로 이어씀(TIMEOUT 재개용)
+if [ "${RESUME:-0}" != "1" ]; then
+    rm -f "${OUT}" "${OUT%.jsonl}.binned.jsonl" "${OUT%.jsonl}.binned.summary.json" "${OUT%.jsonl}.binned.agent_solves.json"
+fi
 
 cmd=(
   python scripts/run_inference.py
