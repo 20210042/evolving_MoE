@@ -1,8 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=acc_rebuild
+#SBATCH --gres=gpu:PRO6000:1
+#SBATCH --nodes=1
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=16G
-#SBATCH --time=12:00:00
+#SBATCH --mem=32G
+#SBATCH --time=48:00:00
 #SBATCH --output=logs/%x.%j.log
 #SBATCH --error=logs/%x.%j.log
 
@@ -17,8 +19,7 @@
 #   ② 원본 split은 critic별 행 확장이라 problem_id가 split을 가로지른다(3,636건).
 #      행 단위로 자른 홀드아웃은 42% 누수됐다. dedupe 후 problem_id 단위로 다시 나눈다.
 #
-# 리소스: QOS 상한이 사용자당 cpu=8이라 다른 잡이 돌 때도 들어가도록 2코어로 잡았다.
-# 코어가 비면 그만큼 빨라진다 — sbatch -c 8 --mem=64G 로 덮어쓰면 된다.
+# 리소스는 클러스터 표준(gpu1·cpu2·32G·48h). 코드 실행만 하므로 GPU는 쓰지 않는다.
 # 사용: sbatch scripts/sbatch/run_acc_rebuild.sh
 
 set -euo pipefail
