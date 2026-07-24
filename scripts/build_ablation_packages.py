@@ -29,10 +29,10 @@ def qasc_subjects(ids):
     return {i: tags.get(i, "other") for i in ids}, tax
 
 
-def acc_subjects(ids):
-    """acc: minji LLM critic 태깅 5범주 (acc_train.jsonl의 main_critic_category)."""
+def acc_subjects(ids, src_path="export/acc/acc_train.jsonl"):
+    """acc: minji LLM critic 태깅 5범주 (SFT 소스의 main_critic_category)."""
     src = {str(json.loads(l)["id"]): json.loads(l)
-           for l in open(REPO / "export/acc/acc_train.jsonl", encoding="utf-8")}
+           for l in open(REPO / src_path, encoding="utf-8")}
     tax = ["Greedy Strategy", "Constructive Implementation", "Quantitative Reasoning",
            "State-Space Reasoning", "Structured Data"]
     return {i: (src.get(i, {}).get("main_critic_category") or "other") for i in ids}, tax
@@ -49,11 +49,15 @@ CONFIGS = {
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--dataset", default="qasc", choices=sorted(CONFIGS))
+# 코퍼스를 재빌드하면 evolved 패키지·SFT 소스 경로가 바뀐다. 미지정 시 기존 경로 그대로.
+ap.add_argument("--evolved", default=None, help="evolved binning_labels.jsonl 경로 override")
+ap.add_argument("--src", default=None, help="SFT 소스 train jsonl 경로 override")
+ap.add_argument("--suffix", default="", help="출력 패키지 이름 접미사 (예: _v2)")
 A = ap.parse_args()
 C = CONFIGS[A.dataset]
 DS = A.dataset
-EVOLVED = REPO / C["evolved"]
-SRC = C["src"]
+EVOLVED = REPO / (A.evolved or C["evolved"])
+SRC = A.src or C["src"]
 SEED = C["seed"]
 CAP = C["cap"]
 
@@ -88,7 +92,7 @@ def write_pkg(name, per_expert_by_id, experts, note):
 
 
 # ---------- 조건3: Human-prior (disjoint) ----------
-subj_of, TAX = C["subjects"](ids)
+subj_of, TAX = (acc_subjects(ids, SRC) if DS == "acc" else C["subjects"](ids))
 hp_ex = [slug(t) for t in TAX]
 subj2ex = {t: slug(t) for t in TAX}
 hp_pe = {}
@@ -97,7 +101,7 @@ for i in ids:
     ex = subj2ex.get(subj, slug("other"))
     # cap 적용: n_solved>cap인 쉬운 문제는 specialized 학습 제외(shared가 담당)
     hp_pe[i] = {e: (1 if (e == ex and nsolved[i] <= CAP) else 0) for e in hp_ex}
-write_pkg(f"{C['pkg_prefix']}_seedhp", hp_pe, hp_ex,
+write_pkg(f"{C['pkg_prefix']}_seedhp{A.suffix}", hp_pe, hp_ex,
           "human-prior partition (LLM-tagged subject/category)")
 
 # ---------- 조건2: Random (count-matched) ----------
@@ -113,7 +117,7 @@ for k, ev in enumerate(evolved_ex):
     sel = rng.choice(len(pool), size=n, replace=False)
     for j in sel:
         rnd_pe[pool[j]][rnd_ex[k]] = 1
-write_pkg(f"{C['pkg_prefix']}_seedrnd", rnd_pe, rnd_ex,
+write_pkg(f"{C['pkg_prefix']}_seedrnd{A.suffix}", rnd_pe, rnd_ex,
           "random count-matched partition (evolved 대응 expert와 동일 볼륨)")
 
 print("done. shared는 evolved 체크포인트 재사용(재학습 X).")
