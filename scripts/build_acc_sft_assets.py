@@ -1,101 +1,122 @@
 #!/usr/bin/env python3
 """코딩(acc) MoL 사다리용 SFT 자산 구축 — seed20210111.
 
-acc 원본에는 참조 솔루션이 없다(실행채점 도메인). 따라서 binning 단계에서
-에이전트가 생성하고 **테스트로 검증된** 코드를 SFT 타깃으로 승격시킨다(rejection sampling).
+**타깃은 원본의 실행검증된 참조 솔루션이다.** 이전 판은 "acc에 참조 솔루션이 없다"는
+잘못된 전제로 에이전트 생성코드를 타깃으로 승격시켰고(주석 라인 27%·`pass` 스텁 849개),
+그 스타일을 학습한 모델이 홀드아웃에서 생성의 41%를 주석 무한루프로 태웠다.
+참조 솔루션은 원본 덤프에 처음부터 있었다(97%가 주석 0줄) — build_acc_selfconsistent.py가
+`--keep-solution`으로 실어 나른다.
 
-QASC와 동일 논리 유지: **문제당 canonical 정답코드 1개**를 고정하고,
+QASC와 동일 논리 유지: **문제당 canonical 정답코드 1개**(= 검증된 refs[0]),
 per_expert는 "어떤 문제를 보느냐"만 결정한다(타깃은 expert 무관 동일).
-canonical 선택 규칙: luca가 풀었으면 luca, 아니면 정렬순 첫 solver (결정적·중립).
 
-출력:
-  export/acc/acc_train.jsonl       — solution 포함 (SFT 소스, solver>=1 문제만)
-  export/acc/acc_validation.jsonl  — 학습 eval용 held-out (binning 밖 문제에서)
-  export/acc_binning_seed20210111/ — 라벨패키지(binning_labels/agent_mapping/summary)
+홀드아웃은 split_acc_problems.py가 problem_id 단위로 이미 갈라놨다 — 여기서 다시
+자르지 않는다(이전 판이 행 단위 tail split로 42% 누수를 만들었다).
+
+사용: python scripts/build_acc_sft_assets.py [--corpus_dir export/acc_v2] [--dup first|union]
 """
+import argparse
+import collections
 import json
 from pathlib import Path
 
 REPO = Path("/data5/jaehoonjeong/MetaAgentEvolution_Release")
 SEED = "seed20210111"
-GEN = REPO / f"results/acc/{SEED}/binning_train_full.jsonl"          # expert_outputs(생성코드)
-BIN = REPO / f"results/acc/{SEED}/binning_train_full.binned.jsonl"   # per_expert(정오)
-SRC = REPO / "export/acc_selfconsistent/acc_train.jsonl"             # 원본 문제(솔루션 없음)
-OUTD = REPO / "export/acc"
-PKG = REPO / f"export/acc_binning_{SEED}"
-N_EVAL = 500
-
-gen = {str(json.loads(l)["id"]): json.loads(l)["expert_outputs"] for l in open(GEN, encoding="utf-8")}
-binned = {str(json.loads(l)["id"]): json.loads(l) for l in open(BIN, encoding="utf-8")}
-src = {str(json.loads(l)["id"]): json.loads(l) for l in open(SRC, encoding="utf-8")}
-EX = sorted(next(iter(binned.values()))["per_expert"])
-print(f"binning {len(binned)}문제 × {len(EX)} experts | 원본 {len(src)}문제")
 
 
-def canonical(pid):
-    """검증된 정답코드 1개 선택: luca 우선, 없으면 정렬순 첫 solver."""
-    pe = binned[pid]["per_expert"]
-    solvers = [e for e in EX if pe.get(e, 0) == 1]
-    if not solvers:
-        return None
-    pick = "luca" if "luca" in solvers else solvers[0]
-    code = (gen.get(pid) or {}).get(pick)
-    return code.strip() if isinstance(code, str) and code.strip() else None
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--corpus_dir", default="export/acc_v2",
+                    help="split_acc_problems.py 산출물(acc_train/validation/test.jsonl)")
+    ap.add_argument("--binned", default=f"results/acc/{SEED}/binning_train_full.binned.jsonl")
+    ap.add_argument("--old_corpus", default="export/acc_selfconsistent/acc_train.jsonl",
+                    help="binning 라벨의 id -> problem_id 매핑용(라벨은 구 코퍼스 id로 찍혀 있다)")
+    ap.add_argument("--pkg", default=f"export/acc_binning_{SEED}_v2")
+    ap.add_argument("--dup", choices=["first", "union"], default="first",
+                    help="같은 problem_id가 구 코퍼스에서 여러 행으로 확장돼 두 번 풀린 경우(2,056건) "
+                         "라벨 병합 규칙. first=정렬 첫 행(한 문제 한 번의 시도로 취급), "
+                         "union=한 번이라도 풀었으면 solve(난이도를 낮게 보이게 만든다)")
+    a = ap.parse_args()
 
+    corpus = REPO / a.corpus_dir
+    train_rows = [json.loads(l) for l in open(corpus / "acc_train.jsonl", encoding="utf-8")]
+    by_pid = {str(r["problem_id"]): r for r in train_rows}
+    print(f"코퍼스 train {len(train_rows)}문제 (참조 솔루션 보유)")
 
-OUTD.mkdir(parents=True, exist_ok=True)
-train_rows, no_sol = [], 0
-for pid in binned:
-    if pid not in src:
-        continue
-    sol = canonical(pid)
-    if sol is None:
-        no_sol += 1
-        continue
-    r = dict(src[pid])
-    r["solution"] = sol            # SFT completion
-    r["ground_truth"] = sol        # 폴백(build_regular_hf_dataset 호환)
-    train_rows.append(r)
-with open(OUTD / "acc_train.jsonl", "w", encoding="utf-8") as f:
-    for r in train_rows:
-        f.write(json.dumps(r, ensure_ascii=False) + "\n")
-print(f"acc_train.jsonl: {len(train_rows)}문제 (정답코드 없어 제외 {no_sol})")
+    pid_of = {}
+    for l in open(REPO / a.old_corpus, encoding="utf-8"):
+        r = json.loads(l)
+        pid_of[str(r["id"])] = str(r["problem_id"])
 
-# eval split: binning에 안 쓰인 원본 문제에서 (누수 없음). 솔루션 필요 → 없으므로
-# binning 문제 중 학습에서 뺀 뒤쪽 N_EVAL개를 held-out으로 사용.
-eval_rows = train_rows[-N_EVAL:]
-train_rows = train_rows[:-N_EVAL]
-with open(OUTD / "acc_train.jsonl", "w", encoding="utf-8") as f:
-    for r in train_rows:
-        f.write(json.dumps(r, ensure_ascii=False) + "\n")
-with open(OUTD / "acc_validation.jsonl", "w", encoding="utf-8") as f:
-    for r in eval_rows:
-        f.write(json.dumps(r, ensure_ascii=False) + "\n")
-print(f"  → train {len(train_rows)} / validation {len(eval_rows)} (held-out, 학습에서 제외)")
-
-# ---- 라벨패키지 ----
-PKG.mkdir(parents=True, exist_ok=True)
-train_ids = {str(r["id"]) for r in train_rows}
-kept = 0
-with open(PKG / "binning_labels.jsonl", "w", encoding="utf-8") as f:
-    for pid, b in binned.items():
-        if pid not in train_ids:            # eval held-out·솔루션없음 제외
+    binned = [json.loads(l) for l in open(REPO / a.binned, encoding="utf-8")]
+    EX = sorted(binned[0]["per_expert"])
+    labels = {}
+    for b in sorted(binned, key=lambda b: str(b["id"])):
+        pid = pid_of.get(str(b["id"]))
+        if pid is None:
             continue
-        f.write(json.dumps({"id": pid, "dataset": "acc", "n_solved": int(b["n_solved"]),
-                            "per_expert": b["per_expert"]}, ensure_ascii=False) + "\n")
-        kept += 1
-mapping = {e: {"name": e, "system_prompt": "You are a helpful assistant.",
-               "strengths": f"acc {SEED} evolved expert", "train_pass_at_1": 0.0} for e in EX}
-json.dump(mapping, open(PKG / "agent_mapping.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-json.dump({"source_train_jsonl": "export/acc/acc_train.jsonl", "experts": EX,
-           "note": "verified-correct agent code as SFT target (canonical per problem)"},
-          open(PKG / "summary.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
-print(f"라벨패키지: {kept}문제 × {len(EX)} experts -> {PKG}")
+        if pid not in labels:
+            labels[pid] = {e: int(b["per_expert"].get(e, 0)) for e in EX}
+        elif a.dup == "union":
+            for e in EX:
+                labels[pid][e] |= int(b["per_expert"].get(e, 0))
+    print(f"binning 라벨 {len(binned)}행 -> {len(labels)}문제 × {len(EX)} experts (dup={a.dup})")
 
-# 볼륨 요약
-import collections
-for cap in (10, 9, 8):
-    rows = [json.loads(l) for l in open(PKG / "binning_labels.jsonl", encoding="utf-8")]
-    v = {e: sum(1 for r in rows if r["per_expert"].get(e, 0) == 1 and r["n_solved"] <= cap) for e in EX}
-    print(f"  cap{cap}: min={min(v.values())} max={max(v.values())} 평균={sum(v.values())//len(v)}")
-print(f"  shared(min_n_solved=10): {sum(1 for r in rows if r['n_solved']>=10)}")
+    # 학습 대상: 라벨이 있고 최소 1명이 푼 문제 (QASC 사다리와 같은 관례).
+    # n_solved=0 문제도 이제는 정답코드가 있지만, 어떤 expert에도 배정되지 않으므로
+    # 조건 간 비교를 위해 dense/MoE 모두 같은 문제집합만 본다.
+    sft_rows, n_zero, n_missing = [], 0, 0
+    label_rows = []
+    for pid, per_expert in labels.items():
+        r = by_pid.get(pid)
+        if r is None:
+            n_missing += 1
+            continue
+        n_solved = sum(per_expert.values())
+        if n_solved == 0:
+            n_zero += 1
+            continue
+        sft_rows.append(r)
+        label_rows.append({"id": str(r["id"]), "dataset": "acc",
+                           "n_solved": n_solved, "per_expert": per_expert})
+    print(f"SFT 대상 {len(sft_rows)}문제 (전원 실패 제외 {n_zero}, 홀드아웃/누락 {n_missing})")
+
+    out = corpus / "sft"
+    out.mkdir(parents=True, exist_ok=True)
+    with open(out / "acc_train.jsonl", "w", encoding="utf-8") as f:
+        for r in sft_rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    for name in ("validation", "test"):
+        src = corpus / f"acc_{name}.jsonl"
+        if src.is_file():
+            (out / f"acc_{name}.jsonl").write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    print(f"  -> {out}/acc_train.jsonl (+ validation/test 복사)")
+
+    pkg = REPO / a.pkg
+    pkg.mkdir(parents=True, exist_ok=True)
+    with open(pkg / "binning_labels.jsonl", "w", encoding="utf-8") as f:
+        for r in label_rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    mapping = {e: {"name": e, "system_prompt": "You are a helpful assistant.",
+                   "strengths": f"acc {SEED} evolved expert", "train_pass_at_1": 0.0} for e in EX}
+    json.dump(mapping, open(pkg / "agent_mapping.json", "w", encoding="utf-8"),
+              ensure_ascii=False, indent=2)
+    json.dump({"source_train_jsonl": str((out / "acc_train.jsonl").relative_to(REPO)),
+               "experts": EX, "dup_rule": a.dup,
+               "note": "SFT target = execution-verified reference solution from source dump"},
+              open(pkg / "summary.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    print(f"라벨패키지: {len(label_rows)}문제 × {len(EX)} experts -> {pkg}")
+
+    for cap in (10, 9, 8):
+        v = {e: sum(1 for r in label_rows if r["per_expert"].get(e, 0) == 1 and r["n_solved"] <= cap)
+             for e in EX}
+        print(f"  cap{cap}: min={min(v.values())} max={max(v.values())} 평균={sum(v.values())//len(v)}")
+    print(f"  shared(min_n_solved=10): {sum(1 for r in label_rows if r['n_solved'] >= 10)}")
+    lens = sorted(len(r["solution"]) for r in sft_rows)
+    com = [sum(1 for x in r["solution"].split("\n") if x.strip().startswith("#")) for r in sft_rows]
+    print(f"  타깃 길이 p50={lens[len(lens)//2]} p90={lens[int(.9*len(lens))]}자, "
+          f"주석 0줄인 비율={100*sum(1 for c in com if c == 0)//len(com)}%")
+
+
+if __name__ == "__main__":
+    main()

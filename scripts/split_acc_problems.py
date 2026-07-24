@@ -27,6 +27,10 @@ def main():
     ap.add_argument("--val", type=int, default=750, help="validation 문제 수")
     ap.add_argument("--test", type=int, default=750, help="test(최종 홀드아웃) 문제 수")
     ap.add_argument("--seed", type=int, default=20210111)
+    ap.add_argument("--prefer_train", default=None,
+                    help="여기 담긴 problem_id는 무조건 train으로 (binning 라벨 보유 문제). "
+                         "라벨은 학습에 다 쓰고 홀드아웃은 라벨 없는 풀에서 뽑는다 — "
+                         "두 풀의 카테고리/플랫폼 분포가 같은 것을 확인했다.")
     a = ap.parse_args()
 
     rows = [json.loads(l) for l in open(a.input, encoding="utf-8") if l.strip()]
@@ -36,13 +40,25 @@ def main():
         raise SystemExit(f"problem_id 중복 {len(dup)}건 — 빌더에서 --dedupe-problem-id 없이 만든 파일이다")
     print(f"input={len(rows)} (problem_id 유일)")
 
+    forced = set()
+    if a.prefer_train:
+        forced = {str(x) for x in json.load(open(a.prefer_train, encoding="utf-8"))}
+        forced &= set(pids)
+        print(f"prefer_train: {len(forced)}문제를 train에 고정 (홀드아웃 후보 {len(rows) - len(forced)})")
+
     by_cat = defaultdict(list)
+    pinned = []
     for r in rows:
+        if str(r["problem_id"]) in forced:
+            pinned.append(r)
+            continue
         by_cat[r.get("main_critic_category") or "UNKNOWN"].append(r)
 
     rng = random.Random(a.seed)
-    val, test, train = [], [], []
-    total = len(rows)
+    val, test, train = [], [], list(pinned)
+    total = sum(len(g) for g in by_cat.values())
+    if a.val + a.test > total:
+        raise SystemExit(f"홀드아웃 {a.val + a.test} > 후보 {total}")
     for cat in sorted(by_cat):
         g = sorted(by_cat[cat], key=lambda r: str(r["problem_id"]))
         rng.shuffle(g)
