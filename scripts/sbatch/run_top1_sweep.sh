@@ -11,4 +11,4 @@ set -euo pipefail
 cd "${SLURM_SUBMIT_DIR}"
 source ~/.bashrc; source ~/data/miniconda3/etc/profile.d/conda.sh; conda activate pro6000
 export OMP_NUM_THREADS=2 MKL_NUM_THREADS=2
-python scripts/router_top1_sweep.py
+python scripts/router_top1_sweep.py --dataset "${DATASET:-qasc}"

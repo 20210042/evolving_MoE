@@ -78,6 +78,22 @@ python scripts/moe_deploy_sweep.py --dataset lbox \
     --out results/lbox/deploy_sweep.md
 ```
 
+SLURM 래퍼도 `DATASET=lbox`를 받는다. hidden-state 추출은 LBOX의 평가 split인
+`valid`를 자동으로 사용한다.
+
+```bash
+DATASET=lbox sbatch scripts/sbatch/run_extract_hs.sh
+DATASET=lbox sbatch scripts/sbatch/run_router_arch.sh
+DATASET=lbox sbatch scripts/sbatch/run_router_feasibility.sh
+DATASET=lbox sbatch scripts/sbatch/run_top1_sweep.sh
+DATASET=lbox sbatch scripts/sbatch/run_top2_push.sh
+DATASET=lbox BINNED=<per-expert-binned.jsonl> DENSE=<dense-baseline.jsonl> \
+  OUT=results/lbox/deploy_sweep.md sbatch scripts/sbatch/run_deploy_sweep.sh
+```
+
+`run_router_combo.sh`, `run_extract_ansprob.sh`, `run_expert_conf*.sh`는 MCQA 전용
+특징을 쓰므로 LBOX에는 제출하지 않는다.
+
 ## ⚠️ QASC 기존 결과에 대한 경고
 
 `router_*.py`가 학습 타깃으로 쓰는 QASC gemma 라벨

@@ -10,6 +10,7 @@ set -euo pipefail
 cd "${SLURM_SUBMIT_DIR}"
 source ~/.bashrc; source ~/data/miniconda3/etc/profile.d/conda.sh; conda activate evolving_moe
 export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4
-echo "===== emb ====="; python scripts/router_feasibility.py --feat emb
-echo "===== hs_last ====="; python scripts/router_feasibility.py --feat hs_last
-echo "===== hs_mean ====="; python scripts/router_feasibility.py --feat hs_mean
+DATASET="${DATASET:-qasc}"
+echo "===== emb ====="; python scripts/router_feasibility.py --dataset "${DATASET}" --feat emb
+echo "===== hs_last ====="; python scripts/router_feasibility.py --dataset "${DATASET}" --feat hs_last
+echo "===== hs_mean ====="; python scripts/router_feasibility.py --dataset "${DATASET}" --feat hs_mean

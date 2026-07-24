@@ -16,6 +16,14 @@ source ~/data/miniconda3/etc/profile.d/conda.sh
 conda activate evolving_moe
 export HF_HOME=/data5/jaehoonjeong/.cache/huggingface
 export PYTHONPATH="${SLURM_SUBMIT_DIR}/src"
-python scripts/extract_hidden_states.py --dataset "${DATASET:-qasc}" --split train
-python scripts/extract_hidden_states.py --dataset "${DATASET:-qasc}" --split validation
+DATASET="${DATASET:-qasc}"
+# QASC uses `validation`, while LBOX uses `valid`. Override when needed for a
+# newly registered dataset: EVAL_SPLIT=<split> sbatch ...
+case "${DATASET}" in
+  lbox) DEFAULT_EVAL_SPLIT=valid ;;
+  *)    DEFAULT_EVAL_SPLIT=validation ;;
+esac
+EVAL_SPLIT="${EVAL_SPLIT:-${DEFAULT_EVAL_SPLIT}}"
+python scripts/extract_hidden_states.py --dataset "${DATASET}" --split train
+python scripts/extract_hidden_states.py --dataset "${DATASET}" --split "${EVAL_SPLIT}"
 echo "=== hidden-state 추출 완료 ==="

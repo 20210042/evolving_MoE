@@ -10,4 +10,4 @@ set -euo pipefail
 cd "${SLURM_SUBMIT_DIR}"
 source ~/.bashrc; source ~/data/miniconda3/etc/profile.d/conda.sh; conda activate evolving_moe
 export OMP_NUM_THREADS=8 MKL_NUM_THREADS=8
-python scripts/router_sweep.py
+python scripts/router_sweep.py --dataset "${DATASET:-qasc}"
