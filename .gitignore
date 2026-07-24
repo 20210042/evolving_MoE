@@ -45,3 +45,8 @@ src/meta_agent_evo/
 
 # 생성 자산(build_acc_sft_assets.py로 재생성 가능, 190MB)
 export/acc/
+
+# 라벨패키지·재빌드 산출물 — 전부 스크립트로 재생성된다
+export/*_binning_*/
+export/acc_v2/
+*.zip
