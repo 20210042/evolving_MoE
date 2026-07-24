@@ -29,6 +29,36 @@ def test_score_qasc_letter_and_option_text():
     assert score_one(item, "local weather conditions") == 100.0
 
 
+def test_score_qasc_enumerated_options_do_not_override_answer():
+    """보기를 전부 나열한 뒤 답을 말하는 장황한 출력도 정답으로 잡혀야 한다.
+
+    회귀: 세 추출 패턴의 매치를 한 리스트에 모아 마지막을 취하던 구현에서는
+    "(A)...(D)" 나열의 마지막 글자가 명시된 답을 덮어써서, 장황한 에이전트가
+    구조적으로 오답 처리됐다.
+    """
+    item = {
+        "id": "q2",
+        "dataset": "qasc",
+        "scoring_kind": "qasc",
+        "instruction": "What affects rain? (A) Moon phase (B) local weather conditions (C) paint (D) music",
+        "ground_truth": "B",
+        "domain": "qasc",
+    }
+    verbose = (
+        "Let's evaluate each option:\n"
+        "(A) Moon phase - no measurable effect.\n"
+        "(B) local weather conditions - this drives precipitation.\n"
+        "(C) paint - irrelevant.\n"
+        "(D) music - irrelevant.\n\n"
+        "Final answer: B"
+    )
+    assert score_one(item, verbose) == 100.0
+    # 답을 마지막 줄에 글자로만 두는 형태도 동일하게 동작해야 한다.
+    assert score_one(item, verbose.replace("Final answer: B", "B")) == 100.0
+    # 나열만 있고 답 표시가 없으면 마지막 보기로 떨어지는 기존 동작은 유지.
+    assert score_one(item, "(A) Moon phase (B) local weather conditions") == 100.0
+
+
 def test_score_lbox_casename_em():
     item = {
         "id": "l1",

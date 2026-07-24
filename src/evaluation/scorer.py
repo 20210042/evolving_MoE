@@ -99,15 +99,22 @@ def _parse_qasc_options(instruction: str) -> Dict[str, str]:
 
 def _extract_qasc_letter(prediction: str) -> str | None:
     text = strip_thinking_channels(prediction or "")
-    candidates: list[str] = []
+    # 우선순위 순서다. 앞선 패턴이 하나라도 맞으면 거기서 끝내야 한다 —
+    # 마지막 "(X)" 패턴은 보기 나열 "(A) ... (H) ..."을 전부 잡으므로,
+    # 매치를 한 리스트에 모아 마지막을 취하면 답을 명시한 문장이 있어도
+    # 나열된 마지막 보기 글자가 이겨버린다.
     patterns = [
-        r"(?i)(?:final\s+answer|answer|choice|option)\s*(?:is|:)?\s*\(?\s*([A-H])\s*\)?",
+        # 답 선언은 같은 줄에서만 인정한다. \s* 로 두면 "각 option:\n(A) ..." 처럼
+        # 산문 뒤 줄바꿈 너머의 첫 보기를 답으로 오인한다.
+        r"(?i)(?:final\s+answer|answer|choice|option)[ \t]*(?:is|:)?[ \t]*\(?[ \t]*([A-H])[ \t]*\)?",
         r"(?m)^\s*\(?\s*([A-H])\s*\)?\s*(?:[.)])?\s*$",
         r"\(([A-H])\)",
     ]
     for pat in patterns:
-        candidates.extend(m.group(1).upper() for m in re.finditer(pat, text))
-    return candidates[-1] if candidates else None
+        matches = [m.group(1).upper() for m in re.finditer(pat, text)]
+        if matches:
+            return matches[-1]
+    return None
 
 
 def score_qasc_item(item: Dict[str, Any], prediction: str) -> float:
