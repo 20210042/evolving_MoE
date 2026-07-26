@@ -41,6 +41,9 @@ SRC="${SRC:-export/acc_v2/acc_test.jsonl}"
 EVAL_SPLIT="${EVAL_SPLIT:-test}"
 DATA_DIR="${DATA_DIR:-export/acc_v2}"
 RES="results/acc/seed20210111_v2/ablation"
+# 생성기는 파일명을 inference_<split>_<tag>.jsonl로 짓는다. 채점이 찾는 이름과
+# 어긋나면 생성만 끝나고 채점이 죽으므로 한 변수로 묶는다.
+SPLIT_TAG="${SPLIT_TAG:-test751}"
 BATCH="${BATCH:-8}"
 # 참조 솔루션 타깃은 p50 ~100 / p90 ~330 토큰이다. 6144는 붕괴한 생성이 상한까지
 # 달리면서 OOM과 28시간 런타임을 만든 값이지 필요한 값이 아니었다.
@@ -56,12 +59,12 @@ if [ -n "${SMOKE:-}" ]; then
     LIMIT_FLAG=(--limit "${SMOKE}")
 fi
 [ "${RESUME}" = "1" ] && LIMIT_FLAG+=(--resume)
-OUT="${RES}/inference_test751_${TAG}.jsonl"
+OUT="${RES}/inference_${SPLIT_TAG}_${TAG}.jsonl"
 
 echo "=== [1/2] 생성: ${LABEL} (${CKPT}) tag=${TAG} ==="
 python scripts/generate_lora_binning.py \
     --dataset acc \
-    --split clean290 \
+    --split "${SPLIT_TAG}" \
     --src "${SRC}" \
     --out_dir "${RES}" \
     --ckpt "${CKPT}" \
