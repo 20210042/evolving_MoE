@@ -147,16 +147,20 @@ def run(name, path):
     print(f"  routed top-2(union) {routed2:6.2f}")
     print(f"  per-expert AUC 평균 {np.nanmean(aucs):.4f}  (min {np.nanmin(aucs):.3f} max {np.nanmax(aucs):.3f})")
     print(f"  contested {int(contested.sum())}문제에서 routed 적중 {c_routed:.2f}%")
-    return dict(condition=name, experts=E, feat=A.feat, best_single=best_single, oracle=oracle,
-                headroom=head, routed_top1=routed, routed_top2_union=routed2,
-                realization=realz, auc_mean=float(np.nanmean(aucs)),
-                contested_n=int(contested.sum()), contested_routed=c_routed)
+    return dict(condition=name, experts=E, feat=A.feat,
+                best_single=float(best_single), oracle=float(oracle), headroom=float(head),
+                routed_top1=float(routed), routed_top2_union=float(routed2),
+                realization=float(realz), auc_mean=float(np.nanmean(aucs)),
+                contested_n=int(contested.sum()), contested_routed=float(c_routed))
 
 
 out = [run(k, v) for k, v in CONDS.items() if (ROOT / v).is_file()]
 dst = ROOT / A.out
 dst.parent.mkdir(parents=True, exist_ok=True)
-prev = json.load(open(dst)) if dst.is_file() else {}
+try:                       # 이전 실행이 중간에 죽어 깨진 파일을 남겼어도 진행한다
+    prev = json.load(open(dst)) if dst.is_file() else {}
+except json.JSONDecodeError:
+    prev = {}
 prev[A.feat] = out
 json.dump(prev, open(dst, "w"), indent=2, ensure_ascii=False)
 print(f"\n-> {dst}")
