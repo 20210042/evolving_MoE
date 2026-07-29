@@ -595,6 +595,11 @@ def main():
     trainer.save_model()
     trainer.save_state()
 
+    if sft_config.push_to_hub:
+        trainer.push_to_hub(
+            commit_message="End of training: best validation-loss checkpoint",
+        )
+
     metrics = train_result.metrics
     metrics["train_samples"] = len(train_dataset)
     trainer.log_metrics("train", metrics)

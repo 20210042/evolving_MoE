@@ -140,6 +140,7 @@ srun --ntasks=1 --gpus-per-task="${NPROC_PER_NODE}" --chdir="$REPO" \
     --save_strategy steps \
     --save_steps "${SAVE_STEPS}" \
     --save_total_limit 2 \
+    --hub_strategy every_save \
     --load_best_model_at_end true \
     --metric_for_best_model eval_loss \
     --report_to wandb \
