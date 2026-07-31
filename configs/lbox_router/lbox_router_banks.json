@@ -1,0 +1,46 @@
+{
+  "low7_high8": {
+    "label": "low7 specialists + high8 shared",
+    "specialist_max_solved": 7,
+    "shared_min_solved": 8,
+    "models": [
+      {"id": "c_29934", "source_expert_id": "c_29934", "name": "Judicial Precedent Classifier", "slug": "roster_c_29934", "lora_path": "checkpoints/sft_lbox_roster_c_29934"},
+      {"id": "c_28126", "source_expert_id": "c_28126", "name": "Legal Case Typology Architect", "slug": "roster_c_28126", "lora_path": "checkpoints/sft_lbox_roster_c_28126"},
+      {"id": "c_63621", "source_expert_id": "c_63621", "name": "Statutory Element Matcher", "slug": "roster_c_63621", "lora_path": "checkpoints/sft_lbox_roster_c_63621"},
+      {"id": "c_24222", "source_expert_id": "c_24222", "name": "Legal Nomenclature Purist", "slug": "roster_c_24222", "lora_path": "checkpoints/sft_lbox_roster_c_24222"},
+      {"id": "c_47388", "source_expert_id": "c_47388", "name": "Legal Fact Synthesis Engine", "slug": "roster_c_47388", "lora_path": "checkpoints/sft_lbox_roster_c_47388"},
+      {"id": "c_27344", "source_expert_id": "c_27344", "name": "Legal Provision Auditor", "slug": "roster_c_27344", "lora_path": "checkpoints/sft_lbox_roster_c_27344"},
+      {"id": "c_16504", "source_expert_id": "c_16504", "name": "Civil Dispute Taxonomy Expert", "slug": "roster_c_16504", "lora_path": "checkpoints/sft_lbox_roster_c_16504"},
+      {"id": "c_31181", "source_expert_id": "c_31181", "name": "Judicial Labeling Precisionist", "slug": "roster_c_31181", "lora_path": "checkpoints/sft_lbox_roster_c_31181"},
+      {"id": "c_4799", "source_expert_id": "c_4799", "name": "Legal Recidivism Analyst", "slug": "roster_c_4799", "lora_path": "checkpoints/sft_lbox_roster_c_4799"},
+      {"id": "c_31573", "source_expert_id": "c_31573", "name": "Criminal Charge Aggregator", "slug": "roster_c_31573", "lora_path": "checkpoints/sft_lbox_roster_c_31573"},
+      {"id": "shared_high8", "name": "High8 Shared Consensus", "slug": "roster_shared_consensus", "lora_path": "checkpoints/sft_lbox_shared_consensus"}
+    ]
+  },
+  "low5_high6": {
+    "label": "low5 specialists + high6 generalist",
+    "specialist_max_solved": 5,
+    "shared_min_solved": 6,
+    "models": [
+      {"id": "c_29934_low5", "source_expert_id": "c_29934", "name": "Judicial Precedent Classifier (low5)", "slug": "roster_c_29934_low5", "lora_path": "checkpoints/sft_lbox_roster_c_29934_low5"},
+      {"id": "c_28126_low5", "source_expert_id": "c_28126", "name": "Legal Case Typology Architect (low5)", "slug": "roster_c_28126_low5", "lora_path": "checkpoints/sft_lbox_roster_c_28126_low5"},
+      {"id": "c_63621_low5", "source_expert_id": "c_63621", "name": "Statutory Element Matcher (low5)", "slug": "roster_c_63621_low5", "lora_path": "checkpoints/sft_lbox_roster_c_63621_low5"},
+      {"id": "c_24222_low5", "source_expert_id": "c_24222", "name": "Legal Nomenclature Purist (low5)", "slug": "roster_c_24222_low5", "lora_path": "checkpoints/sft_lbox_roster_c_24222_low5"},
+      {"id": "c_47388_low5", "source_expert_id": "c_47388", "name": "Legal Fact Synthesis Engine (low5)", "slug": "roster_c_47388_low5", "lora_path": "checkpoints/sft_lbox_roster_c_47388_low5"},
+      {"id": "c_27344_low5", "source_expert_id": "c_27344", "name": "Legal Provision Auditor (low5)", "slug": "roster_c_27344_low5", "lora_path": "checkpoints/sft_lbox_roster_c_27344_low5"},
+      {"id": "c_16504_low5", "source_expert_id": "c_16504", "name": "Civil Dispute Taxonomy Expert (low5)", "slug": "roster_c_16504_low5", "lora_path": "checkpoints/sft_lbox_roster_c_16504_low5"},
+      {"id": "c_31181_low5", "source_expert_id": "c_31181", "name": "Judicial Labeling Precisionist (low5)", "slug": "roster_c_31181_low5", "lora_path": "checkpoints/sft_lbox_roster_c_31181_low5"},
+      {"id": "c_4799_low5", "source_expert_id": "c_4799", "name": "Legal Recidivism Analyst (low5)", "slug": "roster_c_4799_low5", "lora_path": "checkpoints/sft_lbox_roster_c_4799_low5"},
+      {"id": "c_31573_low5", "source_expert_id": "c_31573", "name": "Criminal Charge Aggregator (low5)", "slug": "roster_c_31573_low5", "lora_path": "checkpoints/sft_lbox_roster_c_31573_low5"},
+      {"id": "generalist_high6", "name": "High6 Generalist", "slug": "generalist_high6", "lora_path": "checkpoints/sft_lbox_generalist_high6"}
+    ]
+  },
+  "task_prior": {
+    "label": "learned routing over three task-prior experts",
+    "models": [
+      {"id": "casename_civil", "name": "Task Prior: Civil Case Name", "slug": "task_prior_casename_civil", "lora_path": "checkpoints/sft_llama3_lbox_luca_casename_civil"},
+      {"id": "casename_criminal", "name": "Task Prior: Criminal Charge", "slug": "task_prior_casename_criminal", "lora_path": "checkpoints/sft_llama3_lbox_luca_casename_criminal"},
+      {"id": "statute", "name": "Task Prior: Statute", "slug": "task_prior_statute", "lora_path": "checkpoints/sft_llama3_lbox_luca_statute"}
+    ]
+  }
+}
