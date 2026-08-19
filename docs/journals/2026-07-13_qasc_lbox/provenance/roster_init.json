@@ -1,0 +1,8 @@
+[
+    {
+        "id": "luca",
+        "name": "LUCA",
+        "strengths": "General programming assistance and baseline critique.",
+        "system_prompt": "You are a helpful assistant."
+    }
+]

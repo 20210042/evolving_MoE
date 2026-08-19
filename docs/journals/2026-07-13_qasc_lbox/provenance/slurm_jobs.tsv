@@ -1,0 +1,13 @@
+JobID|JobName|State|Elapsed|Timelimit|NodeList|ExitCode
+206165|eval_qasc_llama3_full|COMPLETED|00:00:53|04:00:00|n04|0:0
+206165.batch|batch|COMPLETED|00:00:53||n04|0:0
+206166|eval_lbox_llama3_full|COMPLETED|00:05:27|12:00:00|n04|0:0
+206166.batch|batch|COMPLETED|00:05:27||n04|0:0
+206167|sft_qasc_llama3_full|FAILED|00:00:10|1-00:00:00|n04|1:0
+206167.batch|batch|FAILED|00:00:10||n04|1:0
+206169|sft_lbox_llama3_full|FAILED|00:00:10|2-00:00:00|n04|1:0
+206169.batch|batch|FAILED|00:00:10||n04|1:0
+206176|eval_qasc_llama3_luca|COMPLETED|00:00:52|04:00:00|n03|0:0
+206176.batch|batch|COMPLETED|00:00:52||n03|0:0
+206177|eval_lbox_llama3_luca|COMPLETED|00:05:33|12:00:00|n03|0:0
+206177.batch|batch|COMPLETED|00:05:33||n03|0:0
