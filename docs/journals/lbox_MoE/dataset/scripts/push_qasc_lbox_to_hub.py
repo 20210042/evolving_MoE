@@ -50,6 +50,13 @@ LBOX_FEATURES = Features(
         "ground_truth_text": Value("string"),
         "ground_truth_items": Sequence(Value("string")),
         "ground_truth_raw_json": Value("string"),
+        "legal_category": Value("string"),
+        "legal_category_name": Value("string"),
+        "legal_category_confidence": Value("float32"),
+        "legal_category_parse_status": Value("string"),
+        "legal_category_rationale": Value("string"),
+        "legal_category_tag_model": Value("string"),
+        "legal_category_tag_source": Value("string"),
         "domain": Value("string"),
         "dataset": Value("string"),
         "scoring_kind": Value("string"),
@@ -111,7 +118,20 @@ def normalize_lbox_ground_truth(value: Any) -> tuple[str, list[str], str]:
     return text, items, json.dumps(value, ensure_ascii=False)
 
 
-def build_lbox(export_dir: Path) -> DatasetDict:
+def load_lbox_legal_tags(tags_dir: Path, split: str) -> tuple[dict[str, dict[str, Any]], str]:
+    path = tags_dir / f"lbox_{split}_legal_categories.jsonl"
+    summary_path = tags_dir / f"lbox_{split}_legal_categories_summary.json"
+    if not path.is_file():
+        raise FileNotFoundError(f"Missing LBox legal-category tags: {path}")
+    tag_model = ""
+    if summary_path.is_file():
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        tag_model = normalize_text(summary.get("model"))
+    tags = {normalize_text(row.get("id")): row for row in read_jsonl(path)}
+    return tags, tag_model
+
+
+def build_lbox(export_dir: Path, legal_category_tags_dir: Path | None = None) -> DatasetDict:
     split_files = {
         "train": export_dir / "lbox_train.jsonl",
         "valid": export_dir / "lbox_valid.jsonl",
@@ -119,12 +139,20 @@ def build_lbox(export_dir: Path) -> DatasetDict:
     }
     splits = {}
     for split, path in split_files.items():
+        tags_by_id: dict[str, dict[str, Any]] = {}
+        tag_model = ""
+        if legal_category_tags_dir is not None:
+            tags_by_id, tag_model = load_lbox_legal_tags(legal_category_tags_dir, split)
         rows = []
         for item in read_jsonl(path):
             gt_text, gt_items, gt_raw = normalize_lbox_ground_truth(item.get("ground_truth"))
+            item_id = normalize_text(item.get("id"))
+            tag = tags_by_id.get(item_id, {})
+            if legal_category_tags_dir is not None and not tag:
+                raise RuntimeError(f"Missing legal-category tag for {split}/{item_id}")
             rows.append(
                 {
-                    "id": normalize_text(item.get("id")),
+                    "id": item_id,
                     "task_type": normalize_text(item.get("task_type")),
                     "task_config": normalize_text(item.get("task_config")),
                     "casetype": normalize_text(item.get("casetype")),
@@ -133,6 +161,15 @@ def build_lbox(export_dir: Path) -> DatasetDict:
                     "ground_truth_text": gt_text,
                     "ground_truth_items": gt_items,
                     "ground_truth_raw_json": gt_raw,
+                    "legal_category": normalize_text(tag.get("primary_category")),
+                    "legal_category_name": normalize_text(tag.get("primary_category_name")),
+                    "legal_category_confidence": float(tag.get("confidence") or 0.0),
+                    "legal_category_parse_status": normalize_text(tag.get("parse_status")),
+                    "legal_category_rationale": normalize_text(tag.get("rationale")),
+                    "legal_category_tag_model": tag_model,
+                    "legal_category_tag_source": (
+                        str(legal_category_tags_dir) if legal_category_tags_dir is not None else ""
+                    ),
                     "domain": normalize_text(item.get("domain") or "lbox"),
                     "dataset": normalize_text(item.get("dataset") or "lbox"),
                     "scoring_kind": normalize_text(item.get("scoring_kind") or "lbox"),
@@ -232,6 +269,20 @@ dataset_info:
     sequence: string
   - name: ground_truth_raw_json
     dtype: string
+  - name: legal_category
+    dtype: string
+  - name: legal_category_name
+    dtype: string
+  - name: legal_category_confidence
+    dtype: float32
+  - name: legal_category_parse_status
+    dtype: string
+  - name: legal_category_rationale
+    dtype: string
+  - name: legal_category_tag_model
+    dtype: string
+  - name: legal_category_tag_source
+    dtype: string
   - name: domain
     dtype: string
   - name: dataset
@@ -258,6 +309,9 @@ This dataset is built from local `export/lbox` JSONL files.
 - `ground_truth_items` stores one or more labels with a stable list schema.
 - `ground_truth_text` is a display-friendly joined label string.
 - `ground_truth_raw_json` preserves the original local label object.
+- `legal_category*` columns are LLM-generated legal-topic tags produced with
+  `google/gemma-4-26B-A4B-it`. The current taxonomy merges the earlier
+  `family_case` and `patent_ip` tags into `family_patent_special`.
 """
 
 
@@ -266,6 +320,16 @@ def main() -> None:
     parser.add_argument("--qasc_repo", default="jongbin-kr/qasc")
     parser.add_argument("--lbox_repo", default="jongbin-kr/lbox")
     parser.add_argument("--lbox_export_dir", default="export/lbox")
+    parser.add_argument(
+        "--lbox_legal_category_tags_dir",
+        default="results/lbox_legal_category_tags/gemma4_a4b_family_patent_merged",
+        help="Directory containing lbox_{train,valid,test}_legal_categories.jsonl.",
+    )
+    parser.add_argument(
+        "--skip_lbox_legal_categories",
+        action="store_true",
+        help="Do not join LBox LLM-generated legal-category tags.",
+    )
     parser.add_argument("--private", action="store_true")
     parser.add_argument("--dry_run", action="store_true")
     parser.add_argument("--skip_qasc", action="store_true")
@@ -280,7 +344,12 @@ def main() -> None:
             upload_readme(args.qasc_repo, qasc_card())
 
     if not args.skip_lbox:
-        lbox = build_lbox(Path(args.lbox_export_dir))
+        lbox = build_lbox(
+            Path(args.lbox_export_dir),
+            None
+            if args.skip_lbox_legal_categories
+            else Path(args.lbox_legal_category_tags_dir),
+        )
         print(lbox)
         if not args.dry_run:
             lbox.push_to_hub(args.lbox_repo, private=args.private)
