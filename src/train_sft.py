@@ -104,6 +104,14 @@ class DataArguments:
         default=None,
         metadata={"help": "카테고리 필터 (e.g. --categories calculus algebra). None이면 전체."},
     )
+    legal_category_tags_path: Optional[str] = field(
+        default=None,
+        metadata={"help": "LBox legal-category tag jsonl path. 제공 시 --legal_category와 id-join해 필터링."},
+    )
+    legal_category: Optional[str] = field(
+        default=None,
+        metadata={"help": "LBox legal-category slug (e.g. civil_property_obligation)."},
+    )
     data_ratio: float = field(
         default=1.0,
         metadata={"help": "학습 데이터 사용 비율 (0.0~1.0). 0.1이면 10%만 사용."},
@@ -153,6 +161,15 @@ class DataArguments:
             "requested case name, charge, or statutory provision in the required one-line format without explanation."
         ),
         metadata={"help": "shared 모드에서 사용할 system prompt."},
+    )
+    use_expert_prompt_for_eval: bool = field(
+        default=False,
+        metadata={
+            "help": (
+                "label_package 학습에서 validation/eval prompt의 system message도 "
+                "선택된 expert/shared system prompt로 덮어씀."
+            )
+        },
     )
 
 
@@ -275,6 +292,7 @@ def build_regular_hf_dataset(
     categories: Optional[List[str]] = None,
     prompt_system: str = "baseline",
     luca_system_prompt: str = LUCA_SYSTEM_PROMPT,
+    fixed_system_prompt: str | None = None,
 ) -> Dataset:
     items = get_dataset(
         name,
@@ -287,14 +305,17 @@ def build_regular_hf_dataset(
 
     rows = []
     for item in items:
+        prompt = build_prompt_messages(
+            item,
+            name,
+            model_name,
+            prompt_system=prompt_system,
+            luca_system_prompt=luca_system_prompt,
+        )
+        if fixed_system_prompt:
+            prompt = _override_system_prompt(prompt, fixed_system_prompt)
         rows.append({
-            "prompt": build_prompt_messages(
-                item,
-                name,
-                model_name,
-                prompt_system=prompt_system,
-                luca_system_prompt=luca_system_prompt,
-            ),
+            "prompt": prompt,
             "completion": [{"role": "assistant", "content": stringify_completion(item.get("solution", item["ground_truth"]))}],
         })
     return Dataset.from_list(rows)
@@ -308,6 +329,24 @@ def _load_jsonl(path: Path) -> list[dict]:
             if line:
                 rows.append(json.loads(line))
     return rows
+
+
+def _load_tag_ids(tags_path: str, legal_category: str) -> set[str]:
+    path = Path(tags_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"Missing legal category tags file: {path}")
+    wanted = {part.strip() for part in str(legal_category).split(",") if part.strip()}
+    if not wanted:
+        raise ValueError("--legal_category is required when --legal_category_tags_path is set.")
+    ids = {
+        str(row["id"])
+        for row in _load_jsonl(path)
+        if str(row.get("primary_category") or "") in wanted
+        and str(row.get("parse_status") or "ok") == "ok"
+    }
+    if not ids:
+        raise ValueError(f"No examples found for legal_category={sorted(wanted)!r} in {path}")
+    return ids
 
 
 def resolve_expert_id(mapping: dict[str, dict], requested: str | None) -> str:
@@ -345,7 +384,7 @@ def build_expert_label_dataset(
     high_consensus_min_solved: int,
     shared_system_prompt: str,
     seed: Optional[int],
-) -> tuple[Dataset, str, int]:
+) -> tuple[Dataset, str, str, int]:
     """Build one SFT dataset from a roster label package.
 
     Modes are intentionally mutually exclusive:
@@ -442,7 +481,56 @@ def build_expert_label_dataset(
             ],
             "completion": [{"role": "assistant", "content": stringify_completion(item.get("solution", item["ground_truth"]))}],
         })
-    return Dataset.from_list(rows), chosen, len(selected)
+    return Dataset.from_list(rows), chosen, persona, len(selected)
+
+
+def build_legal_category_dataset(
+    name: str,
+    split: str,
+    *,
+    model_name: str,
+    data_dir: str | None,
+    tags_path: str,
+    legal_category: str,
+    data_ratio: float,
+    seed: Optional[int],
+    prompt_system: str,
+    luca_system_prompt: str,
+) -> Dataset:
+    tag_ids = _load_tag_ids(tags_path, legal_category)
+    items = [
+        item
+        for item in get_dataset(name, split=split, local_dir=data_dir, data_ratio=1.0, seed=seed)
+        if str(item.get("id")) in tag_ids
+    ]
+    if data_ratio < 1.0:
+        import random
+        rng = random.Random((seed or 0) + sum(ord(char) for char in legal_category))
+        rng.shuffle(items)
+        items = items[: max(1, int(len(items) * data_ratio))]
+    if not items:
+        raise ValueError(f"No source examples matched legal_category={legal_category!r} for {name}/{split}")
+
+    rows = []
+    for item in items:
+        rows.append({
+            "prompt": build_prompt_messages(
+                item,
+                name,
+                model_name,
+                prompt_system=prompt_system,
+                luca_system_prompt=luca_system_prompt,
+            ),
+            "completion": [{"role": "assistant", "content": stringify_completion(item.get("solution", item["ground_truth"]))}],
+        })
+    logger.info(
+        "legal_category=%s split=%s: selected=%d from tag_ids=%d",
+        legal_category,
+        split,
+        len(rows),
+        len(tag_ids),
+    )
+    return Dataset.from_list(rows)
 
 
 def main():
@@ -474,9 +562,12 @@ def main():
 
     set_all_seeds(sft_config.seed)
 
+    if data_args.label_package and data_args.legal_category_tags_path:
+        parser.error("--label_package and --legal_category_tags_path are mutually exclusive.")
+
     if data_args.label_package:
         logger.info("전문가별 라벨 패키지 로딩: %s", data_args.label_package)
-        train_dataset, chosen_expert, n_rows = build_expert_label_dataset(
+        train_dataset, chosen_expert, chosen_system_prompt, n_rows = build_expert_label_dataset(
             package_dir=data_args.label_package,
             expert_id=data_args.expert_id,
             source_jsonl=data_args.source_jsonl,
@@ -489,7 +580,30 @@ def main():
             seed=sft_config.seed,
         )
         logger.info("전문가 SFT 학습셋: expert=%s, examples=%d", chosen_expert, n_rows)
+    elif data_args.legal_category_tags_path:
+        chosen_system_prompt = None
+        chosen_expert = data_args.legal_category
+        logger.info(
+            "LBox legal category 학습 데이터셋 로딩: %s/%s category=%s tags=%s",
+            data_args.train_dataset,
+            data_args.train_split,
+            data_args.legal_category,
+            data_args.legal_category_tags_path,
+        )
+        train_dataset = build_legal_category_dataset(
+            data_args.train_dataset,
+            split=data_args.train_split,
+            model_name=model_args.model_name_or_path,
+            data_dir=data_args.data_dir,
+            tags_path=data_args.legal_category_tags_path,
+            legal_category=data_args.legal_category or "",
+            data_ratio=data_args.data_ratio,
+            seed=sft_config.seed,
+            prompt_system=extra_args.prompt_system,
+            luca_system_prompt=luca_system_prompt,
+        )
     else:
+        chosen_system_prompt = None
         logger.info("학습 데이터셋 로딩: %s/%s", data_args.train_dataset, data_args.train_split)
         train_dataset = build_regular_hf_dataset(
             data_args.train_dataset,
@@ -506,16 +620,36 @@ def main():
     logger.info("학습 데이터셋: %d개 예제", len(train_dataset))
 
     logger.info("평가 데이터셋 로딩: %s/%s", data_args.eval_dataset, data_args.eval_split)
-    eval_dataset = build_regular_hf_dataset(
-        data_args.eval_dataset,
-        split=data_args.eval_split,
-        model_name=model_args.model_name_or_path,
-        data_dir=data_args.eval_data_dir or data_args.data_dir,
-        seed=sft_config.seed,
-        categories=data_args.categories,
-        prompt_system=extra_args.prompt_system,
-        luca_system_prompt=luca_system_prompt,
-    )
+    if data_args.legal_category_tags_path:
+        eval_tags_path = data_args.legal_category_tags_path.replace("_train_", f"_{data_args.eval_split}_")
+        eval_dataset = build_legal_category_dataset(
+            data_args.eval_dataset,
+            split=data_args.eval_split,
+            model_name=model_args.model_name_or_path,
+            data_dir=data_args.eval_data_dir or data_args.data_dir,
+            tags_path=eval_tags_path,
+            legal_category=data_args.legal_category or "",
+            data_ratio=1.0,
+            seed=sft_config.seed,
+            prompt_system=extra_args.prompt_system,
+            luca_system_prompt=luca_system_prompt,
+        )
+    else:
+        eval_dataset = build_regular_hf_dataset(
+            data_args.eval_dataset,
+            split=data_args.eval_split,
+            model_name=model_args.model_name_or_path,
+            data_dir=data_args.eval_data_dir or data_args.data_dir,
+            seed=sft_config.seed,
+            categories=data_args.categories,
+            prompt_system=extra_args.prompt_system,
+            luca_system_prompt=luca_system_prompt,
+            fixed_system_prompt=(
+                chosen_system_prompt
+                if data_args.label_package and data_args.use_expert_prompt_for_eval
+                else None
+            ),
+        )
     logger.info("평가 데이터셋: %d개 예제", len(eval_dataset))
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -585,6 +719,7 @@ def main():
     logger.info("  학습 데이터셋: %s, 예제 수: %d", data_args.label_package or data_args.train_dataset, len(train_dataset))
     if chosen_expert:
         logger.info("  expert_id: %s", chosen_expert)
+        logger.info("  use_expert_prompt_for_eval: %s", data_args.use_expert_prompt_for_eval)
     logger.info("  에폭: %s, LR: %s", sft_config.num_train_epochs, sft_config.learning_rate)
     logger.info("  배치: %s, GA: %s", sft_config.per_device_train_batch_size, sft_config.gradient_accumulation_steps)
     logger.info("  출력 디렉토리: %s", sft_config.output_dir)

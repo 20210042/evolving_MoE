@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 MATH_DATASETS = {"bigmath", "math", "numina_cot"}
 LUCA_SYSTEM_PROMPT = "You are a helpful assistant."
 PROMPT_SYSTEM_CHOICES = {"baseline", "luca", "category"}
+SYSTEM_PROMPT_PRESETS = PROMPT_SYSTEM_CHOICES
 
 
 @dataclass
@@ -82,7 +83,7 @@ class DataArguments:
     )
     data_ratio: float = field(
         default=1.0,
-        metadata={"help": "데이터 사용 비율 (0.0~1.0). 0.1이면 10%만 사용."},
+        metadata={"help": "데이터 사용 비율 (0.0~1.0). 0.1이면 10 percent만 사용."},
     )
 
 
@@ -131,11 +132,24 @@ class ExtraArguments:
     )
     prompt_system: str = field(
         default="baseline",
-        metadata={"help": "system prompt 선택: baseline | luca | category."},
+        metadata={"help": "Deprecated alias for --system_prompt. Preset name: baseline | luca | category."},
+    )
+    system_prompt: Optional[str] = field(
+        default=None,
+        metadata={
+            "help": (
+                "System prompt preset name or literal prompt text. Presets: baseline | luca | category. "
+                "Any other string is used directly as the system prompt."
+            )
+        },
     )
     luca_roster_path: str = field(
         default="configs/roster_init.json",
-        metadata={"help": "prompt_system=luca일 때 LUCA system_prompt를 읽을 roster json 경로."},
+        metadata={"help": "system_prompt=luca일 때 LUCA system_prompt를 읽을 roster json 경로."},
+    )
+    fixed_system_prompt: Optional[str] = field(
+        default=None,
+        metadata={"help": "Deprecated alias for passing literal text to --system_prompt."},
     )
 
 
@@ -187,11 +201,11 @@ def build_output_path(
     dataset_name: str,
     model_name: str,
     lora_path: str | None = None,
-    prompt_system: str | None = None,
+    system_prompt_label: str | None = None,
 ) -> str:
     model_component = _safe_filename_component(lora_path or model_name)
     dataset_component = _safe_filename_component(dataset_name)
-    prompt_component = _safe_filename_component(prompt_system or "baseline")
+    prompt_component = _safe_filename_component(system_prompt_label or "baseline")
     job_id = _safe_filename_component(_job_id_for_output())
     filename = f"{dataset_component}_{model_component}_{prompt_component}_{job_id}.jsonl"
     return os.path.join(output_dir, filename)
@@ -239,23 +253,26 @@ def build_eval_prompt(
     dataset_name: str,
     model_name: str,
     fixed_math_category: str | None = None,
-    prompt_system: str = "baseline",
+    system_prompt: str = "baseline",
     luca_system_prompt: str = LUCA_SYSTEM_PROMPT,
 ):
     dataset_key = (item.get("dataset") or dataset_name).lower()
     family = task_family(dataset=dataset_key, domain=item.get("domain"))
     instruction = item["instruction"]
-    prompt_system = (prompt_system or "baseline").lower()
-    if prompt_system not in PROMPT_SYSTEM_CHOICES:
-        raise ValueError(f"Unknown prompt_system={prompt_system!r}; choose one of {sorted(PROMPT_SYSTEM_CHOICES)}")
+    system_prompt_raw = system_prompt or "baseline"
+    system_prompt_key = system_prompt_raw.lower()
+    is_preset = system_prompt_key in SYSTEM_PROMPT_PRESETS
+    literal_system_prompt = None if is_preset else system_prompt_raw
 
     if family == "math":
-        if prompt_system == "luca":
-            return _override_system_prompt(build_math_prompt(instruction, metadata=item), luca_system_prompt)
+        if system_prompt_key == "luca":
+            messages = _override_system_prompt(build_math_prompt(instruction, metadata=item), luca_system_prompt)
+            return _override_system_prompt(messages, literal_system_prompt) if literal_system_prompt else messages
         metadata = {"category": fixed_math_category} if fixed_math_category else item
-        if prompt_system == "baseline":
+        if system_prompt_key == "baseline":
             metadata = None
-        return build_math_prompt(instruction, metadata=metadata)
+        messages = build_math_prompt(instruction, metadata=metadata)
+        return _override_system_prompt(messages, literal_system_prompt) if literal_system_prompt else messages
 
     messages = build_baseline_prompt(
         instruction,
@@ -264,9 +281,23 @@ def build_eval_prompt(
         starter_code=item.get("starter_code"),
         domain=item.get("domain"),
     )
-    if prompt_system == "luca":
-        return _override_system_prompt(messages, luca_system_prompt)
+    if system_prompt_key == "luca":
+        messages = _override_system_prompt(messages, luca_system_prompt)
+    if literal_system_prompt:
+        return _override_system_prompt(messages, literal_system_prompt)
     return messages
+
+
+def resolve_system_prompt_spec(extra_args: ExtraArguments) -> tuple[str, str, bool]:
+    """Return (system prompt spec, compact filename/log label, is_preset)."""
+    spec = extra_args.system_prompt
+    if spec is None:
+        spec = extra_args.fixed_system_prompt or extra_args.prompt_system
+    spec = spec or "baseline"
+    key = spec.lower()
+    if key in SYSTEM_PROMPT_PRESETS:
+        return key, key, True
+    return spec, "custom_system", False
 
 
 def main():
@@ -275,9 +306,7 @@ def main():
         description="Evaluate Script",
     )
     model_args, data_args, extra_args = parser.parse_args_into_dataclasses()
-    extra_args.prompt_system = (extra_args.prompt_system or "baseline").lower()
-    if extra_args.prompt_system not in PROMPT_SYSTEM_CHOICES:
-        parser.error(f"--prompt_system must be one of {sorted(PROMPT_SYSTEM_CHOICES)}")
+    system_prompt_spec, system_prompt_label, system_prompt_is_preset = resolve_system_prompt_spec(extra_args)
 
     logging.basicConfig(
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -315,17 +344,17 @@ def main():
     logger.info("  데이터셋   : %s/%s (ratio=%s)", data_args.test_dataset, data_args.split, data_args.data_ratio)
     logger.info("  data_dir   : %s", data_args.data_dir or "HF/default")
     logger.info("  max_tokens : %s", extra_args.max_new_tokens)
-    logger.info("  prompt system: %s", extra_args.prompt_system)
-    if extra_args.prompt_system == "luca":
+    logger.info("  system prompt: %s", system_prompt_label if system_prompt_is_preset else system_prompt_spec)
+    if system_prompt_label == "luca":
         logger.info("  LUCA roster: %s", extra_args.luca_roster_path)
-    elif extra_args.prompt_system == "category":
+    elif system_prompt_label == "category":
         logger.info("  category prompt fixed value: %s", extra_args.use_category_prompt or "item metadata")
     logger.info("  출력 디렉토리: %s", extra_args.output_dir)
     logger.info("  job id     : %s", _job_id_for_output())
     logger.info("=" * 60)
 
     luca_system_prompt = load_luca_system_prompt(extra_args.luca_roster_path)
-    if extra_args.prompt_system == "luca":
+    if system_prompt_label == "luca":
         logger.info("LUCA system prompt: %s", luca_system_prompt)
 
     from utils.llm import LLMService
@@ -343,7 +372,7 @@ def main():
         data_args.test_dataset,
         model_args.model_name_or_path,
         model_args.finetuned_lora_path,
-        extra_args.prompt_system,
+        system_prompt_label,
     )
     logger.info("결과 파일: %s", out_path)
 
@@ -363,9 +392,9 @@ def main():
     dataset_key = data_args.test_dataset.lower()
     family = task_family(dataset=dataset_key, domain=(items_list[0].get("domain") if items_list else None))
     is_math_dataset = family == "math"
-    use_fixed_category_prompt = bool(extra_args.use_category_prompt) and extra_args.prompt_system == "category"
+    use_fixed_category_prompt = bool(extra_args.use_category_prompt) and system_prompt_label == "category"
     logger.info("task family: %s", family)
-    logger.info("system prompt 선택: %s", extra_args.prompt_system)
+    logger.info("system prompt 선택: %s", system_prompt_label if system_prompt_is_preset else "literal")
 
     chunk_size = 1000
     with open(out_path, "a", encoding="utf-8") as out_f:
@@ -377,7 +406,7 @@ def main():
                     dataset_name=data_args.test_dataset,
                     model_name=model_args.model_name_or_path,
                     fixed_math_category=(extra_args.use_category_prompt if use_fixed_category_prompt else None),
-                    prompt_system=extra_args.prompt_system,
+                    system_prompt=system_prompt_spec,
                     luca_system_prompt=luca_system_prompt,
                 )
                 for item in chunk
@@ -401,7 +430,8 @@ def main():
                     "category": item.get("category") or item.get("categories", []),
                     "dataset": item.get("dataset") or data_args.test_dataset,
                     "domain": item.get("domain"),
-                    "prompt_system": extra_args.prompt_system,
+                    "prompt_system": system_prompt_label,
+                    "system_prompt_spec": system_prompt_spec,
                     "system_prompt": (
                         messages[0].get("content")
                         if isinstance(messages, list) and messages and messages[0].get("role") == "system"
