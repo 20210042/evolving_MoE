@@ -44,6 +44,9 @@ PUSH_TO_HUB="${PUSH_TO_HUB:-false}"
 HUB_MODEL_ID="${HUB_MODEL_ID:-}"
 LABEL_PACKAGE="${LABEL_PACKAGE:-}"
 SOURCE_JSONL="${SOURCE_JSONL:-}"
+USE_EXPERT_PROMPT_FOR_EVAL="${USE_EXPERT_PROMPT_FOR_EVAL:-false}"
+LEGAL_CATEGORY_TAGS_PATH="${LEGAL_CATEGORY_TAGS_PATH:-}"
+LEGAL_CATEGORY="${LEGAL_CATEGORY:-}"
 
 # Dataset selection modes for roster-labelled SFT:
 #   roster_expert_with_unanimous_sampling: EXPERT_ID's solved set, sample unanimous rows.
@@ -73,6 +76,7 @@ if [[ -n "${LABEL_PACKAGE}" ]]; then
         EXTRA_TRAIN_ARGS+=(--source_jsonl "${SOURCE_JSONL}")
     fi
     EXTRA_TRAIN_ARGS+=(--expert_data_mode "${EXPERT_DATA_MODE}")
+    EXTRA_TRAIN_ARGS+=(--use_expert_prompt_for_eval "${USE_EXPERT_PROMPT_FOR_EVAL}")
     case "${EXPERT_DATA_MODE}" in
         roster_expert_with_unanimous_sampling)
             EXTRA_TRAIN_ARGS+=(--expert_id "${EXPERT_ID}")
@@ -91,6 +95,10 @@ if [[ -n "${LABEL_PACKAGE}" ]]; then
             ;;
     esac
 fi
+if [[ -n "${LEGAL_CATEGORY_TAGS_PATH}" ]]; then
+    EXTRA_TRAIN_ARGS+=(--legal_category_tags_path "${LEGAL_CATEGORY_TAGS_PATH}")
+    EXTRA_TRAIN_ARGS+=(--legal_category "${LEGAL_CATEGORY}")
+fi
 if [[ "${PUSH_TO_HUB}" == "true" || "${PUSH_TO_HUB}" == "True" ]]; then
     EXTRA_TRAIN_ARGS+=(--push_to_hub True)
     if [[ -n "${HUB_MODEL_ID}" ]]; then
@@ -104,6 +112,7 @@ echo "=== QASC/LBox LUCA SFT 시작 ==="
 echo "=== dataset=${DATASET} prompt_system=${PROMPT_SYSTEM} train=${TRAIN_SPLIT} eval=${EVAL_SPLIT} data_dir=${DATA_DIR} ==="
 echo "=== run=${RUN_NAME} output=${OUTPUT_DIR} ==="
 echo "=== label_package=${LABEL_PACKAGE:-none} expert=${EXPERT_ID:-none} mode=${EXPERT_DATA_MODE} low_max=${LOW_CONSENSUS_MAX_SOLVED} high_min=${HIGH_CONSENSUS_MIN_SOLVED} ==="
+echo "=== legal_category=${LEGAL_CATEGORY:-none} tags=${LEGAL_CATEGORY_TAGS_PATH:-none} ==="
 echo "=== GPUs=${NPROC_PER_NODE} GA=${GRADIENT_ACCUMULATION_STEPS} CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-unset} ==="
 
 srun --ntasks=1 --gpus-per-task="${NPROC_PER_NODE}" --chdir="$REPO" \
