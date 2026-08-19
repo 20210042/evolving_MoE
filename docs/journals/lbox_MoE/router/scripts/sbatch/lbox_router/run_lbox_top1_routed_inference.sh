@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=lbox_low5h6_routed
 #SBATCH --gres=gpu:PRO6000:1
-#SBATCH --cpus-per-task=2
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=32G
 #SBATCH --time=06:00:00
 #SBATCH --output=logs/lbox_router/%x.%j.log
@@ -12,6 +12,7 @@ set -euo pipefail
 REPO="${REPO:-$SLURM_SUBMIT_DIR}"
 RESULTS_ROOT="${RESULTS_ROOT:?RESULTS_ROOT is required}"
 ROUTER_DIR="${ROUTER_DIR:?ROUTER_DIR is required}"
+BANK="${BANK:-low5_high6}"
 cd "$REPO"
 source ~/data/miniconda3/etc/profile.d/conda.sh
 conda activate "${CONDA_ENV:-MoE}"
@@ -20,7 +21,7 @@ export VLLM_USE_FLASHINFER_SAMPLER=0
 mkdir -p logs/lbox_router "$RESULTS_ROOT"
 
 srun --chdir="$REPO" python scripts/lbox_router/run_lbox_top1_routed_inference.py \
-    --bank low5_high6 \
+    --bank "$BANK" \
     --router-dir "$ROUTER_DIR" \
     --seed 42 \
     --split test \

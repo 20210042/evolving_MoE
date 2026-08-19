@@ -18,11 +18,100 @@ from train_lbox_router_baseline import Router
 
 
 BASE_MODEL = "meta-llama/Llama-3.1-8B-Instruct"
+GENERALIST_SYSTEM_PROMPT = (
+    "You are a Korean legal classification generalist. Given Korean legal facts, return the exact "
+    "requested case name, charge, or statutory provision in the required one-line format without explanation."
+)
+LEGAL_CATEGORY_NAMES = {
+    "admin_labor": "Administrative Labor Law",
+    "admin_other": "Administrative Law General",
+    "admin_traffic": "Road Traffic Law",
+    "civil_family_inheritance": "Civil Family and Inheritance Law",
+    "civil_property_obligation": "Civil Property and Obligation Law",
+    "criminal_non_property": "Criminal Non-property Offenses",
+    "criminal_property": "Criminal Property Offenses",
+    "family_patent_special": "Family and Patent Special Cases",
+}
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     with path.open(encoding="utf-8") as handle:
         return [json.loads(line) for line in handle if line.strip()]
+
+
+def load_low5_high6_persona_bank(base_bank: dict[str, Any], agent_mapping_path: Path) -> dict[str, Any]:
+    """Reuse the low5/high6 router order, swapping in persona-trained LoRAs and prompts."""
+    mapping = json.loads(agent_mapping_path.read_text(encoding="utf-8"))
+    models = []
+    for model in base_bank["models"]:
+        persona_model = dict(model)
+        if model["id"] == "generalist_high6":
+            persona_model["lora_path"] = "checkpoints/sft_lbox_generalist_high6_persona_eval_ep5"
+            persona_model["system_prompt"] = GENERALIST_SYSTEM_PROMPT
+            persona_model["prompt_system"] = "persona"
+        else:
+            source_id = str(model.get("source_expert_id") or "").strip()
+            if not source_id or source_id not in mapping:
+                raise KeyError(f"Missing source_expert_id/system prompt for {model}")
+            persona_model["lora_path"] = f"checkpoints/sft_lbox_roster_{source_id}_low5_persona_eval_ep5"
+            persona_model["system_prompt"] = str(mapping[source_id]["system_prompt"])
+            persona_model["prompt_system"] = "persona"
+        models.append(persona_model)
+    bank = dict(base_bank)
+    bank["label"] = "low5 specialists + high6 generalist, persona-trained LoRA and persona inference prompt"
+    bank["models"] = models
+    return bank
+
+
+def load_legal_category_bank(router_dir: Path) -> dict[str, Any]:
+    """Build an 8-way LBox legal-category expert bank in the router output order."""
+    metrics = json.loads((router_dir / "metrics.json").read_text(encoding="utf-8"))
+    categories = list(metrics["categories"])
+    models = []
+    for category in categories:
+        name = LEGAL_CATEGORY_NAMES.get(category, category)
+        models.append(
+            {
+                "id": category,
+                "name": name,
+                "slug": f"lbox_category_{category}",
+                "lora_path": f"Jongbin-kr/llama3_lbox_category_{category}_step5000",
+                "prompt_system": "baseline",
+                "system_prompt": "baseline",
+                "legal_category": category,
+            }
+        )
+    return {
+        "label": "Gemma4-tagged legal-category router with 8 category LoRA experts",
+        "models": models,
+    }
+
+
+def resolve_lora_path(lora_path: str, cache_dir: Path) -> str:
+    """Return a local LoRA adapter path, downloading Hub repos when needed."""
+    path = Path(lora_path)
+    if (path / "adapter_config.json").is_file():
+        return str(path.resolve())
+    if "/" not in lora_path:
+        raise FileNotFoundError(f"Missing LoRA adapter: {lora_path}")
+
+    from huggingface_hub import snapshot_download
+
+    local_dir = cache_dir / lora_path.replace("/", "__")
+    snapshot = snapshot_download(
+        repo_id=lora_path,
+        local_dir=str(local_dir),
+        allow_patterns=[
+            "adapter_config.json",
+            "adapter_model.safetensors",
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "chat_template.jinja",
+        ],
+    )
+    if not (Path(snapshot) / "adapter_config.json").is_file():
+        raise FileNotFoundError(f"Downloaded LoRA is missing adapter_config.json: {lora_path}")
+    return snapshot
 
 
 def task_name(row: dict[str, Any]) -> str:
@@ -158,6 +247,7 @@ def summarize(
             "max_model_len": args.max_model_len,
             "max_new_tokens": args.max_new_tokens,
             "temperature": 0.0,
+            "prompt_mode": args.bank,
         },
         "examples": len(rows),
         "correct": int(scores.sum()),
@@ -216,7 +306,21 @@ def main() -> None:
         type=Path,
         default=Path("configs/lbox_router/lbox_router_banks.json"),
     )
-    parser.add_argument("--bank", default="low5_high6", choices=["low5_high6", "task_prior"])
+    parser.add_argument(
+        "--bank",
+        default="low5_high6",
+        choices=[
+            "low5_high6",
+            "task_prior",
+            "low5_high6_persona_eval_ep5",
+            "legal_category_gemma4_merged",
+        ],
+    )
+    parser.add_argument(
+        "--agent-mapping",
+        type=Path,
+        default=Path("results/lbox_binning_seed20210311/agent_mapping.json"),
+    )
     parser.add_argument("--router-dir", type=Path, required=True)
     parser.add_argument("--feature-dir", type=Path, default=Path("results/embed_viz_test"))
     parser.add_argument("--data-file", type=Path, default=Path("export/lbox/lbox_test.jsonl"))
@@ -229,16 +333,19 @@ def main() -> None:
     parser.add_argument("--chunk-size", type=int, default=1000)
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--route-only", action="store_true")
+    parser.add_argument("--lora-cache-dir", type=Path, default=Path("results/hf_lora_cache"))
     parser.add_argument("--vanilla-baseline", type=Path)
     parser.add_argument("--dense-baseline", type=Path)
     args = parser.parse_args()
 
-    bank = json.loads(args.bank_config.read_text(encoding="utf-8"))[args.bank]
+    bank_config = json.loads(args.bank_config.read_text(encoding="utf-8"))
+    if args.bank == "low5_high6_persona_eval_ep5":
+        bank = load_low5_high6_persona_bank(bank_config["low5_high6"], args.agent_mapping)
+    elif args.bank == "legal_category_gemma4_merged":
+        bank = load_legal_category_bank(args.router_dir)
+    else:
+        bank = bank_config[args.bank]
     models = bank["models"]
-    for model in models:
-        path = Path(model["lora_path"])
-        if not (path / "adapter_config.json").is_file():
-            raise FileNotFoundError(f"Missing LoRA adapter: {path}")
 
     rows = load_jsonl(args.data_file)
     if args.limit:
@@ -277,8 +384,15 @@ def main() -> None:
     print(f"Routing complete: {len(rows)} examples", flush=True)
     print(json.dumps(selection_counts, ensure_ascii=False, indent=2), flush=True)
 
+    args.lora_cache_dir.mkdir(parents=True, exist_ok=True)
+    for model in models:
+        model["resolved_lora_path"] = resolve_lora_path(
+            str(model["lora_path"]),
+            args.lora_cache_dir,
+        )
+
     lora_requests = [
-        LoRARequest(model["slug"], index + 1, str(Path(model["lora_path"]).resolve()))
+        LoRARequest(model["slug"], index + 1, str(model["resolved_lora_path"]))
         for index, model in enumerate(models)
     ]
     sampling = SamplingParams(
@@ -319,7 +433,7 @@ def main() -> None:
                         row,
                         dataset_name="lbox",
                         model_name=args.base_model,
-                        prompt_system="baseline",
+                        system_prompt=str(expert.get("system_prompt") or "baseline"),
                     )
                     for row in chunk_rows
                 ]
@@ -350,7 +464,8 @@ def main() -> None:
                         "category": row.get("category") or row.get("categories", []),
                         "dataset": row.get("dataset") or "lbox",
                         "domain": row.get("domain"),
-                        "prompt_system": "baseline",
+                        "prompt_system": str(expert.get("prompt_system") or "baseline"),
+                        "system_prompt_spec": str(expert.get("system_prompt") or "baseline"),
                         "system_prompt": (
                             message[0].get("content")
                             if isinstance(message, list)
