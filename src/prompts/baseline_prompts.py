@@ -179,6 +179,41 @@ Feedback:
 Output only the corrected final answer.
 """
 
+# Super-NaturalInstructions: instruction 안에 이미 태스크 Definition + Input이 들어 있다.
+# 여기서 태스크를 다시 설명하지 않는다 — 우리가 덧붙이는 건 "설명 없이 출력만" 계약뿐이다.
+# ROUGE-L은 여분의 텍스트를 그대로 페널티로 먹으므로 이 계약이 곧 점수다.
+SNI_GEN_SYSTEM = "You follow task instructions exactly and output only the requested answer."
+SNI_GEN_USER = """Perform the task exactly as described below.
+Output only the answer itself — no explanation, no restatement of the task, no labels.
+
+{instruction}
+"""
+SNI_CRITIC_SYSTEM = "You review whether a response follows the task instruction exactly."
+SNI_CRITIC_USER = """Review the proposed response to this task.
+
+{instruction}
+
+Response:
+{solution}
+
+Check whether it follows the task definition and contains only the requested answer.
+If it is already correct, say no change is needed.
+Feedback: [Your concise feedback]
+"""
+SNI_REVISION_SYSTEM = "You follow task instructions exactly and output only the requested answer."
+SNI_REVISION_USER = """Revise the response based on the feedback.
+
+{instruction}
+
+Previous Response:
+{solution}
+
+Feedback:
+{feedback}
+
+Output only the corrected answer itself.
+"""
+
 # Critic: Zero-Shot, Textual Feedback Only
 MATH_CRITIC_SYSTEM = "You are a helpful assistant."
 MATH_CRITIC_USER = """Review the following solution.

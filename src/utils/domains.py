@@ -13,8 +13,10 @@ def task_family(dataset: str | None = None, domain: str | None = None) -> str:
         return "qasc"
     if dom in {"lbox", "legal"} or ds == "lbox":
         return "lbox"
+    if dom in {"sni", "natural_instructions"} or ds == "sni":
+        return "sni"
     return "coding"
 
 
 def is_text_generation_task(dataset: str | None = None, domain: str | None = None) -> bool:
-    return task_family(dataset=dataset, domain=domain) in {"math", "qasc", "lbox"}
+    return task_family(dataset=dataset, domain=domain) in {"math", "qasc", "lbox", "sni"}

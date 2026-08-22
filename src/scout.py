@@ -112,6 +112,12 @@ def scout_new_persona(
             hard_errors=hard_errors_text[:4000],
             current_roster=roster_str,
         )
+    elif family == "sni":
+        from prompts.meta import META_AGENT_SNI_PROMPT
+        prompt = META_AGENT_SNI_PROMPT.substitute(
+            hard_errors=hard_errors_text[:4000],
+            current_roster=roster_str,
+        )
     else:
         prompt = META_AGENT_PROMPT.substitute(
             hard_errors=hard_errors_text[:4000],

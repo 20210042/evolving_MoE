@@ -54,6 +54,24 @@ Output only valid JSON:
 """
 )
 
+MANAGER_SNI_PROMPT = Template(
+    """You are the Router of a general instruction-following team.
+Assign the following task to exactly one specialist from your roster.
+
+=== Current Roster ===
+$scouting_report
+
+=== Task ===
+$problem_description
+
+Pick the specialist most likely to produce the exact required output.
+Output only valid JSON:
+{
+    "selected_expert_id": "the_id_of_the_chosen_expert"
+}
+"""
+)
+
 MANAGER_LEGAL_PROMPT = Template(
     """You are the Router of a Korean legal reasoning team.
 Assign the following legal classification task to exactly one specialist from your roster.
@@ -175,6 +193,41 @@ $current_roster
 
 --- YOUR TASK ---
 Look at these unsolved legal tasks. What legal specialist is missing from this roster?
+
+Define that expert yourself.
+
+Rules:
+1. NON-REDUNDANCY (CRITICAL): Must be genuinely different from every current roster member.
+2. ATOMICITY (CRITICAL): One expert, one focused identity — not a combination of multiple.
+3. persona_name must NOT contain the word 'and'.
+
+Output in JSON. Keep system_prompt under 3 sentences:
+{
+    "persona_name": "...",
+    "system_prompt": "...",
+    "strengths": "..."
+}
+"""
+)
+
+# SNI: 분해 축을 "주제"가 아니라 "태스크 유형/요구 능력"으로 못박는다 — 이게 arm B의
+# 관측 대상이다. 나머지 구조(규칙 3개, JSON 스키마)는 QASC/LEGAL과 동일하게 유지한다.
+META_AGENT_SNI_PROMPT = Template(
+    """You are the Head Scouter for an AI General Instruction-Following Team.
+
+Every agent on the current roster failed the following tasks:
+
+=== HARD ERRORS ===
+$hard_errors
+
+=== CURRENT ROSTER ===
+$current_roster
+
+--- YOUR TASK ---
+Look at these unsolved tasks. Note what *kind* of task each one is (what operation it
+demands and what output format it requires), not merely what topic it is about.
+
+What kind of task specialist is missing from this roster?
 
 Define that expert yourself.
 

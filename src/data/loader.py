@@ -26,6 +26,8 @@ def scoring_kind_for_dataset(name: str) -> str:
         return "qasc"
     if n == "lbox":
         return "lbox"
+    if n == "sni":            # Super-NaturalInstructions: EM(이진) + ROUGE-L(부분점수)
+        return "sni"
     return "asserts"
 
 
@@ -217,6 +219,8 @@ def load_from_jsonl(filepath: str, dataset_key: str) -> List[Dict[str, Any]]:
         domain = "qasc"
     elif key == "lbox":
         domain = "lbox"
+    elif key == "sni":
+        domain = "sni"
     else:
         domain = "coding"
     with open(filepath, "r") as f:

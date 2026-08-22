@@ -107,6 +107,8 @@ class SelfRefinePipeline(BasePipeline):
             neutral_critic_sys = baseline_prompts.QASC_CRITIC_SYSTEM
         elif family == "lbox":
             neutral_critic_sys = baseline_prompts.LBOX_CRITIC_SYSTEM
+        elif family == "sni":
+            neutral_critic_sys = baseline_prompts.SNI_CRITIC_SYSTEM
         else:
             neutral_critic_sys = baseline_prompts.CODING_CRITIC_SYSTEM
 

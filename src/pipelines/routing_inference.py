@@ -14,7 +14,13 @@ from typing import Any, Dict, List
 from agents.base import Agent
 from pipelines.base_pipeline import BasePipeline
 from prompts.coding import build_expert_prompt
-from prompts.meta import MANAGER_LEGAL_PROMPT, MANAGER_PROMPT, MANAGER_MATH_PROMPT, MANAGER_QASC_PROMPT
+from prompts.meta import (
+    MANAGER_LEGAL_PROMPT,
+    MANAGER_PROMPT,
+    MANAGER_MATH_PROMPT,
+    MANAGER_QASC_PROMPT,
+    MANAGER_SNI_PROMPT,
+)
 from utils.domains import task_family
 from utils.helpers import finalize_generation_output, extract_json_object
 
@@ -232,6 +238,8 @@ class GMRoutingPipeline(BasePipeline):
             return MANAGER_QASC_PROMPT
         if family == "lbox":
             return MANAGER_LEGAL_PROMPT
+        if family == "sni":
+            return MANAGER_SNI_PROMPT
         return MANAGER_PROMPT
 
     def _parse_expert_ids(self, router_res: str, k: int) -> List[str]:
