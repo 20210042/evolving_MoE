@@ -31,12 +31,22 @@ def _format_roster_table(roster: List[Dict[str, Any]]) -> str:
             appr = _as_text(p.get("approach")).replace("|", "/")
             lines.append(f"| {name} | {ident} | {appr} |")
         return "\n".join(lines)
+    # strengths를 아무도 안 들고 있으면(SNI 진화처럼 스카우트가 system_prompt만 내는 경우)
+    # 빈 칸 대신 system_prompt를 보여준다 — 스카우트가 "이미 쓰이는 프롬프트"를 봐야
+    # 중복을 피할 수 있다. strengths를 쓰는 기존 도메인은 그대로 간다.
+    if not any(_as_text(p.get("strengths")).strip() for p in roster):
+        lines = ["| name | system prompt |", "|------|---------------|"]
+        for p in roster:
+            name = _as_text(p.get("name") or p.get("prompt_name") or p.get("persona_name"))
+            sp = _as_text(p.get("system_prompt")).replace("|", "/")
+            lines.append(f"| {name} | {sp} |")
+        return "\n".join(lines)
     lines = [
         "| name | strengths |",
         "|------|-----------|",
     ]
     for p in roster:
-        name = _as_text(p.get("name") or p.get("persona_name"))
+        name = _as_text(p.get("name") or p.get("prompt_name") or p.get("persona_name"))
         strengths = _as_text(p.get("strengths")).replace("|", "/")
         lines.append(f"| {name} | {strengths} |")
     return "\n".join(lines)
@@ -72,7 +82,9 @@ def scout_new_persona(
     family = task_family(dataset=ds, domain=domain)
     # failure mode includes a full failed attempt per hard error → larger cap so
     # solutions aren't sliced; plain modes keep the original 4k char budget.
-    cap = 40000 if failure_mode else 4000
+    # SNI 케이스도 정의+입력+기대+실제를 싣는 같은 모양이라 같은 예산을 쓴다 —
+    # 4,000자면 케이스 3건에서 잘려 "공통점"을 찾을 표본이 안 된다(케이스당 ~670자).
+    cap = 40000 if (failure_mode or family == "sni") else 4000
     if family == "math":
         if failure_mode:
             from prompts.meta import META_AGENT_MATH_PROMPT_FAILURE
@@ -115,7 +127,7 @@ def scout_new_persona(
     elif family == "sni":
         from prompts.meta import META_AGENT_SNI_PROMPT
         prompt = META_AGENT_SNI_PROMPT.substitute(
-            hard_errors=hard_errors_text[:4000],
+            hard_errors=hard_errors_text[:cap],
             current_roster=roster_str,
         )
     else:

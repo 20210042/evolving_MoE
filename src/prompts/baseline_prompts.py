@@ -183,8 +183,11 @@ Output only the corrected final answer.
 # 여기서 태스크를 다시 설명하지 않는다 — 우리가 덧붙이는 건 "설명 없이 출력만" 계약뿐이다.
 # ROUGE-L은 여분의 텍스트를 그대로 페널티로 먹으므로 이 계약이 곧 점수다.
 SNI_GEN_SYSTEM = "You follow task instructions exactly and output only the requested answer."
-SNI_GEN_USER = """Perform the task exactly as described below.
-Output only the answer itself — no explanation, no restatement of the task, no labels.
+# ⚠️ user 턴은 **답변공간 한 줄(answer_line) + 입력**뿐이다. 태스크 정의(Definition)를 여기
+# 넣으면 조작과 출력형식이 못박혀 system의 정체성이 개입할 자리가 사라진다 —
+# 프로브 job 229352의 null이 그것이었다(docs/REFLECTION_sni_probe.md).
+# answer_line은 export가 데이터에서 기계적으로 만든다(scripts/build_sni_export.py).
+SNI_GEN_USER = """{answer_line}
 
 {instruction}
 """

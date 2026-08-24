@@ -83,11 +83,18 @@ def normalize_persona_fields(persona: Dict[str, Any], new_id: str) -> Dict[str, 
     persona = dict(persona)
     persona["id"] = new_id
     # scout LLM may return these as list/dict → coerce to str (used in prompts & formatting)
-    for k in ("system_prompt", "strengths", "approach", "name", "persona_name"):
+    for k in ("system_prompt", "strengths", "approach", "name",
+              "persona_name", "prompt_name", "fixes"):
         if k in persona:
             persona[k] = _as_text(persona[k])
-    if "name" not in persona and "persona_name" in persona:
-        persona["name"] = persona["persona_name"]
+    # 스카우트가 내는 이름 키는 프롬프트마다 다르다(persona_name / prompt_name).
+    # 하류(scout 로스터표·라우터 메뉴·타임라인 그림)는 전부 `name`을 먼저 읽으므로
+    # 여기 한 곳에서 승격시킨다.
+    if "name" not in persona:
+        for k in ("prompt_name", "persona_name"):
+            if k in persona:
+                persona["name"] = persona[k]
+                break
     persona.setdefault("total_war", 0)
     persona.setdefault("active_steps", 0)
     persona.setdefault("average_war", 0.0)

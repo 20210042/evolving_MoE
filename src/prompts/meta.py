@@ -210,37 +210,37 @@ Output in JSON. Keep system_prompt under 3 sentences:
 """
 )
 
-# SNI: 분해 축을 "주제"가 아니라 "태스크 유형/요구 능력"으로 못박는다 — 이게 arm B의
-# 관측 대상이다. 나머지 구조(규칙 3개, JSON 스키마)는 QASC/LEGAL과 동일하게 유지한다.
+# SNI: **축을 지정하지 않는다.** 데이터가 실제로 (태스크, 도메인) 두 축인데 한쪽을 가리키면
+# 답을 정해놓고 묻는 셈이다. 실패 사례만 주고 무엇을 공통점으로 보는지는 모델이 정하게 한다 —
+# `fixes` 필드가 곧 "모델이 어떤 축을 봤는가"의 기록이고, 파일럿의 관측 대상이 그것이다.
+# 정체성("You are a ... specialist")을 요구하지 않는다: 정체성은 문체만 바꾼다는 게
+# acc·QASC·SNI에서 세 번 확인됐다(docs/REPORT_for_collab_sni_axis.md).
 META_AGENT_SNI_PROMPT = Template(
-    """You are the Head Scouter for an AI General Instruction-Following Team.
+    """You are improving an AI team. Each member works from its own system prompt.
 
-Every agent on the current roster failed the following tasks:
+Every member of the current team failed the cases below. Each case shows the task,
+the input, the expected output, and what the team actually produced.
 
-=== HARD ERRORS ===
+=== FAILED CASES ===
 $hard_errors
 
-=== CURRENT ROSTER ===
+=== SYSTEM PROMPTS ALREADY IN USE ===
 $current_roster
 
 --- YOUR TASK ---
-Look at these unsolved tasks. Note what *kind* of task each one is (what operation it
-demands and what output format it requires), not merely what topic it is about.
-
-What kind of task specialist is missing from this roster?
-
-Define that expert yourself.
+Whatever these failures have in common, write one new system prompt that would have
+produced the expected outputs.
 
 Rules:
-1. NON-REDUNDANCY (CRITICAL): Must be genuinely different from every current roster member.
-2. ATOMICITY (CRITICAL): One expert, one focused identity — not a combination of multiple.
-3. persona_name must NOT contain the word 'and'.
+1. It must cover something the system prompts already in use do not.
+2. One thing, stated concretely. Not a combination.
+3. Keep it under 3 sentences.
 
-Output in JSON. Keep system_prompt under 3 sentences:
+Output in JSON:
 {
-    "persona_name": "...",
+    "prompt_name": "...",
     "system_prompt": "...",
-    "strengths": "..."
+    "fixes": "<what these failures had in common, one line>"
 }
 """
 )

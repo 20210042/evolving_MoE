@@ -80,6 +80,23 @@ def score_acc_item(item: Dict[str, Any], code: str) -> float:
     return 100.0 if out.get("passed") else 0.0
 
 
+def score_acc_item_partial(item: Dict[str, Any], code: str) -> float:
+    """통과 테스트 비율(0~100). score_acc_item과 별개 함수 — 그 0/100 계약은 binning·배포·
+    평가 스크립트가 그대로 소비하므로 절대 바꾸지 않는다. 이 함수는 진화의 WAR 계산 전용
+    (라벨링 실험, seed20211002~)이며, 실행기가 이미 반환하는 num_tests_passed/num_tests_total을
+    그대로 쓴다(acc_exec/*_runner.py). eval_spec 등으로 total이 없는 문제는 기존 0/100로 폴백한다."""
+    from evaluation.acc_exec import ExecutionInterface
+    problem = dict(item)
+    problem["eval_spec"] = _json(item.get("eval_spec")) or {}
+    problem["test_cases"] = _json(item.get("test_cases")) or []
+    out = ExecutionInterface().run(problem, code, solution_id="candidate")
+    total = out.get("num_tests_total") or 0
+    if total <= 0:
+        return 100.0 if out.get("passed") else 0.0
+    passed = out.get("num_tests_passed") or 0
+    return 100.0 * passed / total
+
+
 _QASC_OPT_RE = re.compile(
     r"(?:^|\n|\s)\(?([A-H])[\):.]\s*(.+?)(?=(?:\n|\s)\(?[A-H][\):.]|\Z)",
     re.S,
@@ -195,6 +212,79 @@ def score_lbox_item(item: Dict[str, Any], prediction: str) -> float:
     return 100.0 if gold_norm and pred_norm == gold_norm else 0.0
 
 
+# --- Super-NaturalInstructions (niv2) --------------------------------------
+# ⚠️ 공식 채점을 그대로 쓴다. 레포의 eval/automatic/evaluation.py를 이식한 것이다
+#    (/data5/jaehoonjeong/datasets/natural-instructions/eval/automatic/evaluation.py).
+#
+# 공식이 하는 일:
+#   - **태스크를 분기하지 않는다.** 모든 인스턴스에 EM과 ROUGE-L을 둘 다 계산한다.
+#   - 둘 다 복수 레퍼런스에 대해 max를 취한다(metric_max_over_ground_truths).
+#   - 최종 보고는 {"exact_match": ..., "rougeL": ...} 두 숫자를 병기한다.
+#
+# 이전 구현(직접 만든 LCS·CJK 문자단위 분기·task_closed 채점 분기·_sni_extract 형식제거)은
+# 전부 공식에 없는 자체 발명이었고 산술 태스크가 ROUGE로 새는 등 어긋났다. 폐기했다.
+# 정규화 차이도 크다: 공식은 구두점을 **삭제**한다("choice/control" → "choicecontrol").
+# ROUGE는 rouge_score 라이브러리 + use_stemmer=True (killed/kill을 같게 본다).
+#
+# 트랙: 우리 export는 default 트랙(전량 English)이라 xlingual GPT2 토크나이저는 쓰지 않는다.
+import string as _string
+
+_ROUGE_SCORER = None
+
+
+def _rouge_scorer():
+    global _ROUGE_SCORER
+    if _ROUGE_SCORER is None:
+        from rouge_score import rouge_scorer  # 공식과 동일 라이브러리
+        _ROUGE_SCORER = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=True)
+    return _ROUGE_SCORER
+
+
+_SNI_PUNC = set(_string.punctuation)
+
+
+def _sni_normalize(s: Any) -> str:
+    """공식 normalize_answer: 소문자 + 구두점 제거 + 공백 정리. **관사는 지우지 않는다.**"""
+    text = strip_thinking_channels(str(s or "")).lower()
+    text = "".join(ch for ch in text if ch not in _SNI_PUNC)
+    return " ".join(text.split())
+
+
+def _sni_refs(item: Dict[str, Any]) -> list:
+    gt = item.get("ground_truth")
+    if isinstance(gt, list):
+        return [str(g) for g in gt]
+    return [str(gt)] if gt is not None else []
+
+
+def sni_metrics(item: Dict[str, Any], prediction: str) -> Dict[str, float]:
+    """공식 두 지표를 한 번에. 각각 레퍼런스 최대값(0~100)."""
+    pred = strip_thinking_channels(str(prediction or ""))
+    refs = _sni_refs(item)
+    if not refs:
+        return {"exact_match": 0.0, "rougeL": 0.0}
+    npred = _sni_normalize(pred)
+    em = 100.0 if any(npred == _sni_normalize(r) for r in refs) else 0.0
+    sc = _rouge_scorer()
+    rl = max(sc.score(prediction=pred, target=r)["rougeL"].fmeasure for r in refs)
+    return {"exact_match": em, "rougeL": 100.0 * rl}
+
+
+def score_sni_item(item: Dict[str, Any], prediction: str) -> float:
+    """0/100 이진 계약(진화 WAR·binning이 소비). 공식 EM 그대로.
+
+    ⚠️ 공식은 임계를 두지 않고 EM·ROUGE 연속값 두 개를 병기한다. "풀었다/못 풀었다"라는
+    이진 판정은 공식에 없는 **우리 요구사항**이고, 여기서 EM을 쓰는 것이 그 선택이다.
+    ROUGE 임계로 판정하려면 war_mode='soft_partial'의 partial_credit 경로를 쓴다.
+    """
+    return sni_metrics(item, prediction)["exact_match"]
+
+
+def score_sni_item_partial(item: Dict[str, Any], prediction: str) -> float:
+    """공식 ROUGE-L(0~100). 진화 WAR(war_mode='soft_partial')의 부분점수."""
+    return sni_metrics(item, prediction)["rougeL"]
+
+
 def score_one(
     item: Dict[str, Any],
     prediction_code: str,
@@ -222,6 +312,8 @@ def score_one(
             kind = "qasc"
         elif ds == "lbox":
             kind = "lbox"
+        elif ds == "sni":
+            kind = "sni"
         else:
             kind = "asserts"
 
@@ -242,6 +334,9 @@ def score_one(
 
     if kind == "lbox":
         return score_lbox_item(item, prediction_code)
+
+    if kind == "sni":
+        return score_sni_item(item, prediction_code)
 
     domain = item.get("domain", "coding")
     ground_truth = item.get("ground_truth")

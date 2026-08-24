@@ -12,7 +12,12 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from action_selector import ActionDecision, ActionGateConfig, select_action
 from agents.base import Agent
-from evaluation.scorer import pass_at_threshold, score_one
+from evaluation.scorer import (
+    pass_at_threshold,
+    score_acc_item_partial,
+    score_one,
+    score_sni_item_partial,
+)
 from prompts.coding import build_expert_prompt
 from roster import assign_candidate_id, ensure_roster, normalize_persona_fields, save_roster
 from scout import scout_new_persona
@@ -29,6 +34,15 @@ _SCORE_PER_PAIR_TIMEOUT = float(os.environ.get("SCORE_PER_PAIR_TIMEOUT", "5.0"))
 _SCORE_MIN_TIMEOUT = float(os.environ.get("SCORE_MIN_TIMEOUT", "180.0"))
 
 
+def _persona_label(persona: Dict[str, Any]) -> str:
+    """스카우트 출력의 이름 키는 프롬프트마다 다르다(prompt_name / persona_name / name)."""
+    for k in ("name", "prompt_name", "persona_name"):
+        v = persona.get(k)
+        if v:
+            return str(v)
+    return "(unnamed)"
+
+
 def _score_pair(
     args: Tuple[Dict[str, Any], str, int, float, str, str],
 ) -> Tuple[str, str, float]:
@@ -42,6 +56,21 @@ def _score_pair(
         code_timeout=code_timeout,
         lcb_release_version=lcb_release_version,
     )
+    return pid, cid, sc
+
+
+def _score_pair_partial(args: Tuple[Dict[str, Any], str, str]) -> Tuple[str, str, float]:
+    """Top-level 부분점수 스코어러(ProcessPoolExecutor용). war_mode='soft_partial' 전용 —
+    squad_results(0/1)는 기존 _score_pair 결과로 그대로 만들고, 이건 WAR 계산에만 쓴다."""
+    item, code, cid = args
+    pid = item["id"]
+    # dataset/domain 어느 쪽으로 들어와도 같게 판정한다(원본 jsonl엔 dataset·scoring_kind가
+    # 없고 domain만 있다 — 붙이는 건 loader.annotate_items다).
+    if task_family(dataset=item.get("dataset"), domain=item.get("domain")) == "sni":
+        # SNI엔 테스트케이스가 없다 — 부분점수는 레퍼런스 최대 ROUGE-L이다.
+        sc = score_sni_item_partial(item, code)
+    else:
+        sc = score_acc_item_partial(item, code)
     return pid, cid, sc
 
 
@@ -72,6 +101,8 @@ class GMEvolutionOrchestrator:
         deletion_floor: float = 0.0,
         delete_cooldown: int = 0,
         add_only: bool = False,
+        war_mode: str = "hard",
+        lives_mode: str = "legacy",
     ):
         self.agent = agent
         self.roster_path = roster_path
@@ -116,6 +147,14 @@ class GMEvolutionOrchestrator:
         self.lcb_release_version = lcb_release_version
         self.code_exec_timeout = code_exec_timeout
         self.war_tiebreak = war_tiebreak
+        # war_mode: "hard"(기존) | "soft_linear"((E-n)/(E-1) 배점) | "soft_partial"
+        #   (soft_linear + 통과테스트비율 부분점수, war.py 참고).
+        # lives_mode="rank": 목숨 게이트를 순위 기반으로 — 매 배치 최하위 1명 -1, 그 외 +1(상한
+        #   max_lives), 신규 멤버는 deletion_window스텝 유예. 기존 게이트는 전부
+        #   `current_score > 0`("단독해결 했나")에 걸려 있어 soft 점수에서는 항상 참이 되어
+        #   아무도 안 죽는다. "legacy" = OFF = 기존 동작과 완전 동일.
+        self.war_mode = war_mode
+        self.lives_mode = lives_mode
         self.score_workers = score_workers
         self.step_logger = StepLogger(results_dir)
         self.run_id = run_id
@@ -198,11 +237,60 @@ class GMEvolutionOrchestrator:
             results.setdefault(pair, 0.0)
         return results
 
+    def _score_pairs_parallel_partial(
+        self,
+        batch_data: List[Dict[str, Any]],
+        codes: Dict[Tuple[str, str], str],
+    ) -> Dict[Tuple[str, str], float]:
+        """_score_pairs_parallel과 같은 워커 패턴이지만 score_acc_item_partial을 쓴다
+        (war_mode='soft_partial' 전용, 같은 코드 문자열을 재실행만 한다 — 재생성 없음)."""
+        pairs = list(codes.keys())
+        if not pairs:
+            return {}
+        by_id = {b["id"]: b for b in batch_data}
+        score_args = [
+            (by_id[pid], codes[(pid, cid)], cid)
+            for pid, cid in pairs
+            if pid in by_id
+        ]
+        results: Dict[Tuple[str, str], float] = {}
+        workers = max(1, min(self.score_workers, _SCORE_WORKERS))
+        if workers <= 1 or len(score_args) <= 1:
+            for args in score_args:
+                pid, cid, sc = _score_pair_partial(args)
+                results[(pid, cid)] = sc
+            return results
+        timeout_s = max(_SCORE_MIN_TIMEOUT, _SCORE_PER_PAIR_TIMEOUT * len(score_args) / workers)
+        pool = ProcessPoolExecutor(max_workers=workers)
+        futures = {pool.submit(_score_pair_partial, a): (a[0]["id"], a[2]) for a in score_args}
+        try:
+            for fut in as_completed(futures, timeout=timeout_s):
+                pid, cid, sc = fut.result()
+                results[(pid, cid)] = sc
+        except FuturesTimeoutError:
+            unfinished = [futures[f] for f in futures if not f.done()]
+            logging.error(
+                "Partial-credit scoring wall-clock timeout (%.0fs): %d/%d pairs unfinished -> 0.0",
+                timeout_s, len(unfinished), len(futures),
+            )
+        finally:
+            for proc in list(getattr(pool, "_processes", {}).values()):
+                if proc.is_alive():
+                    proc.kill()
+            pool.shutdown(wait=False, cancel_futures=True)
+        for pair in futures.values():
+            results.setdefault(pair, 0.0)
+        return results
+
     def run_batch(
         self,
         batch_data: List[Dict[str, Any]],
-    ) -> Tuple[Dict[str, Set[str]], Dict[str, str]]:
-        """One-step raw generation per (problem × roster member); parallel scoring."""
+    ) -> Tuple[Dict[str, Set[str]], Dict[str, str], Dict[str, Dict[str, float]] | None]:
+        """One-step raw generation per (problem × roster member); parallel scoring.
+
+        third return value: war_mode="soft_partial"일 때만 {agent_id: {problem_id: 0..1}}
+        (score_acc_item_partial, 재생성 없이 같은 코드를 재채점). 그 외엔 None.
+        """
         squad_results: Dict[str, Set[str]] = {p["id"]: set() for p in self.roster}
         hard_errors_texts: Dict[str, str] = {}
 
@@ -229,6 +317,10 @@ class GMEvolutionOrchestrator:
                         starter_code=starter,
                         approach=player.get("approach"),
                         domain=dom,
+                        answer_line=item.get("answer_line"),
+                        definition=item.get("definition"),
+                        positive_examples=item.get("positive_examples"),
+                        negative_examples=item.get("negative_examples"),
                     )
                 )
                 pair_order.append((pid, cid))
@@ -246,6 +338,13 @@ class GMEvolutionOrchestrator:
             )
 
         scores = self._score_pairs_parallel(batch_data, codes)
+
+        partial_credit: Dict[str, Dict[str, float]] | None = None
+        if self.war_mode == "soft_partial":
+            partial_scores = self._score_pairs_parallel_partial(batch_data, codes)
+            partial_credit = {p["id"]: {} for p in self.roster}
+            for (pid, cid), sc in partial_scores.items():
+                partial_credit.setdefault(cid, {})[pid] = sc / 100.0
 
         for item in batch_data:
             problem_id = item["id"]
@@ -282,10 +381,28 @@ class GMEvolutionOrchestrator:
                         f"{clean_desc}\n"
                         f"Tests:\n{tests_str}"
                     )
+                elif family == "sni":
+                    # SNI는 instruction이 Input 원문뿐이다(정의는 별도 필드). 그대로 주면
+                    # 스카우트는 무슨 조작을 요구하는 태스크인지 알 방법이 없어 소재(주제)로만
+                    # 분화한다 — 프로브에서 죽은 것으로 판정된 축이다. 정의·기대·실제를 같이 준다.
+                    gts = item.get("ground_truth") or []
+                    expected = str(gts[0]) if gts else ""
+                    attempts = [
+                        codes[(problem_id, p["id"])]
+                        for p in self.roster
+                        if (problem_id, p["id"]) in codes
+                    ]
+                    produced = self._fm_rng.choice(attempts) if attempts else ""
+                    hard_errors_texts[problem_id] = (
+                        f"Task: {(item.get('definition') or '').strip()[:600]}\n"
+                        f"Input: {clean_desc[:600]}\n"
+                        f"Expected: {expected[:300]}\n"
+                        f"Produced: {produced[:300]}"
+                    )
                 else:
                     hard_errors_texts[problem_id] = clean_desc
 
-        return squad_results, hard_errors_texts
+        return squad_results, hard_errors_texts, partial_credit
 
     def _run_candidate_on_item(
         self,
@@ -305,6 +422,10 @@ class GMEvolutionOrchestrator:
             model_name=model_name,
             starter_code=item.get("starter_code"),
             domain=item.get("domain"),
+            answer_line=item.get("answer_line"),
+            definition=item.get("definition"),
+            positive_examples=item.get("positive_examples"),
+            negative_examples=item.get("negative_examples"),
         )
         raw = self.agent.chat(msg, enable_thinking=self.enable_thinking)
         return finalize_generation_output(raw, dataset=ds_probe, domain=item.get("domain"))
@@ -333,12 +454,14 @@ class GMEvolutionOrchestrator:
         logging.info("Starting Epoch with %s problems.", len(batch_data))
         rng = random.Random(self.seed + self._step_for_log)
 
-        squad_results, hard_errors_texts = self.run_batch(batch_data)
+        squad_results, hard_errors_texts, partial_credit = self.run_batch(batch_data)
         war_scores, _ub_count, ub_rate = compute_war_scores(
             squad_results,
             len(batch_data),
             tiebreak=self.war_tiebreak,
             rng=rng,
+            mode=self.war_mode,
+            partial_credit=partial_credit,
         )
         logging.info("WAR Scores: %s", war_scores)
 
@@ -349,6 +472,51 @@ class GMEvolutionOrchestrator:
         win = self.deletion_window
         batch_n = len(batch_data)
         unique_rate_map: Dict[str, float] = {}
+
+        # lives_mode="rank": 이번 배치 단발 점수로 최하위 1명만 -1, 나머지 +1.
+        # 2026-08-04 seed20211001(회복 없음)이 더 크게 진동해서(방향전환 37 vs 3회) 회복을
+        # 다시 넣었더니(seed20211002) 이번엔 삭제가 0번 — 배치 하나(100문제)의 soft_partial
+        # 점수는 재현성 7%(거의 무작위)라 노이즈로 매 배치 최하위가 계속 바뀌고, 회복이 그걸
+        # 즉시 지웠다. 실제 로그로 재보니 16배치 누적 평균은 재현성 80%(오프라인 5,000문제
+        # 사전검증 79%와 일치) — 신호는 있는데 배치 하나론 노이즈에 묻힌다.
+        # → lives_mode="rank_windowed": 단발 대신 win배치 누적 평균으로 최하위를 정한다.
+        #
+        # ⚠️ 2026-08-13 seed20211003에서 발견/수정: 이 풀(pool)·unique_rate_map 값을 batch_n으로
+        # 안 나눠서(원점수 절대값 2.6~6.4를 그대로) select_action에 mcl로 넘겼다.
+        # action_selector.py:70 docstring이 "mcl = 배치 전체 대비 비율(fraction)"이라고 명시하는데,
+        # lambda_del(~0.04)과 비교되는 값이라 mcl이 4~6이면 u_delete가 항상 -4 근방으로 나와
+        # 삭제가 영원히 안 나온다(seed20211003: 축출후보 40스텝, 실제 delete 0). legacy 윈도
+        # 경로의 `rate = sum(ru)/(len(ru)*batch_n)`과 같은 정규화를 여기도 적용한다.
+        rank_loser: str | None = None
+        if self.lives_mode in ("rank", "rank_windowed") and war_scores and not all_zero_war:
+            grace = win if win > 0 else 0
+            eligible = {
+                p["id"] for p in self.roster
+                if p.get("id") in war_scores and p.get("active_steps", 0) >= grace
+            }
+            if self.lives_mode == "rank_windowed":
+                # 판단은 누적 평균으로 하되, 버퍼 업데이트는 아래 for-루프에서 한 번만 한다
+                # (여기선 판정 전용으로 "만약 이번 점수까지 넣으면"을 미리 계산해 쓴다).
+                pool = {}
+                for p in self.roster:
+                    pid = p["id"]
+                    if pid not in eligible:
+                        continue
+                    ru = list(p.get("recent_unique", [])) + [war_scores[pid]]
+                    ru = ru[-win:] if win > 0 else ru
+                    pool[pid] = sum(ru) / (len(ru) * batch_n) if batch_n > 0 else 0.0
+            else:
+                pool = {a: v for a, v in war_scores.items() if a in eligible}
+            pool = pool or war_scores
+            worst_val = min(pool.values())
+            tied = sorted(a for a, v in pool.items() if v == worst_val)
+            rank_loser = tied[0] if len(tied) == 1 else tied[int(rng.random() * len(tied))]
+            logging.info("Lives penalty (%s mode) -> %s (score %.4f, %d/%d eligible)",
+                         self.lives_mode, rank_loser, worst_val, len(pool), len(war_scores))
+        elif self.lives_mode in ("rank", "rank_windowed") and all_zero_war:
+            logging.info("All-zero WAR batch — skipping lives penalty (collective failure), "
+                         "%s mode.", self.lives_mode)
+
         for p in self.roster:
             p_id = p["id"]
             if p_id in war_scores:
@@ -356,7 +524,23 @@ class GMEvolutionOrchestrator:
                 p["total_war"] = p.get("total_war", 0) + current_score
                 p["active_steps"] = p.get("active_steps", 0) + 1
                 p["average_war"] = p["total_war"] / p["active_steps"]
-                if win > 0:
+                if self.lives_mode in ("rank", "rank_windowed"):
+                    if self.lives_mode == "rank_windowed":
+                        # 판정에 쓴 것과 같은 버퍼를 여기서 실제로 갱신(한 번만) — 다음 스텝의
+                        # "판정 전 미리계산"이 이 갱신을 이어받는다. batch_n으로 정규화해
+                        # select_action의 mcl(비율 계약)과 스케일을 맞춘다.
+                        ru = p.setdefault("recent_unique", [])
+                        ru.append(current_score)
+                        if win > 0:
+                            del ru[:-win]
+                        unique_rate_map[p_id] = sum(ru) / (len(ru) * batch_n) if batch_n > 0 else 0.0
+                    if all_zero_war:
+                        pass  # 집단 실패 배치 — 개인 페널티/회복 없음(legacy와 동일한 면제)
+                    elif p_id == rank_loser:
+                        p["lives"] = max(0, p.get("lives", self.max_lives) - 1)
+                    else:
+                        p["lives"] = min(self.max_lives, p.get("lives", self.max_lives) + 1)
+                elif win > 0:
                     # Window mode: accumulate the per-batch unique-solve count (== WAR
                     # score) over a sliding window and key lives off the sustained
                     # unique-rate, not one unlucky batch. Newborns get a full-window
@@ -405,7 +589,15 @@ class GMEvolutionOrchestrator:
             self.roster,
             tiebreak=self.war_tiebreak,
             rng=rng,
-            unique_rate_map=(unique_rate_map if win > 0 else None),
+            # unique_rate_map은 legacy+windowed(win>0)와 rank_windowed에서만 채워진다.
+            # "rank"(단발)는 이 딕셔너리를 안 채우므로, 잘못 넘기면 pick_worst_agent가 전원
+            # average_war=0.0 취급해 최종 축출 후보 정렬이 깨진다 — None을 넘겨 누적
+            # average_war로 폴백시킨다.
+            unique_rate_map=(
+                unique_rate_map
+                if (self.lives_mode == "rank_windowed" or (win > 0 and self.lives_mode == "legacy"))
+                else None
+            ),
         )
         logging.info("Worst Agent for Eviction: %s", worst_agent)
         logging.info("Total Hard Errors: %s", len(hard_errors_texts))
@@ -458,7 +650,7 @@ class GMEvolutionOrchestrator:
             logging.warning("Failed to scout new persona. Skipping.")
             return
 
-        logging.info("Scouted New Persona: %s", new_persona.get("persona_name"))
+        logging.info("Scouted New Persona: %s", _persona_label(new_persona))
 
         roster_ids = [p["id"] for p in self.roster]
         probe_hard = list(hard_errors_texts.keys())
@@ -493,6 +685,10 @@ class GMEvolutionOrchestrator:
                         starter_code=item.get("starter_code"),
                         approach=new_persona.get("approach"),
                         domain=item.get("domain"),
+                        answer_line=item.get("answer_line"),
+                        definition=item.get("definition"),
+                        positive_examples=item.get("positive_examples"),
+                        negative_examples=item.get("negative_examples"),
                     )
                 )
             probe_out = self.agent.chat_batch(probe_msgs, enable_thinking=self.enable_thinking)
@@ -647,7 +843,7 @@ class GMEvolutionOrchestrator:
         if decision.action in ("add", "swap") and self.roster:
             record["added_id"] = self.roster[-1]["id"]
         if new_persona:
-            record["candidate_persona"] = new_persona.get("persona_name")
+            record["candidate_persona"] = _persona_label(new_persona)
 
         self.step_logger.append(ctx, record)
         self.step_logger.save_roster_snapshot(self.run_id, self._step_for_log, list(self.roster))

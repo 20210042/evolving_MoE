@@ -1,0 +1,24 @@
+# SNI 프로브 v2 (docs/PLAN_sni_probe_v2.md) — 전수 87,089 × 25명 × K3.
+# max_tokens = 128 — 공식 표준(Tk-Instruct scripts/{train,eval}_tk_instruct.sh의
+#   --max_target_length 128)과 동일. 공식도 이 길이로 타깃을 자른다.
+#   전수 실측 gold 토큰: 중앙값 2 · p95 37 · p99 97 · p99.9 447 · 최대 2,147.
+#   → 128은 99% 이상을 덮고, 그 위(주로 요약·장문생성)는 공식과 마찬가지로 잘린다.
+# ⚠️ llm 블록은 shallow merge라 여기 적은 키가 base.yaml의 llm을 통째로 덮는다.
+#   v1 프로브(job 229352)와 같은 레짐을 유지하려고 구조를 그대로 뒀다(실효 T=0.7 top_p=0.8 top_k=20).
+model: "google/gemma-4-26B-A4B-it"
+dataset: "sni"
+data_dir: "export/sni_v2"
+split: "all"
+enable_thinking: false
+
+llm:
+  max_model_len: 16384
+  max_tokens: 128
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

@@ -37,7 +37,11 @@ class RawPipeline(BasePipeline):
         model_name = self.agent.llm.model_name
 
         raw_output = self.agent.chat(
-            build_baseline_prompt(instruction, dataset=ds, model_name=model_name, domain=self.domain),
+            build_baseline_prompt(instruction, dataset=ds, model_name=model_name,
+                                  domain=self.domain, answer_line=input_item.get("answer_line"),
+                                  definition=input_item.get("definition"),
+                                  positive_examples=input_item.get("positive_examples"),
+                                  negative_examples=input_item.get("negative_examples")),
         )
         code = finalize_generation_output(raw_output, dataset=ds, domain=self.domain)
 
@@ -55,7 +59,12 @@ class RawPipeline(BasePipeline):
         for item in items:
             instruction = self._instruction(item)
             ds = (item.get("dataset") or "mbpp").lower()
-            msgs.append(build_baseline_prompt(instruction, dataset=ds, model_name=model_name, domain=self.domain))
+            msgs.append(build_baseline_prompt(instruction, dataset=ds, model_name=model_name,
+                                              domain=self.domain,
+                                              answer_line=item.get("answer_line"),
+                                              definition=item.get("definition"),
+                                              positive_examples=item.get("positive_examples"),
+                                              negative_examples=item.get("negative_examples")))
         outs = self.agent.chat_batch(msgs)
         results = []
         for item, raw in zip(items, outs):
@@ -116,8 +125,12 @@ class SelfRefinePipeline(BasePipeline):
         datasets = [(it.get("dataset") or "mbpp").lower() for it in items]
 
         init_msgs = [
-            build_baseline_prompt(instr, dataset=ds, model_name=model_name, domain=self.domain)
-            for instr, ds in zip(instructions, datasets)
+            build_baseline_prompt(instr, dataset=ds, model_name=model_name, domain=self.domain,
+                                  answer_line=it.get("answer_line"),
+                                  definition=it.get("definition"),
+                                  positive_examples=it.get("positive_examples"),
+                                  negative_examples=it.get("negative_examples"))
+            for instr, ds, it in zip(instructions, datasets, items)
         ]
         raw_init = self.agent.chat_batch(init_msgs)
         codes = [
@@ -139,6 +152,8 @@ class SelfRefinePipeline(BasePipeline):
                     neutral_critic_sys,
                     dataset=datasets[j],
                     model_name=model_name,
+                    answer_line=items[j].get("answer_line"),
+                    definition=items[j].get("definition"),
                 )
                 for j in active_idx
             ]
@@ -162,6 +177,8 @@ class SelfRefinePipeline(BasePipeline):
                     codes[j],
                     dataset=datasets[j],
                     model_name=model_name,
+                    answer_line=items[j].get("answer_line"),
+                    definition=items[j].get("definition"),
                 )
                 for j in refine_tasks
             ]
