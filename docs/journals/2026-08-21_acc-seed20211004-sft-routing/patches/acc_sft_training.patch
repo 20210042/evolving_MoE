@@ -1,0 +1,521 @@
+diff --git a/results/acc/seed20211004/README.md b/results/acc/seed20211004/README.md
+index dd57ebd..89f59b0 100644
+--- a/results/acc/seed20211004/README.md
++++ b/results/acc/seed20211004/README.md
+@@ -31,3 +31,19 @@ These assets are intended for downstream LoRA training and label-based routing e
+ ## Notes
+ 
+ This branch is intentionally limited to the collaborator-facing artifacts and excludes experimental logs, scratch analysis, and in-progress work.
++
++## Persona LoRA SFT
++
++The bundle contains labels and persona prompts, but not the original problem statements or
++supervised reference solutions. Prepare an ACC train JSONL whose `id` values match
++`binning_train_full.binned.jsonl` and whose rows contain `solution` or `ground_truth`, then run:
++
++```bash
++SOURCE_JSONL=/path/to/acc_train.jsonl \
++  bash scripts/sbatch/launch_acc_seed20211004_persona_sft.sh
++```
++
++The launcher validates the ID join and target availability, creates
++`export/acc_binning_seed20211004_persona`, and submits one LoRA job per roster expert. Each
++adapter sees only rows where its `per_expert` label is 1, with that expert's `system_prompt`
++from `roster_final.json` as the training system message.
+diff --git a/scripts/sbatch/launch_sft_by_experts.sh b/scripts/sbatch/launch_sft_by_experts.sh
+index c202cc6..daf4bb9 100755
+--- a/scripts/sbatch/launch_sft_by_experts.sh
++++ b/scripts/sbatch/launch_sft_by_experts.sh
+@@ -19,7 +19,7 @@ if [ -z "${EXPERT_IDS:-}" ]; then
+     EXPERT_IDS="$(python3 -c "import json,sys; print(' '.join(json.load(open(sys.argv[1]))))" "${LABEL_PACKAGE}/agent_mapping.json")"
+ fi
+ 
+-echo "=== package: ${LABEL_PACKAGE} / max_n_solved: ${MAX_N_SOLVED:-none} / serial: ${SERIAL} ==="
++echo "=== package: ${LABEL_PACKAGE} / max_n_solved: ${MAX_N_SOLVED:-none} / serial: ${SERIAL} / persona: ${USE_EXPERT_SYSTEM_PROMPT:-false} ==="
+ echo "=== experts: ${EXPERT_IDS} ==="
+ 
+ if [ "${SERIAL}" = "1" ]; then
+diff --git a/scripts/sbatch/train_sft_by_expert.sh b/scripts/sbatch/train_sft_by_expert.sh
+index c5b1ddc..ed83d3b 100755
+--- a/scripts/sbatch/train_sft_by_expert.sh
++++ b/scripts/sbatch/train_sft_by_expert.sh
+@@ -1,17 +1,17 @@
+ #!/bin/bash
+ #SBATCH --job-name=sft_llama3_expert
+-#SBATCH --gres=gpu:PRO6000:2
++#SBATCH --gres=gpu:PRO6000:1
+ #SBATCH --nodes=1
+ #SBATCH --ntasks-per-node=1
+ #SBATCH --cpus-per-task=2
+-#SBATCH --mem=64G
+-#SBATCH --time=48:00:00
++#SBATCH --mem=32G
++#SBATCH --time=24:00:00
+ #SBATCH --output=logs/%x.%j.log
+ #SBATCH --error=logs/%x.%j.log
+ 
+-# per-expert SFT (합의 2026-07-13): system prompt는 baseline GEN으로 통일,
+-# expert별로 binning 라벨(per_expert==1)에 따라 보는 데이터만 다름.
+-# 사용: LABEL_PACKAGE=export/qasc_binning_seed20210211 EXPERT_ID=c_33055 [MAX_N_SOLVED=10] sbatch $0
++# per-expert SFT. 기본은 기존 실험 호환용 baseline prompt이고,
++# USE_EXPERT_SYSTEM_PROMPT=true이면 agent_mapping.json의 persona prompt를 사용한다.
++# 사용: LABEL_PACKAGE=... EXPERT_ID=c_33055 USE_EXPERT_SYSTEM_PROMPT=true sbatch $0
+ 
+ set -euo pipefail
+ 
+@@ -23,8 +23,9 @@ source ~/data/miniconda3/etc/profile.d/conda.sh
+ conda activate "${CONDA_ENV:-evolving_moe}"
+ 
+ export PYTHONPATH="$REPO/src"
+-# HF cache는 /data5 고정 (home quota 작음; ~/.bashrc의 HF_HOME은 비인터랙티브 셸에서 미적용)
+-export HF_HOME="${HF_HOME:-/data5/jaehoonjeong/.cache/huggingface}"
++# 현재 사용자의 cache/token을 사용한다. 다른 사용자의 HF_HOME을 하드코딩하면
++# gated Llama 다운로드와 Hub push 모두 PermissionError로 실패한다.
++export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
+ # train_sft.py 기본 entity는 종빈 팀(jongbin-kr-skiml_moe) — 멤버가 아니면 wandb init 실패
+ export WANDB_ENTITY="${WANDB_ENTITY:-wjdwongs1234-none}"
+ 
+@@ -37,6 +38,10 @@ if [ -z "${LABEL_PACKAGE}" ] || [ -z "${EXPERT_ID}" ]; then
+ fi
+ MAX_N_SOLVED="${MAX_N_SOLVED:-}"
+ MIN_N_SOLVED="${MIN_N_SOLVED:-}"   # shared 어댑터(EXPERT_ID=shared)용: n_solved>=이 값만 학습
++MAX_TRAIN_SAMPLES="${MAX_TRAIN_SAMPLES:-}"
++COMMON_CORE_SIZE="${COMMON_CORE_SIZE:-0}"
++COMMON_CORE_N_SOLVED="${COMMON_CORE_N_SOLVED:-12}"
++COMMON_CORE_SEED="${COMMON_CORE_SEED:-20211004}"
+ 
+ # export/<domain>_binning_seed<seed> → domain / seed
+ PKG_BASE="$(basename "${LABEL_PACKAGE}")"
+@@ -59,6 +64,16 @@ if [ -n "${MIN_N_SOLVED}" ]; then
+     CAP_SUFFIX="${CAP_SUFFIX}_min${MIN_N_SOLVED}"
+     CAP_FLAG+=(--min_n_solved "${MIN_N_SOLVED}")
+ fi
++if [ -n "${MAX_TRAIN_SAMPLES}" ]; then
++    CAP_SUFFIX="${CAP_SUFFIX}_n${MAX_TRAIN_SAMPLES}"
++    CAP_FLAG+=(--max_train_samples "${MAX_TRAIN_SAMPLES}")
++fi
++if [ "${COMMON_CORE_SIZE}" -gt 0 ]; then
++    CAP_SUFFIX="${CAP_SUFFIX}_core${COMMON_CORE_SIZE}"
++    CAP_FLAG+=(--common_core_size "${COMMON_CORE_SIZE}" \
++               --common_core_n_solved "${COMMON_CORE_N_SOLVED}" \
++               --common_core_seed "${COMMON_CORE_SEED}")
++fi
+ # 코딩(acc)처럼 시퀀스가 긴 도메인용. 미설정 시 TRL 기본(1024) 유지 = QASC 기존 동작 불변.
+ LEN_FLAG=()
+ if [ -n "${MAX_LENGTH:-}" ]; then
+@@ -76,12 +91,23 @@ EVAL_DIR_FLAG=()
+ if [ -n "${EVAL_DATA_DIR:-}" ]; then
+     EVAL_DIR_FLAG=(--eval_data_dir "${EVAL_DATA_DIR}")
+ fi
++PERSONA_FLAG=()
++if [ "${USE_EXPERT_SYSTEM_PROMPT:-false}" = "true" ]; then
++    PERSONA_FLAG=(--use_expert_system_prompt true)
++fi
+ 
+ RUN_NAME="${RUN_NAME:-sft_llama3_${DOMAIN}_seed${BIN_SEED}${CAP_SUFFIX}_${EXPERT_ID}}"
+ OUTPUT_DIR="${OUTPUT_DIR:-checkpoints/expert_sft/${DOMAIN}_seed${BIN_SEED}${CAP_SUFFIX}/${EXPERT_ID}}"
+-DEEPSPEED_CONFIG="$REPO/configs/deepspeed_zero3.json"
+-NPROC_PER_NODE="${NPROC_PER_NODE:-${SLURM_GPUS_ON_NODE:-2}}"
++NPROC_PER_NODE="${NPROC_PER_NODE:-${SLURM_GPUS_ON_NODE:-1}}"
+ GRADIENT_ACCUMULATION_STEPS="${GRADIENT_ACCUMULATION_STEPS:-4}"
++NUM_TRAIN_EPOCHS="${NUM_TRAIN_EPOCHS:-5}"
++EVAL_STEPS="${EVAL_STEPS:-100}"
++SAVE_STEPS="${SAVE_STEPS:-${EVAL_STEPS}}"
++HUB_MODEL_ID="${HUB_MODEL_ID:-${HUB_ORG:-Jongbin-kr}/evolving-moe-${DOMAIN}-seed${BIN_SEED}${CAP_SUFFIX}-${EXPERT_ID}}"
++DEEPSPEED_FLAG=()
++if [ "${USE_DEEPSPEED:-false}" = "true" ]; then
++    DEEPSPEED_FLAG=(--deepspeed "$REPO/configs/deepspeed_zero3.json")
++fi
+ 
+ # rolling chain: 시작 시점에 다음 expert 잡 하나만 제출(afterany:자기 자신).
+ # 전체를 미리 걸어두지 않으므로 큐에는 항상 러닝 1개 + 대기 1개만 보인다.
+@@ -105,12 +131,13 @@ srun --ntasks=1 --gpus-per-task="${NPROC_PER_NODE}" --chdir="$REPO" \
+     --attn_implementation sdpa \
+     --label_package "${LABEL_PACKAGE}" \
+     --expert_id "${EXPERT_ID}" \
++    "${PERSONA_FLAG[@]}" \
+     "${CAP_FLAG[@]}" \
+     "${LEN_FLAG[@]}" \
+     "${GC_FLAG[@]}" \
+     --eval_dataset "${DOMAIN}" \
+     --eval_split "${EVAL_SPLIT}" \
+-    --data_dir "export/${DOMAIN}" \
++    --data_dir "${DATA_DIR:-export/${DOMAIN}}" \
+     "${EVAL_DIR_FLAG[@]}" \
+     --data_ratio 1.0 \
+     --seed 42 \
+@@ -120,24 +147,27 @@ srun --ntasks=1 --gpus-per-task="${NPROC_PER_NODE}" --chdir="$REPO" \
+     --sft_lora_dropout 0.05 \
+     --output_dir "${OUTPUT_DIR}" \
+     --run_name "${RUN_NAME}" \
+-    --num_train_epochs 7 \
++    --num_train_epochs "${NUM_TRAIN_EPOCHS}" \
+     --per_device_train_batch_size 2 \
+     --per_device_eval_batch_size 2 \
+     --gradient_accumulation_steps "${GRADIENT_ACCUMULATION_STEPS}" \
+     --learning_rate 2e-5 \
+     --lr_scheduler_type cosine \
+     --bf16 true \
+-    --deepspeed "${DEEPSPEED_CONFIG}" \
++    "${DEEPSPEED_FLAG[@]}" \
+     --logging_steps 10 \
+     --eval_strategy steps \
+-    --eval_steps 100 \
++    --eval_steps "${EVAL_STEPS}" \
+     --save_strategy steps \
+-    --save_steps 100 \
++    --save_steps "${SAVE_STEPS}" \
+     --save_total_limit 3 \
+     --load_best_model_at_end true \
+     --metric_for_best_model eval_loss \
+     --report_to wandb \
+     --wandb_project "${WANDB_PROJECT:-sft_expert}" \
+-    --push_to_hub "${PUSH_TO_HUB:-False}"
++    --push_to_hub "${PUSH_TO_HUB:-False}" \
++    --hub_model_id "${HUB_MODEL_ID}" \
++    --hub_strategy every_save \
++    --hub_private_repo "${HUB_PRIVATE_REPO:-false}"
+ 
+ echo "=== expert SFT 완료: ${EXPERT_ID}. 체크포인트: ${OUTPUT_DIR} ==="
+diff --git a/src/train_sft.py b/src/train_sft.py
+index 1ecec56..76da826 100644
+--- a/src/train_sft.py
++++ b/src/train_sft.py
+@@ -13,7 +13,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
+ from trl import SFTConfig, SFTTrainer
+ 
+ from data import get_dataset
+-from prompts.coding import build_baseline_prompt
++from prompts.coding import build_baseline_prompt, build_expert_prompt
+ from prompts.math import build_generation_prompt as build_math_prompt
+ from utils.domains import task_family
+ from utils.helpers import set_all_seeds
+@@ -87,6 +87,10 @@ class DataArguments:
+         default=None,
+         metadata={"help": "label_package에서 사용할 expert id. 'best'면 train_pass_at_1 최고 전문가."},
+     )
++    use_expert_system_prompt: bool = field(
++        default=False,
++        metadata={"help": "expert SFT prompt의 system 턴에 agent_mapping.json의 persona system_prompt를 사용."},
++    )
+     source_jsonl: Optional[str] = field(
+         default=None,
+         metadata={"help": "label_package 라벨과 id-join할 원본 train jsonl. 생략 시 summary.json의 source_train_jsonl."},
+@@ -99,6 +103,22 @@ class DataArguments:
+         default=None,
+         metadata={"help": "label_package 필터: n_solved >= 이 값인 문제만 사용. shared 어댑터(공통 core) 학습용."},
+     )
++    max_train_samples: Optional[int] = field(
++        default=None,
++        metadata={"help": "필터와 shuffle 이후 사용할 최대 train 예제 수. None이면 전부 사용."},
++    )
++    common_core_size: int = field(
++        default=0,
++        metadata={"help": "전문가별 필터셋에 공통으로 추가할 예제 수. 0이면 사용하지 않음."},
++    )
++    common_core_n_solved: int = field(
++        default=12,
++        metadata={"help": "공통 core 후보의 정확한 n_solved 값. ACC all-pass는 12."},
++    )
++    common_core_seed: int = field(
++        default=20211004,
++        metadata={"help": "모든 expert가 동일한 common core ID를 뽑기 위한 고정 seed."},
++    )
+ 
+ 
+ @dataclass
+@@ -137,6 +157,14 @@ def stringify_completion(value: Any) -> str:
+     return str(value)
+ 
+ 
++def supervised_target(item: dict) -> Any:
++    if item.get("solution") is not None:
++        return item["solution"]
++    if item.get("ground_truth") is not None:
++        return item["ground_truth"]
++    raise ValueError(f"SFT item {item.get('id')!r} has neither solution nor ground_truth.")
++
++
+ def build_prompt_messages(item: dict, dataset_name: str, model_name: str) -> list[dict] | str:
+     dataset_key = (item.get("dataset") or dataset_name).lower()
+     family = task_family(dataset=dataset_key, domain=item.get("domain"))
+@@ -164,6 +192,7 @@ def build_regular_hf_dataset(
+     data_ratio: float = 1.0,
+     seed: Optional[int] = None,
+     categories: Optional[List[str]] = None,
++    expert_persona: Optional[dict] = None,
+ ) -> Dataset:
+     items = get_dataset(
+         name,
+@@ -176,9 +205,21 @@ def build_regular_hf_dataset(
+ 
+     rows = []
+     for item in items:
++        if expert_persona:
++            prompt = build_expert_prompt(
++                item["instruction"],
++                str(expert_persona["system_prompt"]),
++                dataset=str(item.get("dataset") or name),
++                model_name=model_name,
++                starter_code=item.get("starter_code"),
++                approach=expert_persona.get("approach"),
++                domain=item.get("domain"),
++            )
++        else:
++            prompt = build_prompt_messages(item, name, model_name)
+         rows.append({
+-            "prompt": build_prompt_messages(item, name, model_name),
+-            "completion": [{"role": "assistant", "content": stringify_completion(item.get("solution", item["ground_truth"]))}],
++            "prompt": prompt,
++            "completion": [{"role": "assistant", "content": stringify_completion(supervised_target(item))}],
+         })
+     return Dataset.from_list(rows)
+ 
+@@ -226,6 +267,11 @@ def build_expert_label_dataset(
+     model_name: str,
+     max_n_solved: Optional[int] = None,
+     min_n_solved: Optional[int] = None,
++    use_expert_system_prompt: bool = False,
++    max_train_samples: Optional[int] = None,
++    common_core_size: int = 0,
++    common_core_n_solved: int = 12,
++    common_core_seed: int = 20211004,
+ ) -> tuple[Dataset, str, int]:
+     package = Path(package_dir)
+     labels_path = package / "binning_labels.jsonl"
+@@ -250,27 +296,74 @@ def build_expert_label_dataset(
+         return (max_n_solved is None or ns <= max_n_solved) and \
+                (min_n_solved is None or ns >= min_n_solved)
+ 
+-    selected = [
+-        source_rows[str(r["id"])]
++    selected_ids = [
++        str(r["id"])
+         for r in labels
+         if (is_shared or int((r.get("per_expert") or {}).get(chosen, 0)) == 1)
+         and _band_ok(int(r.get("n_solved", 0)))
+         and str(r["id"]) in source_rows
+     ]
++    if common_core_size < 0:
++        raise ValueError("common_core_size must be >= 0.")
++    if common_core_size and not is_shared:
++        # ID 정렬 + 별도 seed를 사용하므로 모든 expert가 같은 all-pass core를 받는다.
++        # per_expert 조건도 유지하여 all-pass가 아닌 값으로 일반화해도 실패 예제는 섞지 않는다.
++        core_candidates = sorted(
++            str(r["id"])
++            for r in labels
++            if int(r.get("n_solved", 0)) == common_core_n_solved
++            and int((r.get("per_expert") or {}).get(chosen, 0)) == 1
++            and str(r["id"]) in source_rows
++        )
++        if common_core_size > len(core_candidates):
++            raise ValueError(
++                f"common_core_size={common_core_size} exceeds {len(core_candidates)} candidates "
++                f"for n_solved={common_core_n_solved}."
++            )
++        import random
++        core_rng = random.Random(common_core_seed)
++        core_rng.shuffle(core_candidates)
++        seen = set(selected_ids)
++        selected_ids.extend(rid for rid in core_candidates[:common_core_size] if rid not in seen)
++
++    selected = [source_rows[rid] for rid in selected_ids]
+     if seed is not None:
+         import random
+         rng = random.Random(seed)
+         rng.shuffle(selected)
+     if data_ratio < 1.0:
+         selected = selected[: max(1, int(len(selected) * data_ratio))]
++    if max_train_samples is not None:
++        if max_train_samples <= 0:
++            raise ValueError("max_train_samples must be > 0 when provided.")
++        selected = selected[:max_train_samples]
++
++    persona = mapping.get(chosen, {}) if not is_shared else {}
++    persona_system_prompt = str(persona.get("system_prompt") or "").strip()
++    if use_expert_system_prompt and not is_shared and not persona_system_prompt:
++        raise ValueError(
++            f"expert_id={chosen!r} has no system_prompt in {mapping_path}; "
++            "persona SFT requires a non-empty prompt."
++        )
+ 
+-    # 합의(2026-07-13): 프롬프트는 baseline GEN으로 통일(페르소나 미사용, eval과 동일 경로),
+-    # expert 간 차이는 학습 데이터 분할뿐.
+     rows = []
+     for item in selected:
++        if use_expert_system_prompt and not is_shared:
++            prompt = build_expert_prompt(
++                item["instruction"],
++                persona_system_prompt,
++                dataset=str(item.get("dataset") or dataset_name),
++                model_name=model_name,
++                starter_code=item.get("starter_code"),
++                approach=persona.get("approach"),
++                domain=item.get("domain"),
++            )
++        else:
++            # 기존 QASC/LBox 실험은 baseline prompt를 사용하므로 opt-in으로만 persona를 켠다.
++            prompt = build_prompt_messages(item, dataset_name, model_name)
+         rows.append({
+-            "prompt": build_prompt_messages(item, dataset_name, model_name),
+-            "completion": [{"role": "assistant", "content": stringify_completion(item.get("solution", item["ground_truth"]))}],
++            "prompt": prompt,
++            "completion": [{"role": "assistant", "content": stringify_completion(supervised_target(item))}],
+         })
+     return Dataset.from_list(rows), chosen, len(selected)
+ 
+@@ -311,9 +404,16 @@ def main():
+             model_name=model_args.model_name_or_path,
+             max_n_solved=data_args.max_n_solved,
+             min_n_solved=data_args.min_n_solved,
++            use_expert_system_prompt=data_args.use_expert_system_prompt,
++            max_train_samples=data_args.max_train_samples,
++            common_core_size=data_args.common_core_size,
++            common_core_n_solved=data_args.common_core_n_solved,
++            common_core_seed=data_args.common_core_seed,
+         )
+-        logger.info("전문가 SFT 학습셋: expert=%s, examples=%d, max_n_solved=%s, min_n_solved=%s",
+-                    chosen_expert, n_rows, data_args.max_n_solved, data_args.min_n_solved)
++        logger.info("전문가 SFT 학습셋: expert=%s, examples=%d, max_n_solved=%s, min_n_solved=%s, persona_prompt=%s, common_core=%d@n%d",
++                    chosen_expert, n_rows, data_args.max_n_solved, data_args.min_n_solved,
++                    data_args.use_expert_system_prompt, data_args.common_core_size,
++                    data_args.common_core_n_solved)
+     else:
+         logger.info("학습 데이터셋 로딩: %s/%s", data_args.train_dataset, data_args.train_split)
+         train_dataset = build_regular_hf_dataset(
+@@ -329,6 +429,10 @@ def main():
+     logger.info("학습 데이터셋: %d개 예제", len(train_dataset))
+ 
+     logger.info("평가 데이터셋 로딩: %s/%s", data_args.eval_dataset, data_args.eval_split)
++    eval_persona = None
++    if data_args.label_package and data_args.use_expert_system_prompt and chosen_expert not in (None, "shared"):
++        mapping_path = Path(data_args.label_package) / "agent_mapping.json"
++        eval_persona = json.load(open(mapping_path, encoding="utf-8"))[chosen_expert]
+     eval_dataset = build_regular_hf_dataset(
+         data_args.eval_dataset,
+         split=data_args.eval_split,
+@@ -336,6 +440,7 @@ def main():
+         data_dir=data_args.eval_data_dir or data_args.data_dir,
+         seed=sft_config.seed,
+         categories=data_args.categories,
++        expert_persona=eval_persona,
+     )
+     logger.info("평가 데이터셋: %d개 예제", len(eval_dataset))
+ 
+@@ -425,6 +530,14 @@ def main():
+     trainer.log_metrics("train", metrics)
+     trainer.save_metrics("train", metrics)
+ 
++    # every_save 전략은 eval/save step마다 checkpoint를 Hub에 올린다. 학습 종료 후에는
++    # load_best_model_at_end로 복원된 eval_loss 기준 best adapter를 Hub 루트에 확정 push한다.
++    if sft_config.push_to_hub and trainer.is_world_process_zero():
++        trainer.push_to_hub(
++            commit_message="Upload final best model selected by eval_loss",
++            blocking=True,
++        )
++
+     logger.info("학습 완료! 모델 저장 위치: %s", sft_config.output_dir)
+ 
+ 
+diff --git a/tests/test_qasc_lbox_eval_sft.py b/tests/test_qasc_lbox_eval_sft.py
+index ff5de6f..d9fc8a9 100644
+--- a/tests/test_qasc_lbox_eval_sft.py
++++ b/tests/test_qasc_lbox_eval_sft.py
+@@ -2,7 +2,12 @@ import json
+ 
+ from evaluate import build_eval_prompt, evaluate_item
+ from prompts import baseline_prompts
+-from train_sft import build_prompt_messages, resolve_expert_id, stringify_completion
++from train_sft import (
++    build_expert_label_dataset,
++    build_prompt_messages,
++    resolve_expert_id,
++    stringify_completion,
++)
+ 
+ 
+ def test_evaluate_builds_qasc_prompt_and_scores_letter():
+@@ -62,3 +67,82 @@ def test_train_sft_expert_helpers_select_best_and_stringify_lists():
+     assert resolve_expert_id(mapping, "a") == "a"
+     assert stringify_completion(["형법 제298조", "형법 제299조"]) == "형법 제298조, 형법 제299조"
+     assert stringify_completion({"answer": "B"}) == json.dumps({"answer": "B"}, ensure_ascii=False, sort_keys=True)
++
++
++def test_expert_dataset_uses_roster_persona_and_only_solved_bins(tmp_path):
++    source = tmp_path / "acc_train.jsonl"
++    source.write_text(
++        "\n".join([
++            json.dumps({"id": "p1", "dataset": "acc", "domain": "coding", "instruction": "one", "solution": "print(1)"}),
++            json.dumps({"id": "p2", "dataset": "acc", "domain": "coding", "instruction": "two", "solution": "print(2)"}),
++        ]) + "\n",
++        encoding="utf-8",
++    )
++    package = tmp_path / "package"
++    package.mkdir()
++    (package / "binning_labels.jsonl").write_text(
++        "\n".join([
++            json.dumps({"id": "p1", "dataset": "acc", "n_solved": 1, "per_expert": {"expert": 1}}),
++            json.dumps({"id": "p2", "dataset": "acc", "n_solved": 0, "per_expert": {"expert": 0}}),
++        ]) + "\n",
++        encoding="utf-8",
++    )
++    (package / "agent_mapping.json").write_text(
++        json.dumps({"expert": {"system_prompt": "You are the graph specialist.", "train_pass_at_1": 0.5}}),
++        encoding="utf-8",
++    )
++
++    dataset, expert_id, count = build_expert_label_dataset(
++        package_dir=str(package),
++        expert_id="expert",
++        source_jsonl=str(source),
++        data_ratio=1.0,
++        seed=42,
++        model_name="meta-llama/Llama-3.1-8B-Instruct",
++        use_expert_system_prompt=True,
++    )
++
++    assert expert_id == "expert"
++    assert count == 1
++    assert dataset[0]["prompt"][0]["role"] == "system"
++    assert dataset[0]["prompt"][0]["content"].startswith("You are the graph specialist.")
++    assert dataset[0]["completion"][0]["content"] == "print(1)"
++
++
++def test_experts_receive_the_same_seeded_common_core(tmp_path):
++    source = tmp_path / "acc_train.jsonl"
++    items = [
++        {"id": "only_a", "dataset": "acc", "instruction": "only a", "solution": "a"},
++        {"id": "only_b", "dataset": "acc", "instruction": "only b", "solution": "b"},
++        {"id": "core_1", "dataset": "acc", "instruction": "shared core one", "solution": "c1"},
++        {"id": "core_2", "dataset": "acc", "instruction": "shared core two", "solution": "c2"},
++    ]
++    source.write_text("".join(json.dumps(x) + "\n" for x in items), encoding="utf-8")
++    package = tmp_path / "package"
++    package.mkdir()
++    labels = [
++        {"id": "only_a", "dataset": "acc", "n_solved": 1, "per_expert": {"a": 1, "b": 0}},
++        {"id": "only_b", "dataset": "acc", "n_solved": 1, "per_expert": {"a": 0, "b": 1}},
++        {"id": "core_1", "dataset": "acc", "n_solved": 2, "per_expert": {"a": 1, "b": 1}},
++        {"id": "core_2", "dataset": "acc", "n_solved": 2, "per_expert": {"a": 1, "b": 1}},
++    ]
++    (package / "binning_labels.jsonl").write_text(
++        "".join(json.dumps(x) + "\n" for x in labels), encoding="utf-8"
++    )
++    (package / "agent_mapping.json").write_text(json.dumps({
++        "a": {"system_prompt": "Persona A"},
++        "b": {"system_prompt": "Persona B"},
++    }), encoding="utf-8")
++
++    common_texts = []
++    for expert in ("a", "b"):
++        dataset, _, count = build_expert_label_dataset(
++            package_dir=str(package), expert_id=expert, source_jsonl=str(source),
++            data_ratio=1.0, seed=42, model_name="meta-llama/Llama-3.1-8B-Instruct",
++            max_n_solved=1, use_expert_system_prompt=True,
++            common_core_size=1, common_core_n_solved=2, common_core_seed=7,
++        )
++        assert count == 2
++        user_texts = [row["prompt"][1]["content"] for row in dataset]
++        common_texts.append(next(text for text in user_texts if "shared core" in text))
++    assert common_texts[0] == common_texts[1]
+

@@ -1,0 +1,25 @@
+{
+  "soft_router": {
+    "objective": "KL against normalized solver labels (each of n solvers receives mass 1/n)",
+    "encoder": "google/embeddinggemma-300m",
+    "train_rows": 11097,
+    "train_solvable": 9297,
+    "test_rows": 751,
+    "test_solvable": 621,
+    "test_loss": 0.2144169956445694,
+    "test_solver_probability_mass": 0.8814707398414612,
+    "test_top1_solver_hit": 0.8631240129470825
+  },
+  "top1_router": {
+    "objective": "negative log probability mass assigned to the solver set",
+    "encoder": "google/embeddinggemma-300m",
+    "train_rows": 11097,
+    "train_contested": 2839,
+    "test_rows": 751,
+    "test_contested": 174,
+    "test_set_loss": 3.0426783561706543,
+    "test_solver_probability_mass": 0.5336490273475647,
+    "test_top1_solver_hit_contested": 0.540229856967926,
+    "test_entropy": 0.4769420325756073
+  }
+}
