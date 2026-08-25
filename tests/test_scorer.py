@@ -15,6 +15,40 @@ def test_score_mbpp_zero_on_garbage():
     assert s == 0.0
 
 
+def test_score_acc_strips_markdown_fence_before_execution(monkeypatch):
+    captured = {}
+
+    def fake_run(
+        self,
+        problem,
+        candidate_code,
+        language="python",
+        solution_id="candidate",
+    ):
+        captured["candidate_code"] = candidate_code
+        return {"passed": True}
+
+    monkeypatch.setattr(
+        "evaluation.acc_exec.ExecutionInterface.run",
+        fake_run,
+    )
+
+    item = {
+        "id": "acc_fenced",
+        "dataset": "acc",
+        "scoring_kind": "acc",
+        "instruction": "Write a Python solution.",
+        "eval_spec": {"eval_mode": "stdin_stdout"},
+        "test_cases": [],
+        "domain": "coding",
+    }
+
+    score = score_one(item, "```python\nprint('hello')\n```")
+
+    assert score == 100.0
+    assert captured["candidate_code"] == "print('hello')"
+
+
 def test_score_qasc_letter_and_option_text():
     item = {
         "id": "q1",

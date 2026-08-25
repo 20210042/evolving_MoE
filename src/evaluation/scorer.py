@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict
 
-from evaluation.code_exec import evaluate_code_score, extract_helper_code
+from evaluation.code_exec import clean_extracted_code, evaluate_code_score, extract_helper_code
 from evaluation.lcb_score import score_lcb_item
 from evaluation.metrics import math_verify_score
 from utils.helpers import extract_math_answer, strip_thinking_channels
@@ -76,7 +76,10 @@ def score_acc_item(item: Dict[str, Any], code: str) -> float:
     problem = dict(item)
     problem["eval_spec"] = _json(item.get("eval_spec")) or {}
     problem["test_cases"] = _json(item.get("test_cases")) or []
-    out = ExecutionInterface().run(problem, code, solution_id="candidate")
+    # Generation prompts intentionally request a fenced Markdown code block.
+    # acc_exec expects raw Python, so normalize it before sandbox execution.
+    candidate = clean_extracted_code(code)
+    out = ExecutionInterface().run(problem, candidate, solution_id="candidate")
     return 100.0 if out.get("passed") else 0.0
 
 
