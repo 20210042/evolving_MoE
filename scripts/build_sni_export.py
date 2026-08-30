@@ -130,7 +130,16 @@ def build(
     per_task: int,
     seed: int,
     english_only: bool,
+    *,
+    emit_answer_line: bool = True,
+    exclude_ids: set | None = None,
+    split_ratio: Tuple[int, int, int] | None = None,
 ) -> None:
+    """공식 train/test는 category-disjoint라 우리 용도에 못 쓴다 —
+    ``official_{train,test}.jsonl``로만 남기고, 실제로 쓰는 분할은
+    ``split_ratio``로 전수를 인스턴스 단위 층화 없이 무작위로 자른
+    ``sni_{train,valid,test}.jsonl``이다(로더가 이 이름을 집는다).
+    """
     tasks_dir = os.path.join(repo, "tasks")
     splits_dir = os.path.join(repo, "splits")
     os.makedirs(out_dir, exist_ok=True)
@@ -138,6 +147,7 @@ def build(
     stats: Dict[str, Dict[str, int]] = {}
     all_rows: List[Dict[str, Any]] = []
     audit: List[Dict[str, Any]] = []
+    n_excluded = 0
     for split in ("train", "test"):
         names = _read_split(splits_dir, track, split)
         rows: List[Dict[str, Any]] = []
@@ -196,30 +206,35 @@ def build(
                 gts = [str(g) for g in gts if str(g).strip()]
                 if not gts:
                     continue
-                rows.append(
-                    {
-                        "id": str(inst.get("id") or f"{task_name}-{len(rows)}"),
-                        # ⚠️ Input 원문만. Definition은 아래 별도 필드로만 남는다.
-                        "instruction": str(inst.get("input") or "").strip(),
-                        "ground_truth": gts,
-                        "domain": "sni",
-                        "definition": definition,
-                        "positive_examples": pos_ex,
-                        "negative_examples": neg_ex,
-                        "answer_line": answer_line,
-                        "answer_space": labels or None,
-                        "task_closed": closed,
-                        "n_gold_types": n_types,
-                        "gold_len_median": gold_len,
-                        "task_name": task_name,
-                        "category": category,
-                        "sni_domain": sni_domain,
-                        "sni_domain_full": sni_domain_full,
-                        "input_language": in_lang,
-                        "output_language": out_lang,
-                    }
-                )
-        path = os.path.join(out_dir, f"sni_{split}.jsonl")
+                pid = str(inst.get("id") or f"{task_name}-{len(rows)}")
+                if exclude_ids and pid in exclude_ids:
+                    n_excluded += 1
+                    continue
+                row = {
+                    "id": pid,
+                    # ⚠️ Input 원문만. Definition은 아래 별도 필드로만 남는다.
+                    "instruction": str(inst.get("input") or "").strip(),
+                    "ground_truth": gts,
+                    "domain": "sni",
+                    "definition": definition,
+                    "positive_examples": pos_ex,
+                    "negative_examples": neg_ex,
+                    "answer_space": labels or None,
+                    "task_closed": closed,
+                    "n_gold_types": n_types,
+                    "gold_len_median": gold_len,
+                    "task_name": task_name,
+                    "category": category,
+                    "sni_domain": sni_domain,
+                    "sni_domain_full": sni_domain_full,
+                    "input_language": in_lang,
+                    "output_language": out_lang,
+                }
+                # answer_line은 공식에 없는 우리 추가분이다. 끄면 프롬프트가 공식 그대로가 된다.
+                if emit_answer_line:
+                    row["answer_line"] = answer_line
+                rows.append(row)
+        path = os.path.join(out_dir, f"official_{split}.jsonl")
         with open(path, "w") as f:
             for r in rows:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
@@ -238,6 +253,32 @@ def build(
         for r in all_rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     print(f"[all] instances={len(all_rows)} -> {path_all}")
+    if n_excluded:
+        print(f"[exclude] {n_excluded}건 제외됨(사전등록 컨텍스트 초과 목록)")
+
+    # 우리 분할. 인스턴스 단위 무작위 — 같은 task의 인스턴스가 train/valid/test에
+    # 흩어진다(태스크 단위 분할은 채택하지 않기로 한 결정이다).
+    split_stats: Dict[str, int] = {}
+    if split_ratio:
+        w_tr, w_va, w_te = split_ratio
+        total_w = w_tr + w_va + w_te
+        shuffled = list(all_rows)
+        random.Random(seed).shuffle(shuffled)
+        n = len(shuffled)
+        n_tr = n * w_tr // total_w
+        n_va = n * (w_tr + w_va) // total_w
+        parts = {
+            "train": shuffled[:n_tr],
+            "valid": shuffled[n_tr:n_va],
+            "test": shuffled[n_va:],
+        }
+        for name, part in parts.items():
+            sp = os.path.join(out_dir, f"sni_{name}.jsonl")
+            with open(sp, "w") as f:
+                for r in part:
+                    f.write(json.dumps(r, ensure_ascii=False) + "\n")
+            split_stats[name] = len(part)
+            print(f"[split:{name}] instances={len(part)} -> {sp}")
 
     n_closed = sum(1 for a in audit if a["closed"])
     with open(os.path.join(out_dir, "build_report.json"), "w") as f:
@@ -250,6 +291,10 @@ def build(
                 "english_only": english_only,
                 "splits": stats,
                 "all_instances": len(all_rows),
+                "emit_answer_line": emit_answer_line,
+                "excluded_over_context": n_excluded,
+                "split_ratio": list(split_ratio) if split_ratio else None,
+                "our_splits": split_stats or None,
                 "answer_line_rule": {
                     "max_labels": MAX_LABELS,
                     "closed_ratio": CLOSED_RATIO,
@@ -310,8 +355,34 @@ def main() -> None:
     )
     ap.add_argument("--audit-out", default="results/sni/answer_lines.md",
                     help="answer_line 전수 감사 덤프. 승인 전에는 이 export를 런에 쓰지 않는다.")
+    ap.add_argument("--no-answer-line", action="store_true",
+                    help="answer_line 필드를 내보내지 않는다 → 프롬프트가 공식 Tk-Instruct 그대로.")
+    ap.add_argument("--exclude-ids", default=None,
+                    help="sni_context_filter.py가 만든 초과 목록 json. 여기 담긴 id를 빼고 빌드한다.")
+    ap.add_argument("--split", default=None,
+                    help="우리 train/valid/test 분할 비율, 예: 8:1:1. 없으면 분할 파일을 안 만든다.")
     args = ap.parse_args()
-    audit = build(args.repo, args.out, args.track, args.per_task, args.seed, args.english_only)
+
+    exclude_ids = None
+    if args.exclude_ids:
+        blob = json.loads(Path(args.exclude_ids).read_text(encoding="utf-8"))
+        ids = blob.get("ids") if isinstance(blob, dict) else blob
+        exclude_ids = {str(x) for x in (ids or [])}
+        print(f"[exclude] {len(exclude_ids)}개 id 로드 <- {args.exclude_ids}")
+
+    split_ratio = None
+    if args.split:
+        parts = tuple(int(x) for x in args.split.split(":"))
+        if len(parts) != 3 or any(x < 0 for x in parts) or sum(parts) == 0:
+            ap.error("--split은 'train:valid:test' 형식의 음이 아닌 정수 셋이어야 한다 (예: 8:1:1)")
+        split_ratio = parts
+
+    audit = build(
+        args.repo, args.out, args.track, args.per_task, args.seed, args.english_only,
+        emit_answer_line=not args.no_answer_line,
+        exclude_ids=exclude_ids,
+        split_ratio=split_ratio,
+    )
     write_audit(audit, args.audit_out)
 
 

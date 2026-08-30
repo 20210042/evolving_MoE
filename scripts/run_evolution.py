@@ -208,10 +208,14 @@ def main() -> None:
         use_approach_persona=bool(cfg.get("use_approach_persona", False)),
         shared_contribution_exemption=bool(cfg.get("shared_contribution_exemption", True)),
         failure_mode_scout=bool(cfg.get("failure_mode_scout", False)),
+        scout_exclude_binary=bool(cfg.get("scout_exclude_binary", False)),
+        exclude_binary=bool(cfg.get("exclude_binary", False)),
         deletion_window=int(cfg.get("deletion_window", 0)),
         deletion_floor=float(cfg.get("deletion_floor", 0.0)),
         delete_cooldown=int(cfg.get("delete_cooldown", 0)),
         add_only=bool(cfg.get("add_only", False)),
+        war_mode=str(cfg.get("war_mode", "hard")),
+        lives_mode=str(cfg.get("lives_mode", "legacy")),
     )
 
     step_count = 0

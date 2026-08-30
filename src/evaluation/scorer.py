@@ -270,14 +270,21 @@ def sni_metrics(item: Dict[str, Any], prediction: str) -> Dict[str, float]:
     return {"exact_match": em, "rougeL": 100.0 * rl}
 
 
-def score_sni_item(item: Dict[str, Any], prediction: str) -> float:
-    """0/100 이진 계약(진화 WAR·binning이 소비). 공식 EM 그대로.
+SNI_ROUGE_PASS = 70.0   # ROUGE-L(0~100). EM이 0일 때 이 값을 넘으면 풀었다고 본다.
 
-    ⚠️ 공식은 임계를 두지 않고 EM·ROUGE 연속값 두 개를 병기한다. "풀었다/못 풀었다"라는
-    이진 판정은 공식에 없는 **우리 요구사항**이고, 여기서 EM을 쓰는 것이 그 선택이다.
-    ROUGE 임계로 판정하려면 war_mode='soft_partial'의 partial_credit 경로를 쓴다.
+
+def score_sni_item(item: Dict[str, Any], prediction: str) -> float:
+    """0/100 이진 계약(진화 WAR·binning이 소비). **EM 또는 ROUGE-L > 0.7**.
+
+    공식은 임계 없이 EM·ROUGE 두 값을 병기한다. "풀었다/못 풀었다"라는 이진 판정은
+    공식에 없는 우리 요구사항이고, 공식이 두 지표를 병기하는 취지에 맞춰 둘 다 본다.
+
+    ⚠️ EM 단독으로 판정하면 열린 생성 태스크가 구조적으로 전멸한다 — 정답을 냈는데
+    gold 문자열과 안 맞는 것들이 전부 실패로 잡힌다(열림 8-15단어 층 hard 83.5%).
+    그 결과 스카우트 입력의 상당수가 "사실은 맞은 답"이 되어 진단할 대상이 없어진다.
     """
-    return sni_metrics(item, prediction)["exact_match"]
+    m = sni_metrics(item, prediction)
+    return 100.0 if (m["exact_match"] >= 100.0 or m["rougeL"] > SNI_ROUGE_PASS) else 0.0
 
 
 def score_sni_item_partial(item: Dict[str, Any], prediction: str) -> float:

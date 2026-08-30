@@ -140,7 +140,11 @@ def scout_new_persona(
         {"role": "system", "content": "You are a strict JSON API. Only output valid JSON."},
         {"role": "user", "content": prompt},
     ]
-    response = agent.chat(msg, enable_thinking=enable_thinking)
+    # ⚠️ 상한을 명시하지 않으면 LLMService가 config의 `llm.max_tokens`로 폴백한다. SNI는 그
+    # 값이 128(공식 --max_target_length, **정답 생성용**)이라 페르소나 JSON이 중간에 잘려
+    # seed20212001에서 스카우트가 1,131/1,392 스텝(81%) 실패했다. 스카우트 출력은 정답이
+    # 아니므로 생성 상한과 분리한다(실패분은 641자 근처에서 잘렸다 → 2048이면 여유가 크다).
+    response = agent.chat(msg, max_tokens=2048, enable_thinking=enable_thinking)
     data = extract_json_object(response)
     if data:
         return data

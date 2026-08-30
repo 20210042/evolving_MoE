@@ -29,6 +29,7 @@ FEAT_DIR = REPO / "results" / "embed_viz_test"
 
 sys.path.insert(0, str(REPO / "src"))
 from prompts import baseline_prompts as bp  # noqa: E402
+from prompts.coding import sni_system_block, sni_user_block  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -45,6 +46,9 @@ class DatasetSpec:
     answer_letters: tuple | None   # MCQA 답 어휘. None이면 오픈 QA
     emb_train: tuple           # (npy, ids) — encoder 임베딩만 레거시 경로
     emb_eval: tuple
+    # gen 템플릿 하나로 조립되지 않는 도메인용. row -> (system, user).
+    # None이면 기존대로 gen=(system, user_template.format(instruction=...)).
+    build_prompt: object = None
 
 
 SPECS = {
@@ -64,6 +68,21 @@ SPECS = {
         emb_eval=("results/embed_viz_test/qasc_val_emb.npy",
                   "export/qasc/qasc_validation.jsonl"),
     ),
+    "acc": DatasetSpec(
+        name="acc",
+        train_split="train",
+        eval_split="test",
+        src={"train": "export/acc_v2/sft/acc_train.jsonl",
+             "test": "export/acc_v2/acc_test.jsonl"},
+        labels="export/acc_binning_seed20210111_v2/binning_labels.jsonl",
+        eval_binned="results/acc/seed20210111_v2/ablation/inference_test751_evolved_fewshot.binned.jsonl",
+        ckpt="checkpoints/expert_sft/acc_seed20210111_v2_cap9_fewshot",
+        base_model="meta-llama/Llama-3.1-8B-Instruct",
+        gen=(bp.CODING_GEN_SYSTEM, bp.CODING_GEN_USER),
+        answer_letters=None,     # 코드실행 채점 — 답을 생성해 테스트케이스로 채점
+        emb_train=("results/embed_viz_test/acc_train_emb.npy", "results/embed_viz_test/acc_train_emb_ids.json"),
+        emb_eval=("results/embed_viz_test/acc_test_emb.npy", "results/embed_viz_test/acc_test_emb_ids.json"),
+    ),
     "lbox": DatasetSpec(
         name="lbox",
         train_split="train",
@@ -80,6 +99,31 @@ SPECS = {
         emb_train=("results/embed_viz/lbox_emb.npy", "results/embed_viz/lbox_ids.json"),
         emb_eval=("results/embed_viz_test/lbox_valid_emb.npy",
                   "export/lbox/lbox_valid.jsonl"),
+    ),
+    "sni": DatasetSpec(
+        name="sni",
+        train_split="train",
+        eval_split="test",
+        src={"train": "export/sni_v4/sni_train.jsonl",
+             "valid": "export/sni_v4/sni_valid.jsonl",
+             "test": "export/sni_v4/sni_test.jsonl"},
+        labels="export/sni_binning_seed20212003/binning_labels.jsonl",
+        eval_binned="export/sni_binning_seed20212003/test_binned.jsonl",
+        ckpt="",                 # SNI는 per-expert 어댑터가 없다 — 로스터가 프롬프트 페르소나다
+        base_model="google/gemma-4-26B-A4B-it",
+        gen=(bp.SNI_GEN_SYSTEM, bp.SNI_GEN_USER),
+        answer_letters=None,     # 오픈 생성 — 공식 EM/ROUGE로 채점
+        emb_train=("results/embed_viz_test/sni_train_emb.npy",
+                   "results/embed_viz_test/sni_train_emb_ids.json"),
+        emb_eval=("results/embed_viz_test/sni_test_emb.npy",
+                  "results/embed_viz_test/sni_test_emb_ids.json"),
+        # 실제 생성과 같은 조립. 페르소나 자리는 중립(SNI_GEN_SYSTEM) — 전문가 정보는
+        # 프로파일 벡터로 따로 들어간다(scripts/extract_expert_profiles.py).
+        build_prompt=lambda r: (
+            sni_system_block(bp.SNI_GEN_SYSTEM, r.get("definition")),
+            sni_user_block(r.get("answer_line"), r["instruction"],
+                           positive_examples=r.get("positive_examples"), num_pos=2),
+        ),
     ),
 }
 

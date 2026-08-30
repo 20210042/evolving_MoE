@@ -1,0 +1,71 @@
+# SNI 진화 seed20212002 — **v5 = 스카우트 라벨 해킹 방지판.**
+#
+# seed20212001과 바뀐 것은 딱 하나: `scout_exclude_binary: true`.
+#   진단(2026-08-28): 스카우트는 gold를 못 보지만, 정의가 라벨 공간을 알려주고 실패 시도가
+#   `reward 0`으로 표시되므로 **이진 태스크에서는 "우리 답이 틀렸다"는 사실만으로 정답이
+#   유도된다.** 그래서 "반대로 답하라" 페르소나가 최적해가 됐다 —
+#   seed20212001 최종 로스터의 단독해결 1위(975건)·2위(369건)가 전부 그 계열이고,
+#   개별 pass@1은 23.3%/25.2%로 로스터 최하위였다. verbal RL의 reward hacking.
+#   단독해결 975건을 해부하니 gold가 오답인 태스크도 아니고(Wrong Candidate Generation
+#   상위 없음), 소수 라벨 보정도 아니었다(소수 라벨 밴드 관측 15.5% < 기대 23.5%).
+#   남는 설명은 "이진에서 남들과 다르게 답하면 자동으로 맞는다" = 찍기.
+#
+#   대응: 라벨 공간이 **정확히 2개**인 인스턴스를 **스카우트 입력에서만** 제외한다
+#   (n_gold_types == 2, 코퍼스의 28%). 3지선다 이상은 반전이 유일해가 아니므로 그대로 준다.
+#   게이트·프로브·WAR·로깅은 손대지 않았다 — 정보 통제만 한다.
+#   `scout_exclude_binary: false`면 기존 동작과 바이트 동일.
+#
+# 이하 seed20212001 주석 그대로.
+#
+# 데이터: export/sni_v4 (job 232072). v3에서 바뀐 것 —
+#   · answer_line 제거 → 프롬프트가 공식 Tk-Instruct 그대로
+#     (system = 페르소나 + definition / user = pos example 2건 + "Now complete..." + Input/Output:)
+#   · 컨텍스트 16,384 초과 103건 제외. 이 값은 **실제 프롬프트로 다시 잰 것**이다 —
+#     v3까지의 61건은 sni_context_filter가 pos example을 빼고 조립해 과소평가한 값이었다.
+#   · train/valid/test = 8:1:1 인스턴스 단위 무작위 분할(seed 42). 같은 task의 인스턴스가
+#     분할을 가로지른다 — test는 미접촉 "문제"이지 미접촉 "태스크"가 아니다. 판독 때 살릴 것.
+#   공개본: https://huggingface.co/datasets/Kcsp0042/SNI_split
+#
+# batch_size 50 — 캘리브레이션 프로브(job 232084, v4 프롬프트 실측)로 정했다.
+#   하드에러: luca 단독 45.3%(배치당 23건) → 태스크축 12명 37.1%(19건).
+#   few-shot 2건이 v2 대비 2~5%p 낮췄지만 스카우트 표본으로는 충분하다.
+#   seed18(batch 100, 하드에러 평균 21.2건)과 같은 작동점이다.
+#   ⚠️ acc의 선택압 고갈(배치당 0.5건)과는 상황이 정반대다.
+#
+# max_tokens 128 — 공식 --max_target_length와 동일. 전수 gold 토큰 p99 = 97.
+#   4096에서 128로 자를 때 EM 손실 상한은 실측 0.28%p(435,140건 표본)라 안전하다.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "sni"
+data_dir: "export/sni_v4"
+split: "train"          # 파일 자체가 8:1:1의 train. 홀드아웃은 sni_valid/sni_test에 따로 있다
+train_size: 69588       # sni_train.jsonl 전량 → run_evolution 내부 홀드아웃은 0(의도된 것)
+epochs: 1
+batch_size: 50
+max_lives: 5
+enable_thinking: false
+shared_contribution_exemption: false   # window 모드에선 미사용(누적 윈도가 흡수)
+roster_init_path: "configs/roster_init.json"   # LUCA 단독 = 프로브의 45.3% 시작점
+
+# v5 라벨 해킹 방지 — 스카우트 입력에서 이진(n_gold_types==2) 인스턴스 제외
+scout_exclude_binary: true
+
+# Windowed deletion — seed18 표준. window만 batch에 맞춰 조정한다.
+deletion_window: 16     # seed18의 8은 batch 100 기준(=800문제). batch 50에서 같은 폭이 되려면 16.
+deletion_floor: 0.0     # 윈도 동안 단독해결 0일 때만 lives 감소(가장 보수적)
+delete_cooldown: 5      # 삭제 ≤1회/5스텝 — 연쇄 급락 완충
+
+llm:
+  # 데이터는 이미 16,384 초과분을 export 단계에서 제외했으므로 남은 문제는 전부 그 아래다.
+  # 그런데 16,384로 딱 맞춰 뒀다가 seed20212001이 step 617에서 터졌다 — 제외 목록을 잰 뒤
+  # 진화가 더 긴 페르소나를 만들어, 경계에 붙어 있던 문제가 밀려 넘어갔다.
+  # 32,768이면 데이터 상한 위로 16,384토큰이 남아 페르소나가 얼마가 되든 안 걸린다.
+  max_model_len: 32768
+  max_tokens: 128
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

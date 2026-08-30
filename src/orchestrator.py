@@ -97,6 +97,8 @@ class GMEvolutionOrchestrator:
         use_approach_persona: bool = False,
         shared_contribution_exemption: bool = True,
         failure_mode_scout: bool = False,
+        scout_exclude_binary: bool = False,
+        exclude_binary: bool = False,
         deletion_window: int = 0,
         deletion_floor: float = 0.0,
         delete_cooldown: int = 0,
@@ -119,6 +121,21 @@ class GMEvolutionOrchestrator:
         # failure-mode scout: attach one random failed attempt to each hard error so
         # the scout types the recurring mistake instead of the topic (seed17+).
         self.failure_mode_scout = failure_mode_scout
+        # v5: 라벨 공간이 2개뿐인 인스턴스를 **스카우트 입력에서만** 뺀다.
+        # 이진에서는 '우리 답이 틀렸다'는 사실만으로 정답이 유도돼(gold를 안 줘도),
+        # 스카우트가 '반대로 답하라' 페르소나를 만드는 게 최적해가 된다 — verbal RL의
+        # reward hacking. seed20212001에서 그 페르소나가 단독해결 1·2위를 차지했다.
+        # 3지선다 이상은 반전이 유일해가 아니므로 그대로 보여준다.
+        # 게이트·프로브·로깅은 손대지 않는다. OFF면 기존 동작과 바이트 동일.
+        self.scout_exclude_binary = scout_exclude_binary
+        # v6(seed20212003): 이진(n_gold_types==2)을 **세 경로 전부**에서 뺀다.
+        #   A 스카우트 입력 · B 게이트(probe/new_pass/니치 회수) · C 적합도(WAR·lives·삭제)
+        # v5는 A만 막았다. 정보를 막아도 '반대로 답하라'는 아무 하드에러에서나 나오는
+        # 일반 전략이고, B·C가 열려 있으면 이진에서의 우연한 성공으로 승인·생존한다
+        # (v5 실측: 단독해결 874건 중 634건이 2지선다, lift 2.02).
+        # ⚠️ UB(upper_bound_rate)는 배치 전체로 유지한다 — 이전 시드와 비교할 보고 수치다.
+        # OFF면 기존 동작과 바이트 동일.
+        self.exclude_binary = exclude_binary
         self._fm_rng = random.Random(seed)
         self.max_lives = max_lives
         # Windowed deletion (deletion_window>0): the whole removal path — eviction
@@ -385,19 +402,27 @@ class GMEvolutionOrchestrator:
                     # SNI는 instruction이 Input 원문뿐이다(정의는 별도 필드). 그대로 주면
                     # 스카우트는 무슨 조작을 요구하는 태스크인지 알 방법이 없어 소재(주제)로만
                     # 분화한다 — 프로브에서 죽은 것으로 판정된 축이다. 정의·기대·실제를 같이 준다.
-                    gts = item.get("ground_truth") or []
-                    expected = str(gts[0]) if gts else ""
+                    # ⚠️ gold(Expected)는 **의도적으로 뺀다.** 스카우트에게 정답을 보여주면
+                    # "정답을 그대로 써라"가 최적해가 되고, 추론 시엔 정답이 없어 그 페르소나가
+                    # 통째로 무의미해진다(seed20212001에서 실측: 단독해결 383스텝 전부 0).
+                    # attempts는 전원이 틀린 문제에서만 모이므로 정의상 전부 오답이다.
                     attempts = [
                         codes[(problem_id, p["id"])]
                         for p in self.roster
                         if (problem_id, p["id"]) in codes
                     ]
-                    produced = self._fm_rng.choice(attempts) if attempts else ""
+                    # 로스터가 3명 이상이면 오답 3개를 무작위로 싣는다. 전원이 실패한
+                    # 문제이므로 셋 다 오답이고, 같은 방식으로 틀렸는지 서로 다른 방식으로
+                    # 틀렸는지가 그대로 관측된다 — 무엇이 "다른 실패"인지 우리가 골라주지 않는다.
+                    # 800 — residual 생성물 14,975건 실측: 중앙값 40자·p95 401·최대 788.
+                    # 300이면 8.9%가 잘려 최종 답이 프롬프트에서 사라진다(추론을 길게 쓴 건들).
+                    k = 3 if len(attempts) >= 3 else len(attempts)
+                    shown = self._fm_rng.sample(attempts, k) if k else []
+                    lines = "\n".join(f"Attempt (reward 0): {a[:800]}" for a in shown)
                     hard_errors_texts[problem_id] = (
                         f"Task: {(item.get('definition') or '').strip()[:600]}\n"
                         f"Input: {clean_desc[:600]}\n"
-                        f"Expected: {expected[:300]}\n"
-                        f"Produced: {produced[:300]}"
+                        f"{lines}"
                     )
                 else:
                     hard_errors_texts[problem_id] = clean_desc
@@ -455,6 +480,21 @@ class GMEvolutionOrchestrator:
         rng = random.Random(self.seed + self._step_for_log)
 
         squad_results, hard_errors_texts, partial_credit = self.run_batch(batch_data)
+
+        # 이진(n_gold_types==2) 제외 집합. exclude_binary가 꺼져 있으면 None이라
+        # 아래 경로들이 전부 기존과 동일하게 돈다.
+        binary_ids: Set[str] = set()
+        score_ids: Optional[Set[str]] = None
+        if self.exclude_binary:
+            binary_ids = {
+                b["id"] for b in batch_data if b.get("n_gold_types") == 2
+            }
+            score_ids = {b["id"] for b in batch_data if b["id"] not in binary_ids}
+            logging.info(
+                "Binary exclusion: 적합도·게이트 대상 %d/%d (이진 %d건 제외)",
+                len(score_ids), len(batch_data), len(binary_ids),
+            )
+
         war_scores, _ub_count, ub_rate = compute_war_scores(
             squad_results,
             len(batch_data),
@@ -462,6 +502,7 @@ class GMEvolutionOrchestrator:
             rng=rng,
             mode=self.war_mode,
             partial_credit=partial_credit,
+            score_ids=score_ids,   # C: 적합도만 제한. UB는 배치 전체 그대로.
         )
         logging.info("WAR Scores: %s", war_scores)
 
@@ -572,6 +613,8 @@ class GMEvolutionOrchestrator:
         roster_by_id = {p["id"]: p for p in self.roster}
         for item in batch_data:
             pid = item["id"]
+            if pid in binary_ids:
+                continue  # C: 이진에서의 단독해결은 니치 증거로 인정하지 않는다
             solvers = [cid for cid, solved_set in squad_results.items() if pid in solved_set]
             if len(solvers) == 1:
                 p = roster_by_id.get(solvers[0])
@@ -626,8 +669,29 @@ class GMEvolutionOrchestrator:
 
         self._update_routing_memory(batch_data, squad_results)
 
+        scout_errors = hard_errors_texts
+        if self.scout_exclude_binary or self.exclude_binary:   # A
+            _by_id = {b["id"]: b for b in batch_data}
+            scout_errors = {
+                pid: txt for pid, txt in hard_errors_texts.items()
+                if (_by_id.get(pid, {}).get("n_gold_types") != 2)
+            }
+            if len(scout_errors) != len(hard_errors_texts):
+                logging.info(
+                    "Scout input: %d/%d hard errors (이진 라벨 %d건 제외)",
+                    len(scout_errors), len(hard_errors_texts),
+                    len(hard_errors_texts) - len(scout_errors),
+                )
+            if not scout_errors:
+                logging.info("모든 hard error가 이진 라벨 — 스카우트 건너뜀.")
+                self._log_step(
+                    squad_results, war_scores, worst_agent, hard_errors_texts,
+                    noop_decision, None, [], set(), ub_rate,
+                )
+                return
+
         hard_errors_combined = "\n".join(
-            f"{i+1}. {txt}" for i, txt in enumerate(hard_errors_texts.values())
+            f"{i+1}. {txt}" for i, txt in enumerate(scout_errors.values())
         )
 
         exclusive_solves_map: Optional[Dict[str, List[str]]] = None
@@ -653,7 +717,9 @@ class GMEvolutionOrchestrator:
         logging.info("Scouted New Persona: %s", _persona_label(new_persona))
 
         roster_ids = [p["id"] for p in self.roster]
-        probe_hard = list(hard_errors_texts.keys())
+        # B: 승인 게이트도 이진을 안 본다. v5는 여기가 원본(hard_errors_texts) 전체라,
+        # 스카우트가 이진을 못 봐도 후보가 이진에서 얻은 우연한 성공으로 통과했다.
+        probe_hard = [q for q in hard_errors_texts if q not in binary_ids]
         by_id = {b["id"]: b for b in batch_data}
         new_pass_ids: Set[str] = set()
 
@@ -662,11 +728,17 @@ class GMEvolutionOrchestrator:
         # that niche becomes a hole; select_action only allows the swap if the newface
         # recovers it. These ids are disjoint from probe_hard (worst solved them), so
         # adding them to the probe doesn't change gh_add (which intersects probe_hard).
+        # B: 니치 판정도 이진을 뺀 solve 행렬로 한다. 안 그러면 이진에서의 우연한
+        # 단독해결이 "지켜야 할 니치"가 되어 삭제를 막고 swap을 add로 강등시킨다.
+        gate_squad: Dict[str, Set[str]] = (
+            {k: set(v) for k, v in squad_results.items()} if not binary_ids
+            else {k: (set(v) - binary_ids) for k, v in squad_results.items()}
+        )
         worst_unique_ids: List[str] = []
         if worst_agent:
-            worst_solves = set(squad_results.get(worst_agent, set()))
+            worst_solves = set(gate_squad.get(worst_agent, set()))
             other_solves: Set[str] = set()
-            for rid, solves in squad_results.items():
+            for rid, solves in gate_squad.items():
                 if rid != worst_agent:
                     other_solves.update(solves)
             worst_unique_ids = [q for q in (worst_solves - other_solves) if q in by_id]
@@ -704,7 +776,7 @@ class GMEvolutionOrchestrator:
         decision = select_action(
             roster_ids=roster_ids,
             worst_id=worst_agent,
-            squad_results={k: set(v) for k, v in squad_results.items()},
+            squad_results=gate_squad,   # B: 이진 제외(binary_ids가 비면 기존과 동일)
             hard_errors=probe_hard,
             new_pass_ids=new_pass_ids,
             batch_size=len(batch_data),

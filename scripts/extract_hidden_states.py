@@ -47,8 +47,14 @@ def main():
                                                  attn_implementation="sdpa").cuda().eval()
 
     def prompt(r):
-        msgs = [{"role": "system", "content": sys_p},
-                {"role": "user", "content": user_t.format(instruction=r["instruction"])}]
+        # gen 템플릿 하나로 조립되지 않는 도메인(SNI: 정의 + 예시 블록 + Input)은
+        # spec의 build_prompt를 쓴다. None이면 기존 동작 그대로.
+        if sp.build_prompt is not None:
+            sys_c, user_c = sp.build_prompt(r)
+        else:
+            sys_c, user_c = sys_p, user_t.format(instruction=r["instruction"])
+        msgs = [{"role": "system", "content": sys_c},
+                {"role": "user", "content": user_c}]
         return tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
 
     last_all, mean_all = [], []
@@ -58,7 +64,10 @@ def main():
         enc = tok(texts, return_tensors="pt", padding=True, truncation=True,
                   max_length=a.max_len).to("cuda")
         with torch.no_grad():
-            hs = model(**enc, output_hidden_states=True).hidden_states[-1]  # (B,T,H)
+            hs = model(**enc, output_hidden_states=True,
+                       logits_to_keep=1).hidden_states[-1]  # (B,T,H)
+            # ⚠️ logits_to_keep=1 — 없으면 어휘 262k × 전체 토큰 위치의 logits을 만들다
+            # OOM(스모크 236203, max_len 4096/batch 8에서 16GiB 한 방).
         mask = enc.attention_mask.unsqueeze(-1)                              # (B,T,1)
         last = hs[:, -1, :]                                                  # left-pad → 마지막=진짜 마지막 토큰
         mean = (hs * mask).sum(1) / mask.sum(1)
