@@ -1,0 +1,325 @@
+{
+  "seed": "seed20212003",
+  "arm": "human",
+  "dataset": "sni",
+  "n_experts_routed": 16,
+  "shared_expert": false,
+  "teacher": "google/gemma-4-26B-A4B-it",
+  "student_intended": "meta-llama/Llama-3.1-8B",
+  "split_rule": {
+    "bands": "없음 — 진화 쪽 n_solved 구간을 쓰지 않는다 (사람 사전지식 조건)",
+    "axis": "사람 택소노미 — SNI 공식 category 72개 (대조군)",
+    "style": "순수 BTX (Branch-Train-MiX) — 겹치지 않는 도메인 분할",
+    "assignment": "category 72개를 겹치지 않는 16그룹으로 묶는다 (크기 내림차순 그리디 LPT, category는 쪼개지 않는다). 한 문제는 자기 category를 맡은 expert 1명에게만 간다",
+    "shared_expert": false,
+    "duplication": "없음 (학습 row = train 문제 수)",
+    "coverage": "train 전수 69,588 — 상위 16 category만 쓰면 32%가 버려져 쓰지 않았다",
+    "imbalance": "expert별 12,499~3,500 — 최대 category가 통째로 한 명에게 가서 생기는 편차이고 사람 택소노미의 성질이라 보정하지 않는다",
+    "builder": "scripts/sni_build_split_human.py"
+  },
+  "target": "gold (ground_truth 첫 레퍼런스; 전체는 targets)",
+  "prompt": "페르소나 없음 · system=SNI_GEN_SYSTEM+definition · user=공식 Tk-Instruct(pos 2건)",
+  "n_train_problems": 69588,
+  "n_train_rows": 69588,
+  "n_test": 8699,
+  "source_missing": 0,
+  "scoring": "EM==100 or ROUGE-L>70 (src/evaluation/scorer.py: score_sni_item)",
+  "experts": [
+    {
+      "index": 0,
+      "id": "luca",
+      "name": "expert 0",
+      "n_train": 12499,
+      "n_by_kind": {
+        "btx": 12499
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Question Answering"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 1,
+      "id": "c_10299",
+      "name": "expert 1",
+      "n_train": 7157,
+      "n_by_kind": {
+        "btx": 7157
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Program Execution"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 2,
+      "id": "c_58325",
+      "name": "expert 2",
+      "n_train": 4044,
+      "n_by_kind": {
+        "btx": 4044
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Question Generation"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 3,
+      "id": "c_24456",
+      "name": "expert 3",
+      "n_train": 3572,
+      "n_by_kind": {
+        "btx": 3572
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Text Matching",
+        "Dialogue Generation",
+        "Stereotype Detection",
+        "Sentence Composition",
+        "Number Conversion",
+        "Entity Generation"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 4,
+      "id": "c_17188",
+      "name": "expert 4",
+      "n_train": 3570,
+      "n_by_kind": {
+        "btx": 3570
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Wrong Candidate Generation",
+        "Summarization",
+        "Data to Text",
+        "Explanation",
+        "Stance Detection",
+        "Discourse Connective Identification",
+        "Discourse Relation Classification"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 5,
+      "id": "c_18467",
+      "name": "expert 5",
+      "n_train": 3567,
+      "n_by_kind": {
+        "btx": 3567
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Textual Entailment",
+        "Linguistic Probing",
+        "Negotiation Strategy Detection",
+        "Sentence Perturbation",
+        "Sentence Expansion"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 6,
+      "id": "c_56632",
+      "name": "expert 6",
+      "n_train": 3565,
+      "n_by_kind": {
+        "btx": 3565
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Sentiment Analysis",
+        "Style Transfer",
+        "Preposition Prediction"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 7,
+      "id": "c_13393",
+      "name": "expert 7",
+      "n_train": 3560,
+      "n_by_kind": {
+        "btx": 3560
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Title Generation",
+        "Word Semantics",
+        "Cause Effect Classification",
+        "Coherence Classification",
+        "Question Decomposition",
+        "Spelling Error Detection"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 8,
+      "id": "c_29228",
+      "name": "expert 8",
+      "n_train": 3524,
+      "n_by_kind": {
+        "btx": 3524
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Toxic Language Detection",
+        "Gender Classification",
+        "Mathematics",
+        "Speaker Relation Classification"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 9,
+      "id": "c_53171",
+      "name": "expert 9",
+      "n_train": 3519,
+      "n_by_kind": {
+        "btx": 3519
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Named Entity Recognition",
+        "Question Rewriting",
+        "Word Analogy",
+        "Dialogue State Tracking",
+        "Irony Detection",
+        "Translation"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 10,
+      "id": "c_49611",
+      "name": "expert 10",
+      "n_train": 3503,
+      "n_by_kind": {
+        "btx": 3503
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Text Categorization",
+        "Fill in The Blank",
+        "Code to Text",
+        "Answer Verification",
+        "Entity Relation Classification"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 11,
+      "id": "c_2461",
+      "name": "expert 11",
+      "n_train": 3502,
+      "n_by_kind": {
+        "btx": 3502
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Misc.",
+        "Keyword Tagging",
+        "Grammar Error Detection",
+        "Grammar Error Correction"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 12,
+      "id": "c_19704",
+      "name": "expert 12",
+      "n_train": 3502,
+      "n_by_kind": {
+        "btx": 3502
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Information Extraction",
+        "Text to Code",
+        "Text Quality Evaluation",
+        "Word Relation Classification",
+        "Overlap Extraction",
+        "Spam Classification"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 13,
+      "id": "c_9508",
+      "name": "expert 13",
+      "n_train": 3502,
+      "n_by_kind": {
+        "btx": 3502
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Coreference Resolution",
+        "Question Understanding",
+        "Story Composition",
+        "Text Simplification",
+        "Sentence Ordering",
+        "Poem Generation"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 14,
+      "id": "c_61797",
+      "name": "expert 14",
+      "n_train": 3502,
+      "n_by_kind": {
+        "btx": 3502
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Text Completion",
+        "Answerability Classification",
+        "Speaker Identification",
+        "Intent Identification",
+        "Fact Verification",
+        "Punctuation Error Detection"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    },
+    {
+      "index": 15,
+      "id": "c_46890",
+      "name": "expert 15",
+      "n_train": 3500,
+      "n_by_kind": {
+        "btx": 3500
+      },
+      "n_indiv": 0,
+      "n_all_fail": 0,
+      "categories": [
+        "Commonsense Classification",
+        "Pos Tagging",
+        "Dialogue Act Recognition",
+        "Paraphrasing",
+        "Sentence Compression"
+      ],
+      "persona_system_prompt_TEACHER_ONLY": null
+    }
+  ]
+}

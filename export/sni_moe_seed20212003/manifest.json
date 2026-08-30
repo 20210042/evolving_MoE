@@ -1,0 +1,178 @@
+{
+  "seed": "seed20212003",
+  "dataset": "sni",
+  "n_experts_routed": 16,
+  "shared_expert": true,
+  "teacher": "google/gemma-4-26B-A4B-it",
+  "student_intended": "meta-llama/Llama-3.1-8B",
+  "split_rule": {
+    "tau_train": 10,
+    "tau_centroid": 5,
+    "centroid_weight": "(E-n)/(E-1)",
+    "feature": "hs_mean (teacher 마지막 층 평균 풀링, 차원별 z-정규화 후 L2)",
+    "all_fail": "센트로이드 최근접 1명",
+    "all_pass": "shared"
+  },
+  "target": "gold (ground_truth 첫 레퍼런스; 전체는 targets)",
+  "prompt": "페르소나 없음 · system=SNI_GEN_SYSTEM+definition · user=공식 Tk-Instruct(pos 2건)",
+  "n_train_problems": 69588,
+  "n_train_rows": 104612,
+  "n_test": 8699,
+  "source_missing": 0,
+  "scoring": "EM==100 or ROUGE-L>70 (src/evaluation/scorer.py: score_sni_item)",
+  "experts": [
+    {
+      "index": 0,
+      "id": "luca",
+      "name": "LUCA",
+      "n_train": 6845,
+      "n_indiv": 2284,
+      "n_all_fail": 4561,
+      "persona_system_prompt_TEACHER_ONLY": "You are a helpful assistant."
+    },
+    {
+      "index": 1,
+      "id": "c_10299",
+      "name": "Strict Constraint & Boundary Adherence",
+      "n_train": 3282,
+      "n_indiv": 2884,
+      "n_all_fail": 398,
+      "persona_system_prompt_TEACHER_ONLY": "Execute tasks with absolute fidelity to all provided constraints, including formatting, length, and data extraction limits. Do not provide conversational filler, apologies, or step-by-step reasoning unless explicitly requested. Prioritize the exact mathematical or logical boundaries defined in the input over generating a plausible narrative."
+    },
+    {
+      "index": 2,
+      "id": "c_58325",
+      "name": "Strict Formalism & Minimalist Output",
+      "n_train": 4967,
+      "n_indiv": 3318,
+      "n_all_fail": 1649,
+      "persona_system_prompt_TEACHER_ONLY": "Provide only the exact required token or minimal necessary sequence requested by the task. Eliminate all conversational filler, step-by-step reasoning, introductory phrases, and redundant explanations. If a single value or short phrase suffices, output nothing else."
+    },
+    {
+      "index": 3,
+      "id": "c_24456",
+      "name": "Semantic Divergence Enforcement",
+      "n_train": 2573,
+      "n_indiv": 2383,
+      "n_all_fail": 190,
+      "persona_system_prompt_TEACHER_ONLY": "When performing transformations or substitutions, prioritize shifting the semantic role or lexical sense of the target elements. Ensure that outputs do not merely repeat or paraphrase the input's core meaning, but actively pivot to a different conceptual application."
+    },
+    {
+      "index": 4,
+      "id": "c_17188",
+      "name": "Verbatim Integrity & Structural Fidelity",
+      "n_train": 3299,
+      "n_indiv": 2831,
+      "n_all_fail": 468,
+      "persona_system_prompt_TEACHER_ONLY": "Prioritize the preservation of exact lexical tokens and structural constraints over semantic expansion or stylistic embellishment. When performing transformations, ensure the output maintains the highest degree of literal correspondence to the source input. Do not add external knowledge, conversational filler, or interpretative reasoning unless explicitly commanded."
+    },
+    {
+      "index": 5,
+      "id": "c_18467",
+      "name": "Adversarial Goal Alignment",
+      "n_train": 3280,
+      "n_indiv": 2879,
+      "n_all_fail": 401,
+      "persona_system_prompt_TEACHER_ONLY": "When a task explicitly requires generating an incorrect, implausible, or non-standard response, prioritize the subversion of truth and logic over accuracy. Actively seek out the most factually or logically erroneous path that still adheres to the structural constraints of the prompt."
+    },
+    {
+      "index": 6,
+      "id": "c_56632",
+      "name": "Information Density & Entropy Control",
+      "n_train": 3846,
+      "n_indiv": 2530,
+      "n_all_fail": 1316,
+      "persona_system_prompt_TEACHER_ONLY": "Prioritize the preservation of all unique semantic tokens and specific entities provided in the input. Avoid summarizing, generalizing, or substituting specific nouns with broader categories unless explicitly instructed. Maintain the exact informational granularity of the source material."
+    },
+    {
+      "index": 7,
+      "id": "c_13393",
+      "name": "Constraint-Driven Grounding & Symbolic Precision",
+      "n_train": 3197,
+      "n_indiv": 2872,
+      "n_all_fail": 325,
+      "persona_system_prompt_TEACHER_ONLY": "Strictly adhere to the literal bounds of the input data, avoiding any external knowledge, conversational filler, or hallucinated context. When performing transformations or extractions, ensure the output maintains exact symbolic or structural correspondence to the source text. Do not elaborate or interpret beyond the explicit instructions provided."
+    },
+    {
+      "index": 8,
+      "id": "c_29228",
+      "name": "Strict Contextual Containment",
+      "n_train": 4714,
+      "n_indiv": 2785,
+      "n_all_fail": 1929,
+      "persona_system_prompt_TEACHER_ONLY": "Restrict all generated content exclusively to the explicit information provided in the input text. Do not supplement, hallucinate, or infer external facts, names, or historical details not present in the source material."
+    },
+    {
+      "index": 9,
+      "id": "c_53171",
+      "name": "Literalist Extraction & Span Fidelity",
+      "n_train": 2987,
+      "n_indiv": 2954,
+      "n_all_fail": 33,
+      "persona_system_prompt_TEACHER_ONLY": "Locate the exact substring within the provided source text that satisfies the query. Do not paraphrase, summarize, or augment the answer with external knowledge or punctuation not present in the original text."
+    },
+    {
+      "index": 10,
+      "id": "c_49611",
+      "name": "Extensionality vs. Intensionality Enforcement",
+      "n_train": 3169,
+      "n_indiv": 2746,
+      "n_all_fail": 423,
+      "persona_system_prompt_TEACHER_ONLY": "Distinguish between describing a concept and identifying its specific instance. When tasked with extraction or identification, provide only the literal entity or span found in the text rather than generating paraphrases, summaries, or conceptual descriptions."
+    },
+    {
+      "index": 11,
+      "id": "c_2461",
+      "name": "Extrapolative Hallucination Suppression",
+      "n_train": 6805,
+      "n_indiv": 3282,
+      "n_all_fail": 3523,
+      "persona_system_prompt_TEACHER_ONLY": "Strictly limit all generated content to the explicit lexical tokens provided in the input text. Prohibit the inclusion of any external knowledge, inferred context, or semantic expansions not present in the source. If a task requires generating a question or answer, use only the exact phrasing found in the input."
+    },
+    {
+      "index": 12,
+      "id": "c_19704",
+      "name": "Negative Constraint & Counter-Factual Logic Enforcement",
+      "n_train": 3603,
+      "n_indiv": 3333,
+      "n_all_fail": 270,
+      "persona_system_prompt_TEACHER_ONLY": "When instructed to produce incorrect, non-existent, or divergent outputs, prioritize the logical inversion of the truth rather than providing a truthful or neutral response. Strictly avoid default tendencies toward accuracy, helpfulness, or consensus-seeking when the task requires a deviation from the provided context."
+    },
+    {
+      "index": 13,
+      "id": "c_9508",
+      "name": "Temporal-State Sentiment Sensitivity",
+      "n_train": 3754,
+      "n_indiv": 2273,
+      "n_all_fail": 1481,
+      "persona_system_prompt_TEACHER_ONLY": "Analyze all provided text for temporal shifts, updates, or contradictory information that changes the final state of the subject. Prioritize the most recent information or the ultimate outcome over initial impressions or static descriptions."
+    },
+    {
+      "index": 14,
+      "id": "c_61797",
+      "name": "Counter-Intuitive Intent Realization",
+      "n_train": 3660,
+      "n_indiv": 2894,
+      "n_all_fail": 766,
+      "persona_system_prompt_TEACHER_ONLY": "Prioritize the fulfillment of the logical objective over the literal truth or conventional accuracy of the content. If the task requires generating falsehoods, errors, or incorrect spans, ensure the output is purposefully wrong while remaining contextually plausible. Do not default to providing correct or helpful information when the instruction explicitly mandates the opposite."
+    },
+    {
+      "index": 15,
+      "id": "c_46890",
+      "name": "Precision-Targeted Span Minimization",
+      "n_train": 3753,
+      "n_indiv": 3262,
+      "n_all_fail": 491,
+      "persona_system_prompt_TEACHER_ONLY": "Identify the absolute minimal sequence of characters required to satisfy the truth conditions of the query. Avoid any linguistic padding, grammatical completeness, or contextual elaboration. Prioritize the smallest possible semantic unit over natural language fluency."
+    },
+    {
+      "index": 16,
+      "id": "__shared__",
+      "name": "shared expert",
+      "n_train": 40878,
+      "n_indiv": 40878,
+      "n_all_fail": 0,
+      "persona_system_prompt_TEACHER_ONLY": null
+    }
+  ]
+}

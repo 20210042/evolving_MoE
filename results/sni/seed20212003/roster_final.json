@@ -1,0 +1,1169 @@
+[
+    {
+        "id": "luca",
+        "name": "LUCA",
+        "strengths": "General programming assistance and baseline critique.",
+        "system_prompt": "You are a helpful assistant.",
+        "total_war": 3738.520954045947,
+        "active_steps": 1392,
+        "average_war": 2.685719076182433,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "Pets also track in pollen, and ____ out of every ten people is allergic to cat or dog dander."
+            },
+            {
+                "instruction": "The film explores adolescent issues through the minds of three friends and their reactions after a boy named Rudy Carges (Conor Donovan) is killed in a tree house set on fire by local bullies Jeff and Kenny, who carelessly didn't find out he was inside until too late. The boy's twin brother Jacob, a boy with a huge birthmark (also played by Donovan), decides to seek revenge against the bullies. Leonard (Jesse Camacho) who's overweight, survives the tree house fire but loses his sense of taste an"
+            },
+            {
+                "instruction": "Maybe its how he actually types \u00af_(\u30c4)_/\u00af"
+            },
+            {
+                "instruction": "Context: 'I'm afraid I also have need of the firewood. I have anaemia so i get cold easily so I need to make sure I have adequate firewood or i may freeze at night. I also have a thin clothing so they wont provide adequate warmth. How about all of my water and 2 food for all of the firewood?' 'Seeing as we both have a medical-necessity for the firewood, it's rather unfair that either one of us take ALL of the firewood. I felt that I was being rather generous with my previous offer.' 'you are rig"
+            },
+            {
+                "instruction": "#1 return object \n#2 return #1 that  is  on  the farthest right \n#3 return objects besides #2 \n#4 return shape of #2 \n#5 return shape of #3 \n#6 return #3 where #4 is  the same as #5 \n#7 return number of #6"
+            },
+            {
+                "instruction": "Command: and { only { filter_eq { all_rows ; city ; mansuriyah } } ; eq { hop { filter_eq { all_rows ; city ; mansuriyah } ; club } ; arabi } }, interpretation: select the rows whose city record fuzzily matches to mansuriyah . there is only one such row in the table . the club record of this unqiue row is arabi ."
+            },
+            {
+                "instruction": "Passage: Japan's national beach soccer team became the second Group A team to qualify for the quarter-finals of the sport's World Cup, held on Copacabana beach in Brazilian city Rio de Janeiro, though the team lost 5-8 to Poland on Tuesday. Japan, the United States and Poland are equal on points, each with one win and two losses."
+            },
+            {
+                "instruction": "knife, fork, teeth, steak sauce"
+            },
+            {
+                "instruction": "name[Blue Spice], food[English], priceRange[high], area[city centre]"
+            },
+            {
+                "instruction": "PersonX pays PersonX's ___ in full"
+            }
+        ],
+        "exclusive_solves": [
+            "These results would suggest that 6 - NO ( 2 ) - 7 - OHC and 7 , 8 - OHC might have a therapeutic role to play in the treatment of renal cell carcinoma .",
+            "Context: Ai was a sheltered child who had been abused for years. In foster care she was silent and never smiled. Then one day her foster mom brought home a new baby girl! \n Sentence: Ai played with th",
+            "Pets also track in pollen, and ____ out of every ten people is allergic to cat or dog dander.",
+            "The film explores adolescent issues through the minds of three friends and their reactions after a boy named Rudy Carges (Conor Donovan) is killed in a tree house set on fire by local bullies Jeff and",
+            "Maybe its how he actually types \u00af_(\u30c4)_/\u00af",
+            "#1 return object \n#2 return #1 that  is  on  the farthest right \n#3 return objects besides #2 \n#4 return shape of #2 \n#5 return shape of #3 \n#6 return #3 where #4 is  the same as #5 \n#7 return number ",
+            "Passage: Japan's national beach soccer team became the second Group A team to qualify for the quarter-finals of the sport's World Cup, held on Copacabana beach in Brazilian city Rio de Janeiro, though",
+            "knife, fork, teeth, steak sauce",
+            "name[Blue Spice], food[English], priceRange[high], area[city centre]",
+            "PersonX pays PersonX's ___ in full"
+        ],
+        "recent_unique": [
+            2.4000000000000004,
+            3.0666666666666678,
+            2.333333333333333,
+            1.5999999999999999,
+            4.733333333333335,
+            2.3333333333333335,
+            3.2,
+            2.666666666666667,
+            2.4666666666666672,
+            3.066666666666667,
+            2.4666666666666663,
+            3.1333333333333337,
+            2.3333333333333335,
+            1.5333333333333332,
+            3.266666666666667,
+            2.6
+        ]
+    },
+    {
+        "prompt_name": "Strict Constraint & Boundary Adherence",
+        "system_prompt": "Execute tasks with absolute fidelity to all provided constraints, including formatting, length, and data extraction limits. Do not provide conversational filler, apologies, or step-by-step reasoning unless explicitly requested. Prioritize the exact mathematical or logical boundaries defined in the input over generating a plausible narrative.",
+        "fixes": "Addresses the tendency of current policies to hallucinate context (Task 1), engage in excessive chain-of-thought/verbosity that leads to incomplete outputs (Tasks 2, 4, 14), fail to follow negative constraints (Task 13), and provide incorrect factual/logical inferences due to conversational drift (Tasks 11, 12).",
+        "id": "c_10299",
+        "name": "Strict Constraint & Boundary Adherence",
+        "total_war": 4460.68861693862,
+        "active_steps": 1391,
+        "average_war": 3.2068214356136733,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "[['Fitzbillies', 'eatType', 'coffee shop'], ['Fitzbillies', 'food', 'French'], ['Fitzbillies', 'priceRange', 'more than \u00a330'], ['Fitzbillies', 'customer rating', 'low'], ['Fitzbillies', 'area', 'riverside'], ['Fitzbillies', 'familyFriendly', 'no']]"
+            },
+            {
+                "instruction": "PersonX relaxes and watch ___"
+            },
+            {
+                "instruction": "Paragraph: \"Gov. Bruce Rauner\u2019s signing of a controversial abortion bill last month triggered an avalanche of protest from his fellow Illinois Republicans and anti-abortion groups, who said he had betrayed them. The bill, House Bill 40, removed a \"\"trigger provision\"\" in Illinois law that would have made abortion illegal should the U.S. Supreme Court overturn Roe vs. Wade. It also made abortion eligible for coverage under Medicaid in Illinois and under the state\u2019s employee health insurance plan."
+            },
+            {
+                "instruction": "Article: On Jan. 3, a netizen nicknamed \"Programmer Humor\"published a short story on his micro-blog. It said that there was an old lady who swept nearly every inch of his Internet company. When she passed by a programmer, she took a look at the codes on the programmer's computer and kindly reminded him, \"Be careful, the stack is overfilled!\" Certainly, it is a casual and fictitious story made up by the micro-blogger. However, no one would have guessed that the short blog would eventually cause t"
+            },
+            {
+                "instruction": "Head: PersonX bites the bullet<sep>Tail: PersonX is nervous about the doctor's exam"
+            },
+            {
+                "instruction": "Passage: It turned out that Shaquille was cheating."
+            },
+            {
+                "instruction": "Question: A metallic sphere of radius 12 cm is melted and drawn into a wire, whose radius of cross section is 16 cm. What is the length of the wire?\n\n Option A: 7 cm\n\n Option B: 6 cm\n\n Option C: 5 cm\n\n Option D: 1 cm\n\n Option E: 9 cm"
+            },
+            {
+                "instruction": "[266, 13, 153, 185, 187, 160, 94, 108, 238, 169, 176, 110, 177, 93, 70, 285, 63, 261, 277, 140], k=15"
+            },
+            {
+                "instruction": "password = LtOXDpG671jF2syCs4LDRBH6dAFRmQwVOme1oto859jM96"
+            },
+            {
+                "instruction": "Which British Prime Minister signed the 'Entente Cordiale' in 1904?"
+            }
+        ],
+        "recent_unique": [
+            2.5333333333333337,
+            3.2666666666666675,
+            3.0666666666666673,
+            1.9333333333333331,
+            3.9333333333333336,
+            2.3333333333333335,
+            4.666666666666667,
+            4.066666666666667,
+            2.666666666666667,
+            3.8000000000000007,
+            2.6666666666666665,
+            3.8000000000000007,
+            2.8666666666666667,
+            3.266666666666667,
+            4.2,
+            3.066666666666667
+        ],
+        "exclusive_solves": [
+            "[224, 250, 168, 104, 33, 115, 240, 283, 134, 79, 205, 178, 44, 28, 207, 147, 266, 232, 284, 196], k=19",
+            "[['Fitzbillies', 'eatType', 'coffee shop'], ['Fitzbillies', 'food', 'French'], ['Fitzbillies', 'priceRange', 'more than \u00a330'], ['Fitzbillies', 'customer rating', 'low'], ['Fitzbillies', 'area', 'river",
+            "PersonX relaxes and watch ___",
+            "Paragraph: \"Gov. Bruce Rauner\u2019s signing of a controversial abortion bill last month triggered an avalanche of protest from his fellow Illinois Republicans and anti-abortion groups, who said he had bet",
+            "Article: On Jan. 3, a netizen nicknamed \"Programmer Humor\"published a short story on his micro-blog. It said that there was an old lady who swept nearly every inch of his Internet company. When she pa",
+            "Passage: It turned out that Shaquille was cheating.",
+            "Question: A metallic sphere of radius 12 cm is melted and drawn into a wire, whose radius of cross section is 16 cm. What is the length of the wire?\n\n Option A: 7 cm\n\n Option B: 6 cm\n\n Option C: 5 cm\n",
+            "[266, 13, 153, 185, 187, 160, 94, 108, 238, 169, 176, 110, 177, 93, 70, 285, 63, 261, 277, 140], k=15",
+            "password = LtOXDpG671jF2syCs4LDRBH6dAFRmQwVOme1oto859jM96",
+            "Which British Prime Minister signed the 'Entente Cordiale' in 1904?"
+        ]
+    },
+    {
+        "prompt_name": "Strict Formalism & Minimalist Output",
+        "system_prompt": "Provide only the exact required token or minimal necessary sequence requested by the task. Eliminate all conversational filler, step-by-step reasoning, introductory phrases, and redundant explanations. If a single value or short phrase suffices, output nothing else.",
+        "fixes": "Addresses the tendency of current policies to hallucinate external information (Task 1), provide verbose reasoning/explanations when a single value is requested (Task 5), and add conversational padding to structured outputs (Task 6, 8).",
+        "id": "c_58325",
+        "name": "Strict Formalism & Minimalist Output",
+        "total_war": 4752.665809190813,
+        "active_steps": 1389,
+        "average_war": 3.421645650965308,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "[[-10, -23, -25], [18, -3], [42, 33, -5], [-7, -8, 26, 3], [17, 14, 33, -30, -17], [-35, 44, 20], [32, 24, -40, -46], [-28, 26], [42, 16, 14, -5, 23]]"
+            },
+            {
+                "instruction": "[265, 377, 171, 447, 370, 12, 37, 24, 199, 327, 126, 138, 229, 363, 22, 378, 16, 223, 253, 252]"
+            },
+            {
+                "instruction": "Problem: a man is 35 years older than his son . in two years , his age will be twice the age of his son . the present age of his son is : \nOptions: a ) 14 years , b ) 18 years , c ) 20 years , d ) 22 years , e ) 33 years"
+            },
+            {
+                "instruction": "Mayotte"
+            },
+            {
+                "instruction": "Question: What kind of reaction is needed to prepare amides? Answer: carboxylic acid reaction"
+            },
+            {
+                "instruction": "[183.4, 55.915, -49.5, 74.181]"
+            },
+            {
+                "instruction": "The rivers Axe, Brue, Cary, Parrett, eta, are in which English county?"
+            },
+            {
+                "instruction": "Context: Sheila was a big fan of the actor Liam Neeson. She checked his fan website on the internet regularly. One day, she learned he'd be signing copies of a book he'd written. She went to the local bookstore on they day Liam would be there. \n Sentence: Sheila was thrilled to be able to meet him and get a book signed. \n Character: Sheila"
+            },
+            {
+                "instruction": "When four high school buddies hit the beach for a last summertime fling before they go their separate ways, bogus guidance from a booze-buying pal and their own half-baked schemes put the brakes on their dreams of unlimited beer and uncensored babes. But as their hormone-driven plans unravel, they discover what it means to have and be true friends.The Graduates is a surprisingly touching, hysterical and smart revival of the classic coming-of-age comedy.Ben convinces his older brother to drive hi"
+            },
+            {
+                "instruction": "sentence_A: Someone is banging a camera lens against a nail. sentence_B: The man is not hammering a nail with a camera"
+            }
+        ],
+        "recent_unique": [
+            3.0000000000000004,
+            5.000000000000002,
+            3.0666666666666673,
+            1.9333333333333331,
+            3.9333333333333336,
+            2.3333333333333335,
+            5.533333333333333,
+            3.5333333333333337,
+            2.666666666666667,
+            2.9333333333333336,
+            4.733333333333333,
+            3.8000000000000007,
+            3.8666666666666667,
+            4.133333333333334,
+            3.8000000000000003,
+            3.066666666666667
+        ],
+        "exclusive_solves": [
+            "[[-10, -23, -25], [18, -3], [42, 33, -5], [-7, -8, 26, 3], [17, 14, 33, -30, -17], [-35, 44, 20], [32, 24, -40, -46], [-28, 26], [42, 16, 14, -5, 23]]",
+            "[265, 377, 171, 447, 370, 12, 37, 24, 199, 327, 126, 138, 229, 363, 22, 378, 16, 223, 253, 252]",
+            "Problem: a man is 35 years older than his son . in two years , his age will be twice the age of his son . the present age of his son is : \nOptions: a ) 14 years , b ) 18 years , c ) 20 years , d ) 22 ",
+            "Mayotte",
+            "Question: What kind of reaction is needed to prepare amides? Answer: carboxylic acid reaction",
+            "[183.4, 55.915, -49.5, 74.181]",
+            "The rivers Axe, Brue, Cary, Parrett, eta, are in which English county?",
+            "Context: Sheila was a big fan of the actor Liam Neeson. She checked his fan website on the internet regularly. One day, she learned he'd be signing copies of a book he'd written. She went to the local",
+            "When four high school buddies hit the beach for a last summertime fling before they go their separate ways, bogus guidance from a booze-buying pal and their own half-baked schemes put the brakes on th",
+            "sentence_A: Someone is banging a camera lens against a nail. sentence_B: The man is not hammering a nail with a camera"
+        ]
+    },
+    {
+        "prompt_name": "Semantic Divergence Enforcement",
+        "system_prompt": "When performing transformations or substitutions, prioritize shifting the semantic role or lexical sense of the target elements. Ensure that outputs do not merely repeat or paraphrase the input's core meaning, but actively pivot to a different conceptual application.",
+        "fixes": "Addresses the tendency of policies to provide tautological, paraphrased, or semantically identical responses in tasks requiring sense-shifting (Task 1, 8) or meaningful transformation (Task 5, 11).",
+        "id": "c_24456",
+        "name": "Semantic Divergence Enforcement",
+        "total_war": 4033.8215978465946,
+        "active_steps": 1386,
+        "average_war": 2.910405193251511,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "Sentence: 'a motorcycle shines as it is parked on the side of the street'. Reverse all words of length '2' in the given sentence."
+            },
+            {
+                "instruction": "What was the name of the paranoid android in the book The Hitchhiker's Guide to the Galaxy by Douglas Adams?"
+            },
+            {
+                "instruction": "Prompt: I'm tired of this shit, man. I'm gone. I'm leaving. Fuck that \nCompletion A: . That's it. It's over. It's over. It's over. And it's \nCompletion B: shit up.\"  After a few more drinks, I realize this man is being an asshole. He doesn't mean what he's saying, whic"
+            },
+            {
+                "instruction": "Prior to the fire, what architect was prominent in Raleigh, uh, Jacksonville, rather?"
+            },
+            {
+                "instruction": "I tried to give up soda. I bought a lot of fruit to make smoothies with. I put the fruit on the counter. I turned on the blender and put the fruit inside of it. I made a delicious smoothie and drank it.\nWhy did I make a delicious smoothie?"
+            },
+            {
+                "instruction": "LWOVJF, ABOVds"
+            },
+            {
+                "instruction": "Context: Rio de Janeiro (\"River of January\"), or simply Rio, is the second-most populous municipality in Brazil and the sixth-most populous in the Americas. The metropolis is anchor to the Rio de Janeiro metropolitan area, the second-most populous metropolitan area in Brazil and sixth-most populous in the Americas. Rio de Janeiro is the capital of the state of Rio de Janeiro, Brazil's third-most populous state. Part of the city has been designated as a World Heritage Site, named \"\"Rio de Janeiro"
+            },
+            {
+                "instruction": "One morning, hit men Charlie (Lee Marvin) and Lee (Clu Gulager) enter a school for the blind and terrorize the principal until she reveals the whereabouts of a teacher, Johnny North (John Cassavetes). As the hitmen walk toward North's upstairs classroom, the teacher receives a call warning him of their arrival. Johnny sadly responds, \"It's okay. I know them.\" As he calmly waits at his desk, Charlie and Lee enter and shoot him multiple times.As they depart by train, Charlie is bothered that North"
+            },
+            {
+                "instruction": "A user with an account can opt out (via a link) from the use of contact information by the site, which uses it for marketing purposes."
+            },
+            {
+                "instruction": "ignite : burn. trip : ?"
+            }
+        ],
+        "recent_unique": [
+            2.1999999999999997,
+            4.000000000000002,
+            2.0,
+            2.733333333333334,
+            3.9333333333333336,
+            2.0666666666666664,
+            3.8000000000000007,
+            1.9333333333333331,
+            3.200000000000001,
+            2.1999999999999997,
+            2.333333333333333,
+            2.4000000000000004,
+            4.066666666666666,
+            2.1333333333333333,
+            2.9333333333333336,
+            2.4
+        ],
+        "exclusive_solves": [
+            "Word1: gimmick \n Word2: budget",
+            "Problem: a train traveling at 72 kmph crosses a platform in 33 seconds and a man standing on the platform in 18 seconds . what is the length of the platform in meters ? \nOptions: a ) 240 meters , b ) ",
+            "Sentence: 'a motorcycle shines as it is parked on the side of the street'. Reverse all words of length '2' in the given sentence.",
+            "What was the name of the paranoid android in the book The Hitchhiker's Guide to the Galaxy by Douglas Adams?",
+            "Prior to the fire, what architect was prominent in Raleigh, uh, Jacksonville, rather?",
+            "LWOVJF, ABOVds",
+            "Context: Rio de Janeiro (\"River of January\"), or simply Rio, is the second-most populous municipality in Brazil and the sixth-most populous in the Americas. The metropolis is anchor to the Rio de Jane",
+            "One morning, hit men Charlie (Lee Marvin) and Lee (Clu Gulager) enter a school for the blind and terrorize the principal until she reveals the whereabouts of a teacher, Johnny North (John Cassavetes).",
+            "A user with an account can opt out (via a link) from the use of contact information by the site, which uses it for marketing purposes.",
+            "ignite : burn. trip : ?"
+        ]
+    },
+    {
+        "prompt_name": "Verbatim Integrity & Structural Fidelity",
+        "system_prompt": "Prioritize the preservation of exact lexical tokens and structural constraints over semantic expansion or stylistic embellishment. When performing transformations, ensure the output maintains the highest degree of literal correspondence to the source input. Do not add external knowledge, conversational filler, or interpretative reasoning unless explicitly commanded.",
+        "fixes": "Addresses the tendency of current policies to 'hallucinate' extra detail (Task 1), provide conversational reasoning instead of raw data (Task 7, 14), add unrequested context (Task 10), or fail to follow strict formatting/length requirements by adding explanatory prose (Task 13).",
+        "id": "c_17188",
+        "name": "Verbatim Integrity & Structural Fidelity",
+        "total_war": 4448.650238650241,
+        "active_steps": 1382,
+        "average_war": 3.2189943839726776,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "Where Afghan law fails women. Afghan women have come a long way since the dark days of the Taliban regime . Yet a key obstacle to this progress continues to be high levels of violence against women . The legal system has failed to protect women adequately when it comes to some of the most common crimes against them; rape, domestic violence, underage and forced marriages . That is why, in 2009, a number of prominent Afghan women's rights activists, members of civil society groups, and some lawmak"
+            },
+            {
+                "instruction": "Paragraph: \"The world\u2019s fastest man says he\u2019s not scared of Zika since he can always outrun virus-carrying mosquitoes. Jamaican sprinter Usain Bolt, who is preparing for this summer\u2019s Olympic games, was asked recently about the Zika epidemic in the host country of Brazil. No worries, he said. \"\"Because I\u2019m fast,\"\" he joked in a May 18 interview on NBC\u2019s Today. \"\"They can\u2019t catch me.\"\" This should be obvious: We are not saying that running is a Zika prevention method. (Here are some actual steps "
+            },
+            {
+                "instruction": "Abstract: Treatment and supervision of epileptic patients is part of specialist medicine. A possible change in the role of specialists and general practitioners in the care of these patients was explored by a questionnaire mailed to all Dutch neurologists and a random sample of general practitioners. Patients were also asked their opinion. The real situation was studied in a group of patients retrieved from the registers of general practitioners. Demographic, psychosocial, and epilepsy character"
+            },
+            {
+                "instruction": "Chile"
+            },
+            {
+                "instruction": "hour"
+            },
+            {
+                "instruction": "walk right after look around right twice"
+            },
+            {
+                "instruction": "The NPI Enumerator can be reached at (800) 465-3203 or P.O. Box 6059, Fargo, ND 58108 We do not guarantee the accuracy and/or reliability of the contents found on NPIdb.org. Anyone may request NPI and other health care provider information from the HHS under the FOIA. NPI Profile & details for JEFFREY A GOLD \u00b7 (Male) 1 A sole proprietor/sole proprietorship is an individual, and as such, is eligible for a single NPI number. The sole proprietor must apply for the NPI number using his or her own So"
+            },
+            {
+                "instruction": "Context: Besides chronic stress, chronic pain is a prevalent determinant for depression. Changes induced in specific brain regions by sustained pain may alter the processing of affective information, thus resulting in anxiodepressive disorders. Here, we compared the role of the anterior cingulate cortex (ACC) and the posterior insular cortex in the anxiodepressive, sensory, and affective aspects of chronic pain.', 'Neuropathic pain was induced by cuffing the right sciatic nerve of C57BL/6J mice."
+            },
+            {
+                "instruction": "What nationality was the champion of the FIS Cross-Country World Cup where the runner-up was a Norwegian businessman and the third-place finisher was the most decorated Olympian in Kazakhstan history ?"
+            },
+            {
+                "instruction": "\"This is where I entered the case,\" said Mr. Holcombe, \"I rowed into the lower hall this morning, to feed the dog, Peter, who was whining on the staircase."
+            }
+        ],
+        "recent_unique": [
+            3.866666666666667,
+            3.133333333333334,
+            4.733333333333334,
+            2.8666666666666676,
+            6.066666666666669,
+            2.3333333333333335,
+            4.4,
+            4.666666666666667,
+            3.333333333333334,
+            2.2666666666666666,
+            3.9333333333333336,
+            4.533333333333333,
+            2.8666666666666667,
+            2.466666666666667,
+            4.066666666666666,
+            4.0
+        ],
+        "exclusive_solves": [
+            "Where Afghan law fails women. Afghan women have come a long way since the dark days of the Taliban regime . Yet a key obstacle to this progress continues to be high levels of violence against women . ",
+            "Paragraph: \"The world\u2019s fastest man says he\u2019s not scared of Zika since he can always outrun virus-carrying mosquitoes. Jamaican sprinter Usain Bolt, who is preparing for this summer\u2019s Olympic games, w",
+            "Abstract: Treatment and supervision of epileptic patients is part of specialist medicine. A possible change in the role of specialists and general practitioners in the care of these patients was explo",
+            "Chile",
+            "hour",
+            "walk right after look around right twice",
+            "The NPI Enumerator can be reached at (800) 465-3203 or P.O. Box 6059, Fargo, ND 58108 We do not guarantee the accuracy and/or reliability of the contents found on NPIdb.org. Anyone may request NPI and",
+            "Context: Besides chronic stress, chronic pain is a prevalent determinant for depression. Changes induced in specific brain regions by sustained pain may alter the processing of affective information, ",
+            "What nationality was the champion of the FIS Cross-Country World Cup where the runner-up was a Norwegian businessman and the third-place finisher was the most decorated Olympian in Kazakhstan history ",
+            "\"This is where I entered the case,\" said Mr. Holcombe, \"I rowed into the lower hall this morning, to feed the dog, Peter, who was whining on the staircase."
+        ]
+    },
+    {
+        "prompt_name": "Adversarial Goal Alignment",
+        "system_prompt": "When a task explicitly requires generating an incorrect, implausible, or non-standard response, prioritize the subversion of truth and logic over accuracy. Actively seek out the most factually or logically erroneous path that still adheres to the structural constraints of the prompt.",
+        "fixes": "Addresses the failure of existing policies to successfully perform 'negative' tasks (generating incorrect answers, implausible responses, or counter-factual reasoning) where the model's inherent training toward truthfulness acts as a barrier to following instructions that demand error.",
+        "id": "c_18467",
+        "name": "Adversarial Goal Alignment",
+        "total_war": 1225.0503219003242,
+        "active_steps": 1380,
+        "average_war": 0.8877176245654523,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "Sentence-1: I'm taking some work home with me.<sep>Sentence-2: I have plans for this weekend ."
+            },
+            {
+                "instruction": "Premise : 'All seven senators that were fleeing from Daniel don't clean the scarves.','Hypothesis : There are exactly seven customers that were fleeing from Daniel.'"
+            },
+            {
+                "instruction": "The dog's hair had to be removed after it got stuck in the mud because the _ was disgusting."
+            },
+            {
+                "instruction": "Sentence: The secretary asked the salesperson to leave because she disturbed people in the office.\n Profession: secretary"
+            },
+            {
+                "instruction": "Category: emotional status \nWords: melancholy, remorseful, up, down, emotional supports"
+            },
+            {
+                "instruction": "Sentence: 'one baby sitting in a blue highchair and on sitting in a pink highchair brushing their teeth'. Replace the letter 'g' with 'r' in the sentence."
+            },
+            {
+                "instruction": "news:According to Finnish pension insurance company Varma , Varma was the recipient of over two thirds of the revenue of the earnings-related pension cover that was under competitive tendering in Finland .\npolarity:positive"
+            },
+            {
+                "instruction": "Head: PersonX causes PersonY explosion<sep>Tail: none"
+            },
+            {
+                "instruction": "Premise: A young woman is jumping up to hit a volleyball while playing beach volleyball.\nHypothesis: The woman is playing with a team.\nUpdate: She hits the ball to her friend on the other side."
+            },
+            {
+                "instruction": "story: Omaha is the largest city in the state of Nebraska and the county seat of Douglas County. Omaha is located in the Midwestern United States on the Missouri River, about north of the mouth of the Platte River. Omaha is the anchor of the Omaha-Council Bluffs metropolitan area, which includes Council Bluffs, Iowa, across the Missouri River from Omaha. According to the 2010 census, Omaha's population was 408,958, making it the nation's 44th-largest city; this had increased to 446,970 as of a 2"
+            }
+        ],
+        "recent_unique": [
+            0.13333333333333333,
+            0.8,
+            0.13333333333333333,
+            0.8666666666666667,
+            0.2,
+            0.13333333333333333,
+            1.1333333333333333,
+            0.06666666666666667,
+            2.333333333333333,
+            0.26666666666666666,
+            0.0,
+            0.2,
+            1.3333333333333333,
+            0.06666666666666667,
+            1.8666666666666667,
+            0.26666666666666666
+        ],
+        "exclusive_solves": [
+            "Sentence: When Beuerlein called the play in the huddle , it elicited more laughter from his offense , followed by criticism of the call , when he told them , `` Hey guys , I 'm serious ... do your job",
+            "Let f(X) = if x = 1 then 0 else [x * f(x - 1) + x**2]. The value of f(4) is\n(A)53 (B)29 (C)50 (D)100",
+            "Food. Water enter the body. Bloodstream. Food and water enter the pancreas. The pancreas breaks down carbs. Helps digest other foods and liquids.",
+            "Sentence: While Ballard recuperates in the hospital , the released spirits , unharmed from the nuclear explosion , attack the city . \n Verb: released",
+            "According to Gardiner, which of the following is an important implication of the fact that carbon dioxide is a long-lived greenhouse gas?\n(A)That climate change is a resilient phenomenon. (B)That the ",
+            "Premise : 'All seven senators that were fleeing from Daniel don't clean the scarves.','Hypothesis : There are exactly seven customers that were fleeing from Daniel.'",
+            "The dog's hair had to be removed after it got stuck in the mud because the _ was disgusting.",
+            "Category: emotional status \nWords: melancholy, remorseful, up, down, emotional supports",
+            "Sentence: 'one baby sitting in a blue highchair and on sitting in a pink highchair brushing their teeth'. Replace the letter 'g' with 'r' in the sentence.",
+            "story: Omaha is the largest city in the state of Nebraska and the county seat of Douglas County. Omaha is located in the Midwestern United States on the Missouri River, about north of the mouth of the"
+        ]
+    },
+    {
+        "prompt_name": "Information Density & Entropy Control",
+        "system_prompt": "Prioritize the preservation of all unique semantic tokens and specific entities provided in the input. Avoid summarizing, generalizing, or substituting specific nouns with broader categories unless explicitly instructed. Maintain the exact informational granularity of the source material.",
+        "fixes": "Addresses the tendency of current policies to 'summarize away' critical details (e.g., turning specific names/locations into general terms in tasks 4, 11, 12) or to hallucinate creative but irrelevant content when faced with ambiguity (e.g., tasks 5, 8, 14).",
+        "id": "c_56632",
+        "name": "Information Density & Entropy Control",
+        "total_war": 4257.877017427022,
+        "active_steps": 1372,
+        "average_war": 3.103408904830191,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "[171, 73, 239, 246, 40, 240, 262, 77, 244, 131, 119, 194, 199, 80, 42, 164, 45, 245, 108, 92], k=10"
+            },
+            {
+                "instruction": "Clover can live in it, and people can hunt for ____ leaf clovers in it.\\Question: Choose the right answer from options given a) zero b) eight c) two d) four"
+            },
+            {
+                "instruction": "Problem: one ball will drop from a certain height . the height it will reach after rebounding from the floor is 50 percent of the previous height . the total travel is 260 cm when it touches the floor on third time . what is the value of the original height ? \nOptions: a ) 80 cm , b ) 90 cm , c ) 104 cm , d ) 120 cm , e ) 130 cm"
+            },
+            {
+                "instruction": "Event:PersonX is loud and annoying. Intent: 1) to provide a service"
+            },
+            {
+                "instruction": "context: A person is trying to move a pile of bottles, a pile of flour, a pile of balls, and a pile of books from one side of a room to the other using only one hand.<sep>group: grasping <sep>question: Which pile is the hardest to move?<sep>A: bottles<sep>B: flour<sep>C: balls<sep>D: books"
+            },
+            {
+                "instruction": "'If it were not for the services they provide us, we older persons would not be able to get around to do our business, such as visits to doctors, grocery and drug stores. ' -- William, age 72"
+            },
+            {
+                "instruction": "Within ICU notes (e.g., text example in top-left box in Figure 2), we first identify all abbreviations using regular expressions and then try to find all possible expansions of these abbreviations from domain-specific knowledge base as candidates. \n Question: How do they identify abbreviations?"
+            },
+            {
+                "instruction": "Which is the richest state of India?"
+            },
+            {
+                "instruction": "Text: a few weeks ago, i rma'd a 24\" asus monitor. the monitor was a spare that i kept mostly for troubleshooting/building computers. when the monitor came back, i just stuck it in the spare room and never bothered opening the box. worst. mistake. ever. a couple days ago, my dad says he needs a new monitor and offers me $150 for my spare one. so i gave it to him.\n\nthis morning, my dad called and asked where the power adapter is for the monitor. i'm confused because it just uses a regular power c"
+            },
+            {
+                "instruction": "Acharya_Institute_of_Technology | was given the 'Technical Campus' status by | All_India_Council_for_Technical_Education\nAll_India_Council_for_Technical_Education | location | Mumbai\nKarnataka | has to its northeast | Telangana\nAcharya_Institute_of_Technology | sportsOffered | Tennis\nTennis | sportsGoverningBody | International_Tennis_Federation\nAcharya_Institute_of_Technology | state | Karnataka"
+            }
+        ],
+        "recent_unique": [
+            2.5333333333333337,
+            3.533333333333334,
+            3.333333333333334,
+            2.2,
+            3.5333333333333337,
+            2.3333333333333335,
+            3.9333333333333336,
+            3.8000000000000007,
+            3.4000000000000012,
+            2.466666666666667,
+            3.9333333333333336,
+            3.8000000000000007,
+            3.6,
+            2.1333333333333333,
+            3.866666666666667,
+            3.066666666666667
+        ],
+        "exclusive_solves": [
+            "[171, 73, 239, 246, 40, 240, 262, 77, 244, 131, 119, 194, 199, 80, 42, 164, 45, 245, 108, 92], k=10",
+            "Clover can live in it, and people can hunt for ____ leaf clovers in it.\\Question: Choose the right answer from options given a) zero b) eight c) two d) four",
+            "Problem: one ball will drop from a certain height . the height it will reach after rebounding from the floor is 50 percent of the previous height . the total travel is 260 cm when it touches the floor",
+            "Event:PersonX is loud and annoying. Intent: 1) to provide a service",
+            "context: A person is trying to move a pile of bottles, a pile of flour, a pile of balls, and a pile of books from one side of a room to the other using only one hand.<sep>group: grasping <sep>question",
+            "'If it were not for the services they provide us, we older persons would not be able to get around to do our business, such as visits to doctors, grocery and drug stores. ' -- William, age 72",
+            "Within ICU notes (e.g., text example in top-left box in Figure 2), we first identify all abbreviations using regular expressions and then try to find all possible expansions of these abbreviations fro",
+            "Which is the richest state of India?",
+            "Text: a few weeks ago, i rma'd a 24\" asus monitor. the monitor was a spare that i kept mostly for troubleshooting/building computers. when the monitor came back, i just stuck it in the spare room and ",
+            "Acharya_Institute_of_Technology | was given the 'Technical Campus' status by | All_India_Council_for_Technical_Education\nAll_India_Council_for_Technical_Education | location | Mumbai\nKarnataka | has t"
+        ]
+    },
+    {
+        "prompt_name": "Constraint-Driven Grounding & Symbolic Precision",
+        "system_prompt": "Strictly adhere to the literal bounds of the input data, avoiding any external knowledge, conversational filler, or hallucinated context. When performing transformations or extractions, ensure the output maintains exact symbolic or structural correspondence to the source text. Do not elaborate or interpret beyond the explicit instructions provided.",
+        "fixes": "Addresses the tendency of policies to 'hallucinate' external context (Task 1), add unnecessary conversational reasoning/steps (Task 10, 12), inject outside entities into reasoning tasks (Task 16), or fail to maintain strict symbolic/mathematical accuracy in structured logic tasks (Task 3, 14).",
+        "id": "c_13393",
+        "name": "Constraint-Driven Grounding & Symbolic Precision",
+        "total_war": 4486.008902208905,
+        "active_steps": 1367,
+        "average_war": 3.2816451369487236,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "W: Hey, Bob. How long have you been here? M: I started swimming this morning at 5:00. W: My goodness! That's early! I got here at 6:00. How many lanes have you done? M: I swam 50 lanes before 6:00, but I can't remember how many lanes I've done since then. W: I have 10 more to do and it'll be done. M: I'm almost finished, too. Do you have any classes right after you finish? W: No, I don't have to go to class until 11:00. How about you? M: No, I don't have to go to class until 10:00. I usually go "
+            },
+            {
+                "instruction": "Problem: car dealership x , the total profit from sales increased by 30 percent over the previous years , while the number of cars sold decreased by 30 percent over the previous years . approximately what was the average percent increase in profit per car over the previous year ."
+            },
+            {
+                "instruction": "Little backstory: my wife and I got addicted to meth and got involved with dcfs. They took our 3 children (7f,5f and 3m) and placed them with my mom. Shortly after this my wife and I split up and she moved in with another guy. He was an old friend of mine so my kids know him but can\u2019t see him because of our situation. \nMy middle daughter still won\u2019t accept this and thinks once we get through this my ex and I will get back together. It\u2019s like she thinks the judge is not letting us be together. So"
+            },
+            {
+                "instruction": "Paragraph: \"As the 2014 New Hampshire Senate race veers toward a conclusion, the state\u2019s next senator needs the support of women voters. Incumbent Jeanne Shaheen underscored that point when she targeted Republican challenger Scott Brown\u2019s record supporting women\u2019s reproductive rights during his tenure as a state senator from Massachusetts. Her aim was to undercut Brown\u2019s assertion that he is a pro-choice politician. An ad with a female narrator released on Oct. 7 said, \"\"In Massachusetts, Scott "
+            },
+            {
+                "instruction": "Where is the champions league final taking place this year?"
+            },
+            {
+                "instruction": "Maldives"
+            },
+            {
+                "instruction": "Question: who are the characters of mickey mouse club house?"
+            },
+            {
+                "instruction": "User: How does a septic system work? \nComputer: are you looking for septic system design software"
+            },
+            {
+                "instruction": "22, ['m', 's', 'T', 'N', 'F', '1629', 'v', 'e', 'J', '6639', '1501', '4711', '4079', 'N', '9867', '3673', 'D', 'A', 'O', '1971', 'Q', '6451', '6697', 'O', 'Q', '7339', 'j', 'x', '8921', '4187', '9347', 'm', '1491', 'a', 'r', 'E', '1077', 'R', '7245', '2635', 'E', 'e', 'l', 'd', 'k']"
+            },
+            {
+                "instruction": "if nick the spic is white than i am a nigger jew"
+            }
+        ],
+        "recent_unique": [
+            3.0000000000000004,
+            5.1333333333333355,
+            5.133333333333335,
+            2.2,
+            4.200000000000001,
+            2.3333333333333335,
+            5.466666666666668,
+            4.666666666666667,
+            3.8666666666666676,
+            3.666666666666667,
+            3.6,
+            3.866666666666667,
+            3.6,
+            3.266666666666667,
+            4.133333333333333,
+            3.066666666666667
+        ],
+        "exclusive_solves": [
+            "W: Hey, Bob. How long have you been here? M: I started swimming this morning at 5:00. W: My goodness! That's early! I got here at 6:00. How many lanes have you done? M: I swam 50 lanes before 6:00, bu",
+            "Problem: car dealership x , the total profit from sales increased by 30 percent over the previous years , while the number of cars sold decreased by 30 percent over the previous years . approximately ",
+            "Little backstory: my wife and I got addicted to meth and got involved with dcfs. They took our 3 children (7f,5f and 3m) and placed them with my mom. Shortly after this my wife and I split up and she ",
+            "Paragraph: \"As the 2014 New Hampshire Senate race veers toward a conclusion, the state\u2019s next senator needs the support of women voters. Incumbent Jeanne Shaheen underscored that point when she target",
+            "Where is the champions league final taking place this year?",
+            "Maldives",
+            "Question: who are the characters of mickey mouse club house?",
+            "User: How does a septic system work? \nComputer: are you looking for septic system design software",
+            "22, ['m', 's', 'T', 'N', 'F', '1629', 'v', 'e', 'J', '6639', '1501', '4711', '4079', 'N', '9867', '3673', 'D', 'A', 'O', '1971', 'Q', '6451', '6697', 'O', 'Q', '7339', 'j', 'x', '8921', '4187', '9347'",
+            "if nick the spic is white than i am a nigger jew"
+        ]
+    },
+    {
+        "prompt_name": "Strict Contextual Containment",
+        "system_prompt": "Restrict all generated content exclusively to the explicit information provided in the input text. Do not supplement, hallucinate, or infer external facts, names, or historical details not present in the source material.",
+        "fixes": "Addresses the tendency of models to use internal training data to 'complete' summaries, 'fill in' missing identities in news stories, or 'invent' details to make answers sound more natural (hallucination/external knowledge leakage).",
+        "id": "c_29228",
+        "name": "Strict Contextual Containment",
+        "total_war": 4159.567685092685,
+        "active_steps": 1354,
+        "average_war": 3.0720588516194125,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "Willis imagines a near future (first introduced in her story \"Fire Watch\" (1982)) in which historians conduct field work by traveling into the past as observers. The research is conducted at the University of Oxford, in the late-21st century England.\n\nIn the book's fictional universe, history resists time travel that would cause the past to be altered, by preventing visits to certain places or times. Typically the machine used for time travel will refuse to function, rendering the trip impossibl"
+            },
+            {
+                "instruction": "Question: Dean wants his solution to be as acidic as possible, so his concentration of hydrogen ions will be \n Answer: higher"
+            },
+            {
+                "instruction": "suitcase : open. pump : ?"
+            },
+            {
+                "instruction": "Question: To view the most stars, use a larger telescope because it can collect \n Answer: more or"
+            },
+            {
+                "instruction": "Sentence: 'a stop sign written in chinese and in english'. Count the number of vowels in the given sentence."
+            },
+            {
+                "instruction": "Sentence: Chopin's output as a composer throughout this period declined in quantity year by year. Whereas in 1841 he had written a dozen works, only six were written in 1842 and six shorter pieces in 1843. In 1844 he wrote only the Op. 58 sonata. 1845 saw the completion of three mazurkas (Op. 59). Although these works were more refined than many of his earlier compositions, Zamoyski opines that \"his powers of concentration were failing and his inspiration was beset by anguish, both emotional and"
+            },
+            {
+                "instruction": "Without dinoflagellate symbionts, corals lose algal pigments in a process called coral bleaching and eventually die, while corals in turn provide protection, making this what type of relationship?."
+            },
+            {
+                "instruction": "Problem: a store has 10 bottles of juice , including 5 bottles of apple juice . in the evening , 6 bottles of juice are sold one by one . what is the probability of selling 3 bottles of apple juice among the 6 bottles ? assume that every bottle has an equal chance of being bought . \nOptions: a ) 4 / 9 , b ) 6 / 11 , c ) 8 / 15 , d ) 10 / 21 , e ) 12 / 25"
+            },
+            {
+                "instruction": "shapely"
+            },
+            {
+                "instruction": "Sent1: That doesn't ensure that we don't end up murdering innocent people.\n Sent2: So we kill killers, but in the end, end up with more murders."
+            }
+        ],
+        "recent_unique": [
+            2.666666666666667,
+            4.000000000000001,
+            4.666666666666668,
+            2.533333333333334,
+            3.9333333333333336,
+            1.6666666666666665,
+            5.9333333333333345,
+            3.9333333333333336,
+            3.533333333333334,
+            3.3333333333333335,
+            2.333333333333333,
+            3.4000000000000004,
+            2.8666666666666667,
+            2.1333333333333333,
+            3.600000000000001,
+            2.7333333333333334
+        ],
+        "exclusive_solves": [
+            "Sentence: 'a group of people standing and sitting posing for a picture'. How many words end with the letter 'r' in the sentence.",
+            "Willis imagines a near future (first introduced in her story \"Fire Watch\" (1982)) in which historians conduct field work by traveling into the past as observers. The research is conducted at the Unive",
+            "Question: Dean wants his solution to be as acidic as possible, so his concentration of hydrogen ions will be \n Answer: higher",
+            "suitcase : open. pump : ?",
+            "Question: To view the most stars, use a larger telescope because it can collect \n Answer: more or",
+            "Sentence: 'a stop sign written in chinese and in english'. Count the number of vowels in the given sentence.",
+            "Sentence: Chopin's output as a composer throughout this period declined in quantity year by year. Whereas in 1841 he had written a dozen works, only six were written in 1842 and six shorter pieces in ",
+            "Without dinoflagellate symbionts, corals lose algal pigments in a process called coral bleaching and eventually die, while corals in turn provide protection, making this what type of relationship?.",
+            "Problem: a store has 10 bottles of juice , including 5 bottles of apple juice . in the evening , 6 bottles of juice are sold one by one . what is the probability of selling 3 bottles of apple juice am",
+            "shapely"
+        ]
+    },
+    {
+        "prompt_name": "Literalist Extraction & Span Fidelity",
+        "system_prompt": "Locate the exact substring within the provided source text that satisfies the query. Do not paraphrase, summarize, or augment the answer with external knowledge or punctuation not present in the original text.",
+        "fixes": "Addresses the tendency of models to hallucinate external information (Task 4), inject linguistic noise/translations (Task 5), or provide conversational/creative elaborations (Task 3) instead of performing strict substring extraction.",
+        "id": "c_53171",
+        "name": "Literalist Extraction & Span Fidelity",
+        "total_war": 4030.2135642135668,
+        "active_steps": 1211,
+        "average_war": 3.3280045947263144,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "Queen Victoria sends Dick Deadeye (Victor Spinetti), a sailor, to recover the \"Ultimate Secret\" from two thieves, the Sorcerer (Peter Reeves) and his reptilian henchman, the Shameleon. They are trying to sell it to the Pirate King (George Cooper, sung Ian Samwell). At a military parade (\"Entrance of the Peers\"), Dick sees the Sorcerer speaking with the Pirate King. There, Nanki (John Newton, sung Casey Kelly) sees his evil twin brother Poo (same), who is picking pockets. Dick goes for backup to "
+            },
+            {
+                "instruction": "Coach Ken Carter (Jackson) takes over the head coaching job for the Oilers basketball team at his old high school Richmond, having played on the team himself, earning unbeaten records. Carter quickly learns that the athletes are rude and disrespectful, and are in need of discipline. He hands the players individual contracts, instructing them to attend all of their classes, wear dress shirts and ties on game days, refer to everyone (players and coach alike) as \"sir\", and maintain a minimum 2.3 (C"
+            },
+            {
+                "instruction": "XhIIPAyFBeSKBOECKfs"
+            },
+            {
+                "instruction": "\"I am going to write down some of the history of Harry Penrose, because I do not think full justice has been done to him...\"\nThe novel follows the career of a young officer, Harry Penrose, written from the viewpoint of a close friend who acts as narrator. A sensitive, educated young man, Penrose had enlisted in the ranks in 1914, immediately after completing his second year at Oxford. After six months in training he had been prevailed upon by his relatives   like most educated volunteers   to ta"
+            },
+            {
+                "instruction": "A(-3,2) B(1,2) C(6,-1) The coordinates of points A, B and C in the xy- plane are given above. What is the area of \\(\\triangle { ABC } \\) ?\n(A)6 (B)8 (C)10 (D)12 (E)18"
+            },
+            {
+                "instruction": "igtdflcxwokephpsabwasvbtuwkaeeyoyfrauottya"
+            },
+            {
+                "instruction": "Question: who was the president during the 14th amendment?"
+            },
+            {
+                "instruction": "Context: Sasha asked where Casey was going. \n Question: How would Sasha feel afterwards? \n Options: (A) sasha asked a cup of tea (B) a curious person (C) asked where Casey was going"
+            },
+            {
+                "instruction": "Russian Federation"
+            },
+            {
+                "instruction": "Did M1 's art director , writer , cinematographer , and producer direct , edit , executive produce , and write M0"
+            }
+        ],
+        "recent_unique": [
+            3.866666666666667,
+            4.200000000000002,
+            3.333333333333334,
+            3.666666666666668,
+            5.266666666666668,
+            2.3333333333333335,
+            5.066666666666667,
+            4.133333333333333,
+            3.8666666666666676,
+            3.666666666666667,
+            2.6666666666666665,
+            3.4000000000000004,
+            2.8666666666666667,
+            2.466666666666667,
+            3.6666666666666674,
+            3.066666666666667
+        ],
+        "exclusive_solves": [
+            "Queen Victoria sends Dick Deadeye (Victor Spinetti), a sailor, to recover the \"Ultimate Secret\" from two thieves, the Sorcerer (Peter Reeves) and his reptilian henchman, the Shameleon. They are trying",
+            "Coach Ken Carter (Jackson) takes over the head coaching job for the Oilers basketball team at his old high school Richmond, having played on the team himself, earning unbeaten records. Carter quickly ",
+            "XhIIPAyFBeSKBOECKfs",
+            "\"I am going to write down some of the history of Harry Penrose, because I do not think full justice has been done to him...\"\nThe novel follows the career of a young officer, Harry Penrose, written fro",
+            "A(-3,2) B(1,2) C(6,-1) The coordinates of points A, B and C in the xy- plane are given above. What is the area of \\(\\triangle { ABC } \\) ?\n(A)6 (B)8 (C)10 (D)12 (E)18",
+            "igtdflcxwokephpsabwasvbtuwkaeeyoyfrauottya",
+            "Question: who was the president during the 14th amendment?",
+            "Context: Sasha asked where Casey was going. \n Question: How would Sasha feel afterwards? \n Options: (A) sasha asked a cup of tea (B) a curious person (C) asked where Casey was going",
+            "Russian Federation",
+            "Did M1 's art director , writer , cinematographer , and producer direct , edit , executive produce , and write M0"
+        ]
+    },
+    {
+        "prompt_name": "Extensionality vs. Intensionality Enforcement",
+        "system_prompt": "Distinguish between describing a concept and identifying its specific instance. When tasked with extraction or identification, provide only the literal entity or span found in the text rather than generating paraphrases, summaries, or conceptual descriptions.",
+        "fixes": "Addresses the tendency of models to provide 'intensional' answers (descriptions, definitions, or semantic summaries) when the task requires 'extensional' answers (the exact string, specific entity name, or direct span from the source).",
+        "id": "c_49611",
+        "name": "Extensionality vs. Intensionality Enforcement",
+        "total_war": 3727.8984348984313,
+        "active_steps": 1152,
+        "average_war": 3.236022946960444,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "password = jNdBKb"
+            },
+            {
+                "instruction": "Does this dog breed have short legs compared to the size of its body? Is this dog breed originally from europe?"
+            },
+            {
+                "instruction": "Hedda, the daughter of an aristocratic and enigmatic general, has just returned to her villa in Kristiania (now Oslo) from her honeymoon. Her husband is George Tesman, a young, aspiring, and reliable (but not brilliant) academic who continued his research during their honeymoon. It becomes clear in the course of the play that she has never loved him but married him because she thinks her years of youthful abandon are over. It is also suggested that she may be pregnant.\nThe reappearance of George"
+            },
+            {
+                "instruction": "These roses should make your wife very happy ."
+            },
+            {
+                "instruction": "Phenomenology of religion has at least ____ aspects."
+            },
+            {
+                "instruction": "Context : Son of a Witch (2005, ISBN 0-06-074722-6) is a fantasy novel written by Gregory Maguire. \nQuestion : Which series is Son of a Witch a part of?"
+            },
+            {
+                "instruction": "where did deion sanders play baseball?"
+            },
+            {
+                "instruction": "[387, 130, 179, 297, 391, 394, 460, 420, 180, 68, 429, 321, 42, 151, 428, 339, 61, 33, 200, 150]"
+            },
+            {
+                "instruction": "Passage: 'A general purpose computer has four main components: the arithmetic logic unit (ALU), the control unit, the memory, and the input and output devices (collectively termed I / O). These parts are interconnected by buses, often made of groups of wires. Inside each of these parts are thousands to trillions of small electrical circuits which can be turned off or on by means of an electronic switch. Each circuit represents a bit (binary digit) of information so that when the circuit is on it"
+            },
+            {
+                "instruction": "The tourists near the senator saw the author ."
+            }
+        ],
+        "recent_unique": [
+            3.866666666666667,
+            5.000000000000002,
+            3.0666666666666673,
+            2.2,
+            4.8000000000000025,
+            2.3333333333333335,
+            4.866666666666667,
+            4.0,
+            4.800000000000001,
+            2.466666666666667,
+            2.9333333333333336,
+            2.666666666666667,
+            3.6,
+            2.466666666666667,
+            3.333333333333334,
+            2.7333333333333334
+        ],
+        "exclusive_solves": [
+            "dick grayson",
+            "password = jNdBKb",
+            "Does this dog breed have short legs compared to the size of its body? Is this dog breed originally from europe?",
+            "Hedda, the daughter of an aristocratic and enigmatic general, has just returned to her villa in Kristiania (now Oslo) from her honeymoon. Her husband is George Tesman, a young, aspiring, and reliable ",
+            "These roses should make your wife very happy .",
+            "Phenomenology of religion has at least ____ aspects.",
+            "Context : Son of a Witch (2005, ISBN 0-06-074722-6) is a fantasy novel written by Gregory Maguire. \nQuestion : Which series is Son of a Witch a part of?",
+            "where did deion sanders play baseball?",
+            "[387, 130, 179, 297, 391, 394, 460, 420, 180, 68, 429, 321, 42, 151, 428, 339, 61, 33, 200, 150]",
+            "The tourists near the senator saw the author ."
+        ]
+    },
+    {
+        "prompt_name": "Extrapolative Hallucination Suppression",
+        "system_prompt": "Strictly limit all generated content to the explicit lexical tokens provided in the input text. Prohibit the inclusion of any external knowledge, inferred context, or semantic expansions not present in the source. If a task requires generating a question or answer, use only the exact phrasing found in the input.",
+        "fixes": "Addresses the tendency of models to inject external knowledge (Task 1, 6, 14), hallucinate details not in the text (Task 1, 14), or provide overly descriptive/interpretive responses when a literal extraction is required (Task 7, 8, 13, 16).",
+        "id": "c_2461",
+        "name": "Extrapolative Hallucination Suppression",
+        "total_war": 3746.352264402264,
+        "active_steps": 1094,
+        "average_war": 3.424453623768066,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "Context: Tim , keep your shirt off . Why do n't you lean on the back of the chaise , and Tracy hon , stand between his legs . \" The assistant ran over to do a powder touch - up . He spread his legs and laced his arms around Tracy . His gaze was dropped , but after a moment he looked at her directly , intensely . It 's so eerie - like he actually knows me and is in love with me , Tracy thought ."
+            },
+            {
+                "instruction": "Speaker 1: How's my Bing-a-ling? \nSpeaker 2: Ah, I don't know, you tell me. Anything you ah, wanna tell me, because, if you ah, you should, if you, you would, tell me. \nSpeaker 1: Why are your eyes so white? \nSpeaker 2: You tell me! Maybe, it's because I was just fooling with my ex! Oh no-no-no-no, no-no-no-no, that was you!! \nSpeaker 1: Oh my God!! \nSpeaker 2: All right! \nSpeaker 1: How did you know? \nSpeaker 2: Joey told me, he saw you two kissing. \nSpeaker 1: In the park? \nSpeaker 2: No! In h"
+            },
+            {
+                "instruction": "The Fox Broadcasting Company ( often shortened to Fox and stylized in all caps as FOX ) is an American free-to-air television network that is a flagship property of the Fox Corporation ."
+            },
+            {
+                "instruction": "Carpal tunnel syndrome is a complex of symptoms as a result of compression of the median nerve in the carpal tunnel. As nerve entrapment induces impairment of somatic fibres followed by clinical symptoms and signs of the syndrome, one can assume that sympathetic fibres are involved too. Results of studies focused on this problem show presence of sympathetic symptoms in about half of patients, including Raynaud phenomenon, blanching of hands, painful swelling of fingers, dry or excessive sweating"
+            },
+            {
+                "instruction": "Text:  Wilson Zhang (also Zhang Peng simplified Chinese: \u7ae0\u9e4f; traditional Chinese: \u7ae0\u9d6c; pinyin: Zh\u0101ng P\u00e9ng; born 23 September 1979 in Anda Heilongjiang People's Republic of China) is a Canadian table tennis player of Chinese origin. As of January 2010 Zhang is ranked no. 140 in the world by the International Table Tennis Federation (ITTF).\nQuestion: WHat is the classified topic name"
+            },
+            {
+                "instruction": "Who was the dewey decimal system created by?"
+            },
+            {
+                "instruction": "Sentence: Richard Quiney the younger , a schoolboy of eleven , wrote a letter in Latin asking his father to buy copybooks ( `` {{ chartaceos }} libellos ) '' ) for him and his brother . \nWord: chartaceos"
+            },
+            {
+                "instruction": "sentence_A: A boy is wearing a white hat and is walking on the beach. sentence_B: A little kid is wearing a hat and is walking in the wet sand"
+            },
+            {
+                "instruction": "Who is elected as vice president of india?"
+            },
+            {
+                "instruction": "Former Kentucky and current Washington Wizards guard John Wall is not very happy after being left off the 28 man roster for the US Men's National Team for a chance to compete in the 2014 World Games and 2016 Olympics."
+            }
+        ],
+        "recent_unique": [
+            2.666666666666667,
+            4.200000000000001,
+            3.0000000000000004,
+            3.5333333333333345,
+            4.866666666666668,
+            2.3333333333333335,
+            4.733333333333334,
+            4.333333333333333,
+            4.2666666666666675,
+            4.133333333333334,
+            2.9333333333333336,
+            2.8000000000000007,
+            2.6,
+            3.8666666666666676,
+            2.933333333333334,
+            2.7333333333333334
+        ],
+        "exclusive_solves": [
+            "Premise: \"Dangerous\" is a song by American electronic music project Big Data, from their debut EP \"1.0\" (2013) and their debut studio album \"2.0\" (2015). It features American indie rock band Joywave, ",
+            "Speaker 1: How's my Bing-a-ling? \nSpeaker 2: Ah, I don't know, you tell me. Anything you ah, wanna tell me, because, if you ah, you should, if you, you would, tell me. \nSpeaker 1: Why are your eyes so",
+            "The Fox Broadcasting Company ( often shortened to Fox and stylized in all caps as FOX ) is an American free-to-air television network that is a flagship property of the Fox Corporation .",
+            "Carpal tunnel syndrome is a complex of symptoms as a result of compression of the median nerve in the carpal tunnel. As nerve entrapment induces impairment of somatic fibres followed by clinical sympt",
+            "Text:  Wilson Zhang (also Zhang Peng simplified Chinese: \u7ae0\u9e4f; traditional Chinese: \u7ae0\u9d6c; pinyin: Zh\u0101ng P\u00e9ng; born 23 September 1979 in Anda Heilongjiang People's Republic of China) is a Canadian table te",
+            "Who was the dewey decimal system created by?",
+            "Sentence: Richard Quiney the younger , a schoolboy of eleven , wrote a letter in Latin asking his father to buy copybooks ( `` {{ chartaceos }} libellos ) '' ) for him and his brother . \nWord: chartac",
+            "sentence_A: A boy is wearing a white hat and is walking on the beach. sentence_B: A little kid is wearing a hat and is walking in the wet sand",
+            "Who is elected as vice president of india?",
+            "Former Kentucky and current Washington Wizards guard John Wall is not very happy after being left off the 28 man roster for the US Men's National Team for a chance to compete in the 2014 World Games a"
+        ]
+    },
+    {
+        "prompt_name": "Negative Constraint & Counter-Factual Logic Enforcement",
+        "system_prompt": "When instructed to produce incorrect, non-existent, or divergent outputs, prioritize the logical inversion of the truth rather than providing a truthful or neutral response. Strictly avoid default tendencies toward accuracy, helpfulness, or consensus-seeking when the task requires a deviation from the provided context.",
+        "fixes": "Addresses the tendency of models to default to 'truthful' or 'neutral' responses (Instances 1, 3, 6, 14, 17) even when explicitly tasked to generate incorrect answers, non-answers, or questions where the answer is absent.",
+        "id": "c_19704",
+        "name": "Negative Constraint & Counter-Factual Logic Enforcement",
+        "total_war": 1339.5168498168525,
+        "active_steps": 1023,
+        "average_war": 1.3094006352070895,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "Category: FOOD IN HISTORY \nClue: The WWII \"K\" type of these Army portions, packed by Wrigley's, included meat, sugar &, of course, gum"
+            },
+            {
+                "instruction": "Beginning: I went to the bank yesterday. Middle 1: They had my favorite candy to pick from. Middle 2: They had candy out to pick from. Ending: But only one of them was the flavor I wanted."
+            },
+            {
+                "instruction": "For the Policy Advisor to Margaret Thatcher, see John Hoskyns, for the poet, see John Hoskins (poet) John Hoskins (died February 1664), English miniature painter, the uncle of **Samuel Cooper**, who received his artistic education in Hoskins's house."
+            },
+            {
+                "instruction": "fair, well, alright, ok"
+            },
+            {
+                "instruction": "M: My God! Where is my suitcase? W: Oh! I think that they've unloaded all the luggage. Well, it's not here. M: I suppose that suitcase is lost, doesn't it? W: Which suitcase was it? M: The one with all the souvenirs, the one that you told me not to pack. W: Are you sure you checked it? M: Sure. W: It might be, loaded on another flight. M: Do you think that it could be left behind? W: That's always a possibility. Sooner or later, it'll be traced and rerouted. M: I hope you are right. W: Well... W"
+            },
+            {
+                "instruction": "Great piece by Christine Milne in today 's Mercury . People need to realise that the Liberal party plan to log . . . http://t.co/NRcHJlcvs1"
+            },
+            {
+                "instruction": "Sentence: He also saw some flowers growing in peoples' yards. \nQuestion: What did Joe see when he was riding his bicycle?"
+            },
+            {
+                "instruction": "I had high hopes for this product when I first opened the package because the noodles had a great texture and the sauce looked appealing.  The food was easy to prepare at my workplace.  However to me, the taste was very oily and flavorless.  I'm a big peanut satay fan and was expected more spice in the flavor."
+            },
+            {
+                "instruction": "The H*tel de Toulouse was the site of a scene from Sofia Coppola's Marie Antoinette with its famous Galerie dor*e (one of Robert de Cotte's masterpieces) as a room in a palace of _her_ youth. <sep>, Pronoun: her <sep>, A: Sofia Coppola <sep>, B: Marie Antoinette"
+            },
+            {
+                "instruction": "CONTEXT: Although it doesn't explicitly say so, that's allergy information. It's just been processed in a place that also (potentially) processes those things, so it potentially contains a trace amount, which could be bad if you have a really sensitive allergy. It won't contain enough of those things to matter for any other purpose.Often labels like that are written along the lines of \"processed in a facility which also processes...\" to make it a little more clear. The lists aren't usually that "
+            }
+        ],
+        "recent_unique": [
+            0.2,
+            2.333333333333334,
+            0.8,
+            2.1333333333333333,
+            1.6666666666666665,
+            0.6,
+            0.8666666666666667,
+            1.4,
+            1.9999999999999998,
+            0.4,
+            0.39999999999999997,
+            0.26666666666666666,
+            0.9333333333333333,
+            0.26666666666666666,
+            0.9333333333333333,
+            0.26666666666666666
+        ],
+        "exclusive_solves": [
+            "Kinetic analyses show that after LPS stimulation , NF - kappa B will peak at 1 h , TNF transcript prevalence at 2 h , and TNF protein at 4 h .",
+            "Question: How is the correction of an erroneous amino acid incorporated in the process of translation in the ribosome carried out? \n Options:  <0> There is no possibility of elimination of an amino ac",
+            "Passage: His hand moved around while he swung her hips and grimaced.",
+            "Category: FOOD IN HISTORY \nClue: The WWII \"K\" type of these Army portions, packed by Wrigley's, included meat, sugar &, of course, gum",
+            "For the Policy Advisor to Margaret Thatcher, see John Hoskyns, for the poet, see John Hoskins (poet) John Hoskins (died February 1664), English miniature painter, the uncle of **Samuel Cooper**, who r",
+            "fair, well, alright, ok",
+            "M: My God! Where is my suitcase? W: Oh! I think that they've unloaded all the luggage. Well, it's not here. M: I suppose that suitcase is lost, doesn't it? W: Which suitcase was it? M: The one with al",
+            "Great piece by Christine Milne in today 's Mercury . People need to realise that the Liberal party plan to log . . . http://t.co/NRcHJlcvs1",
+            "I had high hopes for this product when I first opened the package because the noodles had a great texture and the sauce looked appealing.  The food was easy to prepare at my workplace.  However to me,",
+            "The H*tel de Toulouse was the site of a scene from Sofia Coppola's Marie Antoinette with its famous Galerie dor*e (one of Robert de Cotte's masterpieces) as a room in a palace of _her_ youth. <sep>, P"
+        ]
+    },
+    {
+        "prompt_name": "Temporal-State Sentiment Sensitivity",
+        "system_prompt": "Analyze all provided text for temporal shifts, updates, or contradictory information that changes the final state of the subject. Prioritize the most recent information or the ultimate outcome over initial impressions or static descriptions.",
+        "fixes": "Addresses the failure to account for longitudinal data or updates in sentiment/status (e.g., Task 9 where the user initially liked the product but later reported it broke, and Task 3 where the nuance of a 'sacrifice' might shift perception).",
+        "id": "c_9508",
+        "name": "Temporal-State Sentiment Sensitivity",
+        "total_war": 1510.1882783882784,
+        "active_steps": 527,
+        "average_war": 2.8656324068088774,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "The redundant features existing in high dimensional datasets always affect the performance of learning and mining algorithms. How to detect and remove them is an important research topic in machine learning and data mining research. In this paper, we propose a graph based approach to find and remove those redundant features automatically for high dimensional data. Based on sparse learning based unsupervised feature selection framework, Sparse Feature Graph (SFG) is introduced not only to model t"
+            },
+            {
+                "instruction": "I would recommend this product.  I received it in a timely manner and the price was good."
+            },
+            {
+                "instruction": "Most children improve in three to ____ days."
+            },
+            {
+                "instruction": "CONTEXT: You don't need to defrost it, you can add cold roux directly to a boiling liquid. To avoid lumps from the roux, most cooks suggest you either add cold roux to a hot sauce, or cold liquid to hot roux. If you heat the roux gradually with the liquid you may get lumps, and don't get a good impression of how much thickening is going on until it heats fully.  <sep>  Q: I like preparing a large quantity of Roux and pouring them in ice trays to keep them in the freezer. How would I defrost them"
+            },
+            {
+                "instruction": "The quality varies greatly with the soil in which it is grown, and for purposes of Admiralty specification it is graded for quality in the order Italian, European, New Zealand and St."
+            },
+            {
+                "instruction": "The percentage of children in India (age 8) who reported physical punishment by teachers in the past week in 2009 was about what?\n(A)38% (B)58% (C)78% (D)98%"
+            },
+            {
+                "instruction": "What is the largest amount of horsepower for the models with 3 cylinders and what make is it?"
+            },
+            {
+                "instruction": "|Jihadi killers in #Ottawa #Sidney & #Peshawar are rogue acts while|FratBoy UVa Rapists are symbolic of deeper societal flaws...|#tcot"
+            },
+            {
+                "instruction": "@ChaseBasford chase you God damn faggot &#128514;&#128557;&#128514;&#128557;"
+            },
+            {
+                "instruction": "Love Mom We weren't poor, but this was insanely generous, even though I knew I was the last living relative."
+            }
+        ],
+        "recent_unique": [
+            3.466666666666667,
+            3.0666666666666678,
+            2.333333333333333,
+            1.8666666666666665,
+            3.066666666666667,
+            2.3333333333333335,
+            3.6000000000000005,
+            2.866666666666667,
+            2.8666666666666676,
+            3.266666666666667,
+            4.133333333333334,
+            3.8000000000000007,
+            3.1333333333333333,
+            2.4000000000000004,
+            3.5333333333333337,
+            3.2666666666666666
+        ],
+        "exclusive_solves": [
+            "Sentence 1:Prior to the new album 's release , band members said the album 's name would be called ' Jacket on the Rack ' . Sentence 2:However , it was changed to Volume 4 : Songs in the Key of Love &",
+            "William_Anders | was a crew member of | Apollo_8\nApollo_8 | backup pilot | Buzz_Aldrin\nApollo_8 | crewMembers | Frank_Borman\nApollo_8 | operator | NASA",
+            "The redundant features existing in high dimensional datasets always affect the performance of learning and mining algorithms. How to detect and remove them is an important research topic in machine le",
+            "I would recommend this product.  I received it in a timely manner and the price was good.",
+            "Most children improve in three to ____ days.",
+            "The quality varies greatly with the soil in which it is grown, and for purposes of Admiralty specification it is graded for quality in the order Italian, European, New Zealand and St.",
+            "The percentage of children in India (age 8) who reported physical punishment by teachers in the past week in 2009 was about what?\n(A)38% (B)58% (C)78% (D)98%",
+            "What is the largest amount of horsepower for the models with 3 cylinders and what make is it?",
+            "|Jihadi killers in #Ottawa #Sidney & #Peshawar are rogue acts while|FratBoy UVa Rapists are symbolic of deeper societal flaws...|#tcot",
+            "@ChaseBasford chase you God damn faggot &#128514;&#128557;&#128514;&#128557;"
+        ]
+    },
+    {
+        "prompt_name": "Counter-Intuitive Intent Realization",
+        "system_prompt": "Prioritize the fulfillment of the logical objective over the literal truth or conventional accuracy of the content. If the task requires generating falsehoods, errors, or incorrect spans, ensure the output is purposefully wrong while remaining contextually plausible. Do not default to providing correct or helpful information when the instruction explicitly mandates the opposite.",
+        "fixes": "Addresses the tendency of existing policies to default to 'truthfulness' or 'helpfulness' (e.g., providing correct answers in tasks 2, 4, 5, 15, and 16) when the prompt specifically requests incorrect, negative, or counter-factual outputs.",
+        "id": "c_61797",
+        "name": "Counter-Intuitive Intent Realization",
+        "total_war": 911.1238095238095,
+        "active_steps": 507,
+        "average_war": 1.7970883817037664,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "Context: The Decembrist revolt or the Decembrist uprising took place in Imperial Russia on . Russian army officers led about 3,000 soldiers in a protest against Nicholas I's assumption of the throne after his elder brother Constantine removed himself from the line of succession. Because these events occurred in December, the rebels were called the \"Decembrists\" (\"Dekabristy\"). This uprising, which was suppressed by Nicholas I, took place in Peter's Square in Saint Petersburg. In\u00a01925, to mark th"
+            },
+            {
+                "instruction": "Passage: The Polish nobility enjoyed many rights that were not available to the noble classes of other countries and, typically, each new monarch conceded them further privileges. Those privileges became the basis of the Golden Liberty in the Polish\u2013Lithuanian Commonwealth. Despite having a king, Poland was called the nobility's Commonwealth because the king was elected by all interested members of hereditary nobility and Poland was considered to be the property of this class, not of the king or"
+            },
+            {
+                "instruction": "Steps: (1) The flu virus has receptors, which are like viral Velcro, on the surface of the virus particle (2) The receptors will lock onto a target cell using these chemical receptors on the surface, which docks onto the cell surface (3) The receptors  then go into the cell (4) The receptors take it over and make it produce thousands or in some cases millions of copies of new viruses (5) The copies come streaming out of the cell (6) The copies infect other cells to make more viruses, or they esc"
+            },
+            {
+                "instruction": "Text: so i work as a dishwasher, and last night during my shift, it was a crazy night and i accidentally broke a few dishes at work, not once but on two separate times last night. \n\nthe first time was during the regular hustle and bustle during the dinner service. i was carrying a pile of dishes back to the line, and the runners and bussers were taking their sweet time and not paying attention, i forgot to let them know i was there, but i figured that they saw me. there was a girl with a bussers"
+            },
+            {
+                "instruction": "Sentence: 'a man wearing dark blue shirt and khaki shorts playing frisbee on the beach'. How many words contain the letter 'o' in the sentence."
+            },
+            {
+                "instruction": "A video system gaming with accessories and controllers"
+            },
+            {
+                "instruction": "dent \n Sentence1: It made a dent in my bank account. \n Sentence2: The crash produced a dent in the left side of the car."
+            },
+            {
+                "instruction": "opening \n Sentence1: The opening received good critical reviews. \n Sentence2: John spends two hours a day studying openings, and another two hours studying endgames."
+            },
+            {
+                "instruction": "Sentence1: Tom moved out to the country. Sentence2: He noticed a lot of loud birds nearby. Sentence3: They would make a lot of noise at night. Sentence4: Tom had trouble sleeping at first. Sentence5: After a while he got used to the sounds."
+            },
+            {
+                "instruction": "Hypothesis: It's wrong to burgle.\nUpdate: You breaking in and taking things that do not belong to you."
+            }
+        ],
+        "recent_unique": [
+            0.4666666666666667,
+            1.6666666666666665,
+            1.0666666666666667,
+            1.2,
+            1.0666666666666667,
+            0.7999999999999999,
+            1.1333333333333333,
+            1.5333333333333332,
+            2.4000000000000004,
+            0.7333333333333333,
+            2.0666666666666664,
+            0.4666666666666667,
+            0.9333333333333333,
+            2.333333333333333,
+            1.9999999999999998,
+            0.7333333333333333
+        ],
+        "exclusive_solves": [
+            "No necrosis was observed in cells treated with NCQ436 but NCQ344 had a biphasic effect in both cell types , inducing apoptosis at lower concentrations and necrosis at higher concentrations .",
+            "The articular cartilage is thickest in the upper and back part of the acetabulum, the socket portion of what?",
+            "Target: nurse \nA nurse can do anything she puts her mind to. She can be ugly, rude and has great attention to detail.",
+            "Context: The Decembrist revolt or the Decembrist uprising took place in Imperial Russia on . Russian army officers led about 3,000 soldiers in a protest against Nicholas I's assumption of the throne a",
+            "Passage: The Polish nobility enjoyed many rights that were not available to the noble classes of other countries and, typically, each new monarch conceded them further privileges. Those privileges bec",
+            "Steps: (1) The flu virus has receptors, which are like viral Velcro, on the surface of the virus particle (2) The receptors will lock onto a target cell using these chemical receptors on the surface, ",
+            "Text: so i work as a dishwasher, and last night during my shift, it was a crazy night and i accidentally broke a few dishes at work, not once but on two separate times last night. \n\nthe first time was",
+            "Sentence: 'a man wearing dark blue shirt and khaki shorts playing frisbee on the beach'. How many words contain the letter 'o' in the sentence.",
+            "A video system gaming with accessories and controllers",
+            "Sentence1: Tom moved out to the country. Sentence2: He noticed a lot of loud birds nearby. Sentence3: They would make a lot of noise at night. Sentence4: Tom had trouble sleeping at first. Sentence5: "
+        ]
+    },
+    {
+        "prompt_name": "Precision-Targeted Span Minimization",
+        "system_prompt": "Identify the absolute minimal sequence of characters required to satisfy the truth conditions of the query. Avoid any linguistic padding, grammatical completeness, or contextual elaboration. Prioritize the smallest possible semantic unit over natural language fluency.",
+        "fixes": "Addresses the tendency of models to provide conversational, grammatically full, or descriptive answers (e.g., Instances 1, 6, 7, 11, 17) when the task requires extreme brevity or specific minimal spans.",
+        "id": "c_46890",
+        "name": "Precision-Targeted Span Minimization",
+        "total_war": 1740.5333333333351,
+        "active_steps": 482,
+        "average_war": 3.611065006915633,
+        "lives": 5,
+        "routing_history": [
+            {
+                "instruction": "We report a fatal case of toxic epidermal necrolysis (TEN) resulting from a high dose of cytosine arabinoside (ARA-C).\t cytosine arabinoside"
+            },
+            {
+                "instruction": "Step 1: find the Membership_card of member table for which member's Address equals Hartford.\nStep 2: For each row in shop table, find the corresponding rows in member table.\nStep 3: find Membership_card of the results of step 2 whose shop's Address equals Waterbury.\nStep 4: show the rows that are in both the results of step 1 and the results of step 3"
+            },
+            {
+                "instruction": "He then unscrews a light switch and pulls it out just a little, making some slits in the fabric or paper, then putting the light switch back over the new wall paper."
+            },
+            {
+                "instruction": "The City of Oklahoma City has designated the Santa Fe station as the location for intermodal transit services for the city and metropolitan area ."
+            },
+            {
+                "instruction": "Josh: me too, Mark: Is Martha alright?"
+            },
+            {
+                "instruction": "Question: Which of the following is made of atoms?  (A) gravity (B) light (C) heat (D) ai?"
+            },
+            {
+                "instruction": "For the evaluation of performance of the proposed method on the NLI task, SNLI BIBREF22 and MultiNLI BIBREF23 datasets are used. We use Quora Question Pairs dataset BIBREF24 in evaluating the performance of our method on the PI task. In evaluating sentiment classification performance, the Stanford Sentiment Treebank (SST) BIBREF25 is used."
+            },
+            {
+                "instruction": "One box of muffin mix is sufficient to bake six large muffins or ten mini- muffins. How many boxes are needed to bake 180 muffins, 120 of which are large muffins and the rest of which are mini-muffins?\n(A)18 (B)20 (C)22 (D)26 (E)28"
+            },
+            {
+                "instruction": "story: Lilith was sure this was the end for her. She'd been sick for a week, and the last of her tissues was gone. This couch piled with blankets and used tissues would be her grave. Already she could feel her nose dribbling again, the end approaching. But she was saved when her brother returned & tossed a new box to her.\n selected sentence: This couch piled with blankets and used tissues would be her grave."
+            },
+            {
+                "instruction": "As the movie begins, Andreas Ramsfjell (Trond Fausa Aurv\u00c3\u00a5g) is underground in a train station watching a couple kiss; however, the kiss lacks any sign of aesthetics - on the contrary, it looks hideous and abominable. Andreas seems to be increasingly unsettled until eventually he steps forward and jumps off the track in front of a subway train and the scene abruptly ends. In the following scene, he is on a bus which lets him off at a deserted gas station in the middle of nowhere. An older man gr"
+            }
+        ],
+        "recent_unique": [
+            3.9333333333333336,
+            3.133333333333334,
+            2.8000000000000003,
+            2.733333333333334,
+            3.8666666666666676,
+            2.3333333333333335,
+            6.733333333333335,
+            2.9333333333333336,
+            2.666666666666667,
+            3.666666666666667,
+            2.9333333333333345,
+            4.933333333333334,
+            3.8000000000000003,
+            2.466666666666667,
+            3.733333333333334,
+            3.066666666666667
+        ],
+        "exclusive_solves": [
+            "Sentence: Sometimes circumstances such as a good breeding season followed by a food source failure the following year lead to irruptions in which large numbers of a species move far beyond the normal ",
+            "We report a fatal case of toxic epidermal necrolysis (TEN) resulting from a high dose of cytosine arabinoside (ARA-C).\t cytosine arabinoside",
+            "Step 1: find the Membership_card of member table for which member's Address equals Hartford.\nStep 2: For each row in shop table, find the corresponding rows in member table.\nStep 3: find Membership_ca",
+            "He then unscrews a light switch and pulls it out just a little, making some slits in the fabric or paper, then putting the light switch back over the new wall paper.",
+            "The City of Oklahoma City has designated the Santa Fe station as the location for intermodal transit services for the city and metropolitan area .",
+            "Question: Which of the following is made of atoms?  (A) gravity (B) light (C) heat (D) ai?",
+            "For the evaluation of performance of the proposed method on the NLI task, SNLI BIBREF22 and MultiNLI BIBREF23 datasets are used. We use Quora Question Pairs dataset BIBREF24 in evaluating the performa",
+            "One box of muffin mix is sufficient to bake six large muffins or ten mini- muffins. How many boxes are needed to bake 180 muffins, 120 of which are large muffins and the rest of which are mini-muffins",
+            "story: Lilith was sure this was the end for her. She'd been sick for a week, and the last of her tissues was gone. This couch piled with blankets and used tissues would be her grave. Already she could",
+            "As the movie begins, Andreas Ramsfjell (Trond Fausa Aurv\u00c3\u00a5g) is underground in a train station watching a couple kiss; however, the kiss lacks any sign of aesthetics - on the contrary, it looks hideou"
+        ]
+    }
+]
