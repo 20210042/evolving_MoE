@@ -3,13 +3,15 @@
 #SBATCH --gres=gpu:PRO6000:1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem=32G
-#SBATCH --time=12:00:00
+#SBATCH --time=48:00:00
 #SBATCH --output=/home/jaehoonjeong/data/MetaAgentEvolution_Release/logs/%x.%j.out
 #SBATCH --error=/home/jaehoonjeong/data/MetaAgentEvolution_Release/logs/%x.%j.err
 
-# 코딩 도메인(acc) — 최종 로스터 evolved routing(라우터가 9명 중 1명 선택) pass@1.
-#   run_acc_eval.sh(LUCA baseline + binning UB)와 짝. 같은 홀드아웃 500 → 직접 비교.
-# Env: SEED, EVAL_SIZE, EVAL_CONFIG, DATA_DIR.
+# 코딩 도메인(acc) — 최종 로스터 evolved routing(LLM 라우터가 N명 중 1명 선택) pass@1.
+#   run_acc_eval.sh(LUCA baseline + binning UB)와 짝. 같은 홀드아웃 → 직접 비교.
+# Env: SEED, EVAL_SIZE, EVAL_CONFIG, DATA_DIR, SPLIT, IGNORE_TEST_IDS, OUT_TAG.
+#   v1은 test 파일이 없어 SPLIT=train + test_ids.json 필터를 썼다. acc_v2는 실제 test
+#   split(751)이 있으므로 SPLIT=test IGNORE_TEST_IDS=1로 준다.
 
 set -euo pipefail
 
@@ -33,22 +35,30 @@ if [ ! -f "${FINAL_ROSTER}" ]; then
     exit 1
 fi
 
+SPLIT="${SPLIT:-train}"
+cmd=(
+  python scripts/run_inference.py
+  --config "${EVAL_CONFIG}"
+  --dataset "${DATASET}"
+  --split "${SPLIT}"
+  --seed "${SEED}"
+  --data_dir "${DATA_DIR}"
+  --pipeline evolved
+  --roster_path "${FINAL_ROSTER}"
+  --max_items "${EVAL_SIZE}"
+  --output_file "${OUT}"
+)
+if [ "${IGNORE_TEST_IDS:-0}" = "1" ]; then
+    cmd+=(--ignore_test_ids)
+fi
+
 rm -f "${OUT}"
-python scripts/run_inference.py \
-    --config "${EVAL_CONFIG}" \
-    --dataset "${DATASET}" \
-    --split train \
-    --seed "${SEED}" \
-    --data_dir "${DATA_DIR}" \
-    --pipeline evolved \
-    --roster_path "${FINAL_ROSTER}" \
-    --max_items "${EVAL_SIZE}" \
-    --output_file "${OUT}"
+"${cmd[@]}"
 
 python scripts/score_outputs.py \
     --input "${OUT}" \
     --dataset "${DATASET}" \
-    --split train \
+    --split "${SPLIT}" \
     --data_dir "${DATA_DIR}"
 
 echo "=== acc routed eval done (final roster, router picks 1 of N) ==="

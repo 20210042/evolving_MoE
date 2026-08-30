@@ -1,0 +1,26 @@
+# QASC eval config, greedy 변형 (2026-07-26 UB=pass@k 검정용).
+# qasc_eval_a4b.yaml과 동일하되 llm.sampling.temperature=0.0 명시 — run_inference.py의
+# config override가 얕은 병합이라(cfg["llm"]을 통째로 교체) llm 키를 쓰려면 sampling까지
+# 여기서 전부 명시해야 base.yaml의 다른 값으로 새지 않는다.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "qasc"
+data_dir: "export/qasc"
+split: "validation"
+enable_thinking: false
+
+llm:
+  max_model_len: 16384
+  max_tokens: 1024
+  sampling:
+    temperature: 0.0
+    top_p: 1.0
+    top_k: -1
+    repetition_penalty: 1.0
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

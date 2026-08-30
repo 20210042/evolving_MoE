@@ -2,9 +2,28 @@
 
 *2026-07-26 · 두 도메인 4조건 사다리 + 상보성 구조 분석 + 진화 시그널 재설계 제안*
 
-기존 문서와의 관계: QASC 배포 스윕 원문은 [`QASC_MoL_vs_Dense_Report.md`](../QASC_MoL_vs_Dense_Report.md),
-코딩 도메인 인수인계는 [`HANDOVER_acc_coding.md`](HANDOVER_acc_coding.md). 이 문서는 **두 도메인을
-같은 잣대로 나란히 놓고**, 오늘 처음 나온 코딩 4조건 결과와 신규 상보성 분석을 더한 것이다.
+기존 문서와의 관계: 이 문서가 **정본(canonical)** — QASC 배포 스윕 원문
+[`QASC_MoL_vs_Dense_Report.md`](../QASC_MoL_vs_Dense_Report.md)의 라우팅 방법별 상세 표를
+§2-b로 편입했다(2026-07-26 병합). 코딩 도메인 인수인계는
+[`HANDOVER_acc_coding.md`](HANDOVER_acc_coding.md). 이 문서는 **두 도메인을 같은 잣대로
+나란히 놓고**, 코딩 4조건 결과·신규 상보성 분석·라우팅 가능성 검정을 모두 더한 것이다.
+
+**네거티브 결과 총정리(보고용 한눈에)**
+
+| # | 발견 | 근거 | 확실성 |
+|---|---|---|---|
+| 1 | MoE(어떤 분할이든) < Dense 단일 SFT | §2, §2-b | 확정 (QASC 실측) |
+| 2 | Evolved(우리 분할) < Random 분할 | §2, §3, §4 size-controlled | 확정, 2도메인 재현 |
+| 3 | 학습셋 재분할(cap7) 개입해도 실패상관 불변 | §2-b, §4-b | 확정 |
+| 4 | Human-prior(의미축) 최하위(QASC) / 최고 효율(코딩) — 도메인 의존, 일반화 안 됨 | §3 | 확정, 방향 뒤집힘 |
+| 5 | 생성 다양성도 Evolved≈Random(코딩) | §4 생성 다양성 | 확정 |
+| 6 | QASC 13명이 사실상 1.5개 답만 냄(all-fail 62.3% 만장일치 오답) | §4 답변 다양성 | 확정 |
+| 7 | 라우팅 가능성: AUC 0.57~0.77인데 실현율 전부 음수(3개 피처×4조건, 12/12) | §4 routability | 확정, 완결 |
+| 8 | UB(헤드룸)는 상보성이 아니라 시도횟수(pass@k)에 가까움 — 로스터 폭 50.8→3.24pp | §4-c | 핵심, 대조실험 전 잠정 |
+| 9 | 진화 신호(WAR)가 데이터의 1.6~4.4%에서만 값을 가짐 | §4-b, §5 | 확정 |
+| 10 | 배포 파이프라인은 persona가 추론 프롬프트에서 아예 빠짐(LoRA만 차별화) | §11(신규) | 확정, 코드 확인 |
+
+이 열 개가 지금까지 이 연구 계열에서 나온 negative의 전체 목록이다. positive는 아직 없다(§8).
 
 ---
 
@@ -37,13 +56,11 @@
 
 | | QASC | Coding (acc/TACO) |
 |---|---|---|
-| backbone | llama-3.1-8B | 재빌드 v2 (`acc_seed20210111_v2`) |
-| 평가셋 | validation 926문제 | test 751문제 홀드아웃 (problem_id 단위 train과 disjoint) |
 | 채점 | letter EM | **코드 실행** (stdin/function_call/gfg 러너) |
-| Evolved | cap10 seed20210211, 13 experts | cap9 seed20210111_v2, 12 experts |
+| Final Roster | evolved 13 experts | evolved 12 experts |
 | Random | count-matched, 13 | count-matched, 12 |
 | Human-prior | LLM 8과목, 9 | 5 카테고리, 6 |
-| Dense 앵커 | ep9 baseline | `dense_sft/acc_seed20210111_v2` |
+| Dense  | ep9 baseline | `dense_sft/acc_seed20210111_v2` |
 
 > 코딩 절대 수준이 15%대인 것은 정상이다. 재빌드 이전 v1의 83.4% baseline은 **잘못된 타깃 +
 > validation 42% 누수** 위에서 나온 값이라 비교 대상이 아니다(인용 금지).
@@ -63,6 +80,51 @@
 - Evolved 85.2 < Random 86.0. oracle에서도 90.0 vs 89.8로 동률.
 - 재분할 개입(cap7, 학습셋 Jaccard 0.447→0.208)도 실패: 실패상관 0.787→0.739로 거의 불변,
   union 91.7→91.8, 배포 85.2→84.7로 오히려 하락.
+
+> ⚠️ §2·§2-b의 Evolved 로스터는 QASC 채점 버그(`_extract_qasc_letter`, 커밋 93550a7로 수정)
+> 시점의 라벨 위에서 진화됐다. **배포 수치 자체(라우팅 EM)는 llama 실측이라 유효**하지만,
+> "우리 분할이 랜덤에 진다"는 결론의 QASC측 근거는 그 오염을 안고 있다(§9 참조). 코딩(§3·§4)이
+> 버그와 무관한 독립 재현이라 결론이 살아있다.
+
+## 2-b. QASC MoL 배포 스윕 상세 — 12가지 라우팅 방법 (원문: `QASC_MoL_vs_Dense_Report.md`)
+
+§2 "실현 최고 배포"가 어디서 나온 숫자인지, 라우팅 방법 12개 전부를 편다.
+
+**배포 정의**: 라우팅이 문제별 top-2 expert를 고르면 → 두 LoRA를 `add_weighted_adapter(linear,
+[0.5,0.5])`로 **한 어댑터로 병합** → **단 1회 생성** → letter EM 채점 (union coverage 같은
+프록시가 아니라 926문제 실채점). 앵커 = dense SFT llama3 87.15%(807/926).
+
+| 라우팅 방법 | 배포 정확도(%) | vs Dense 87.15 |
+|---|---:|---:|
+| random-2 | 84.8 | −2.4 |
+| confidence (raw) | 85.1 | −2.1 |
+| **confidence (z-norm)** | **85.2** | **−1.9** |
+| confidence (rank) | 84.4 | −2.7 |
+| confidence + prior | 83.8 | −3.3 |
+| pred-agreement | 85.0 | −2.2 |
+| MLP hidden-state | 84.1 | −3.0 |
+| MLP encoder-emb | 85.1 | −2.1 |
+| MLP answer-prob | 85.0 | −2.2 |
+| **MLP confidence** | **85.2** | **−1.9** |
+| MLP hs+conf | 84.6 | −2.6 |
+| **oracle top-2** | **90.0** | **+2.8** |
+
+**읽는 법 세 가지**:
+
+1. **실현 가능한 라우팅 12개 전부 dense 미달이고 서로 거의 구별 안 됨** — random-2(84.8) ≈
+   confidence(85.1) ≈ 학습 MLP(85.2). 어떤 라우팅 신호를 써도 ~85%에 뭉친다.
+2. **상보성 잠재력은 실재한다, oracle에서만** — oracle top-2가 90.0으로 dense를 +2.8pp 넘는다.
+   문제는 그 이상적 pair를 실제 라우터가 못 찾는다는 것 (top-1 한계는 [routability](#4-라우팅-가능성) 참조).
+3. **병합 비용은 일정하게 약 −1.7pp** — union 상한(라우팅으로 "둘 중 하나만 맞아도 성공")과
+   0.5 병합 실생성 사이 간격이 라우팅 방법 무관하게 일정하다(confidence union 86.8→배포 85.1,
+   oracle union 91.7→배포 90.0).
+
+> QASC는 애초에 라우팅으로 벌 수 있는 여지가 얇다(solve 매트릭스가 dense — 평균 11/13이 각
+> 문제를 품, best-single 86.2 → union 91.7). §2-c의 UB 재해석과 함께 보면 이 얇음 자체가
+> "expert가 서로 안 갈린다"는 신호다.
+>
+> 산출물: `scripts/moe_deploy_sweep.py`(job 209918), 원표
+> `results/qasc/seed20210211/deploy_sweep_vs_dense.md`, 로그 `logs/deploy_sweep.209918.log`.
 
 ## 3. 코딩 4조건 사다리 (751 홀드아웃, 실생성 + 코드실행) — **신규**
 
@@ -200,22 +262,23 @@ binned 라벨과 독립 일치 — 채점 배선 검산도 겸한다.
 위다. 즉 라우팅 불가능성은 특정 분할의 성질이 아니라 **문제 축 자체의 성질**이다: 입력 임베딩에서
 solvability가 보이지 않는다.
 
-**hidden-state 특징(hs_last)로 바꿔도 결론이 같다** — 오히려 더 중요한 사실을 준다:
+**세 번째 피처(hs_mean)까지 검정 완료 — 결론 불변, 12/12 음수.** hidden-state 계열(hs_last,
+hs_mean) 둘 다로 바꿔도 결과가 같다 — 오히려 더 중요한 사실을 준다:
 
-| 조건 | AUC(emb) | AUC(hs_last) | 실현율(emb) | 실현율(hs_last) |
-|---|---:|---:|---:|---:|
-| Evolved(cap10) | 0.596 | **0.756** | −0.353 | −0.275 |
-| Random | 0.574 | **0.747** | −0.169 | −0.143 |
-| Human-prior | 0.595 | **0.772** | −0.234 | −0.390 |
-| Evolved(cap7) | 0.603 | **0.761** | −0.155 | −0.042 |
+| 조건 | AUC(emb) | AUC(hs_last) | AUC(hs_mean) | 실현율(emb) | 실현율(hs_last) | 실현율(hs_mean) |
+|---|---:|---:|---:|---:|---:|---:|
+| Evolved(cap10) | 0.596 | **0.756** | 0.628 | −0.353 | −0.275 | −0.373 |
+| Random | 0.574 | **0.747** | 0.633 | −0.169 | −0.143 | −0.169 |
+| Human-prior | 0.595 | **0.772** | 0.643 | −0.234 | −0.390 | −0.299 |
+| Evolved(cap7) | 0.603 | **0.761** | 0.632 | −0.155 | −0.042 | −0.099 |
 
-hidden-state에서는 AUC가 0.75~0.77로 **solvability를 꽤 잘 예측한다**. 그런데도 실현율은 여전히
-전부 음수다. **즉 "누가 풀지 몰라서" 라우팅이 안 되는 게 아니다 — 알아도 갈 곳이 없다.**
-전문가들이 서로 거의 같아서 예측을 맞혀도 최고 단일 전문가 고정 사용을 못 넘는다. §4-c의
-UB 재해석과 정확히 같은 이야기다.
+hidden-state에서는 AUC가 0.63~0.77로 **solvability를 꽤 잘 예측한다**(특히 hs_last). 그런데도
+실현율은 3개 피처 × 4조건 **12칸 전부 음수**다. **즉 "누가 풀지 몰라서" 라우팅이 안 되는 게
+아니다 — 알아도 갈 곳이 없다.** 전문가들이 서로 거의 같아서 예측을 맞혀도 최고 단일 전문가
+고정 사용을 못 넘는다. §4-c의 UB 재해석과 정확히 같은 이야기다.
 
 > 단서: best-single은 전체 926에서 사후 선택한 최강 전문가라 강한 기준선이다(라우터는 held-out).
-> hs_mean은 job 213979에서 실행 중.
+> job 213979(hs_mean)로 검정 완료(2026-07-26) — §10의 "먼저 해야 할 확인" 중 라우팅 축은 닫힘.
 
 ---
 
@@ -276,6 +339,69 @@ temperature 1.0 / top_p 0.95이나 `scripts/run_inference.py`의 실제 적용�
 
 **결정적 대조실험(하루 규모)**: 페르소나 없이 base 모델을 동일 조건으로 12회 생성해 union을 잰다.
 94.6에 근접하면 **12개 역할의 기여는 0**이다. 이 연구에서 지금 가장 중요한 미검증 가정이다.
+
+### 추가 반영 (2026-07-27) — 샘플링 제거(greedy) 실측, 결론이 뒤집힘
+
+위 문단은 "다음 세션 1순위"로 남겨뒀던 미확인 가정이었다. 대신 **더 직접적인 대조를 먼저 돌렸다**:
+같은 roster·같은 config로 temperature만 0(greedy, 결정론)으로 바꿔 재실행. 부수적으로
+**샘플링 설정 자체도 이번에 정정됐다** — 이전 세션에서 "roster 평가는 temperature 1.0/top_p
+0.95"라고 확인했던 건 틀렸다. 실제 운영 스크립트(`run_qasc_eval.sh`)는 `--config
+configs/qasc_eval_a4b.yaml`을 얹어 도는데, `run_inference.py`의 config override가 **얕은
+병합**이라(`cfg["llm"]`을 통째로 교체) override 파일에 `llm:` 키가 있으면(내용이
+max_model_len/max_tokens뿐이어도) base.yaml의 `llm.sampling`이 통째로 사라지고
+`LLMService`의 하드코딩 기본값(**temperature=0.7, top_p=0.8**)으로 조용히 떨어진다. 코드로
+직접 재현해 확인(`cfg.update()` 실행 결과 `sampling: {}` → `temperature=0.7`).
+
+**greedy(temperature=0) 재실행 결과** (`results/qasc/seed20210211/inference_validation_binning_final_greedy.jsonl`,
+job 214932, 현행 스코어러):
+
+| | 샘플링(temp=0.7/0.8, 실제 운영값) | **greedy(temp=0)** |
+|---|---:|---:|
+| best-single | 84.77 | 84.67 |
+| mean | 83.09 | 83.24 |
+| worst | ~81.53 | 79.70 |
+| 로스터 폭 | 3.24pp | **4.97pp** |
+| **UB** | 94.60 | **94.82** |
+| UB−best(헤드룸) | +9.83 | **+10.15** |
+
+**샘플링을 완전히 제거해도 UB가 그대로다 — 오히려 로스터 폭·헤드룸 둘 다 살짝 늘었다.**
+즉 **"UB≈pass@k"라는 위 가설은 QASC에서 기각된다.** 12명의 union이 94.8%로 뜨는 건 여러 번
+찍어서 얻어걸리는 게 아니라, **persona 텍스트 차이만으로 gemma-26B가 결정론적으로도 문제별로
+다르게 맞고 틀린다**는 뜻 — 개별 폭(3~5pp)은 작아도 신호는 진짜다.
+
+이 결과는 §11의 발견과도 맞물린다: 배포(llama-8B, generate_lora_binning.py)는 persona가
+프롬프트에서 아예 빠져 있었다. gemma-26B(진화에 쓰인 모델)는 persona만으로도(few-shot 없이)
+결정론적 분기를 내는데, llama-8B 배포는 그 신호가 애초에 프롬프트에 들어갈 기회조차 없었다 —
+**"모델 체급/능력 문제였을 수도 있다"는 가설(사용자 제기)의 간접 근거**. §11의 재학습(job
+214141→214694, persona+few-shot을 llama-8B 배포에 되살리는 실험)이 긍정적으로 나올 가능성이
+이걸로 좀 더 높아졌다 — 다만 이건 상관일 뿐 214694 결과가 직접 검정한다.
+
+**⚠️ base 모델 다중시도 대조(위 문단, "역할 기여 0인가")는 이걸로 대체되지 않는다** — 그건
+"persona가 아예 없어도 union이 뜨는가"를 묻고, 이번 실험은 "persona가 있을 때 sampling
+없이도 union이 뜨는가"를 물었다. 둘 다 유효한 질문이고 이번 결과가 후자에 강한 positive를
+줬을 뿐이다.
+
+**코딩(TACO) 동일 검정 완료 (2026-07-27) — 독립 재현.** 코딩은 v2 재빌드 위에서 이 실험
+(BinningPipeline+persona+gemma) 자체를 그동안 한 번도 안 돌렸었다 — §4-c 표의 "acc
+seed20210111"/"acc seed20210101" 행은 둘 다 v1(재빌드 이전, 인용 금지) 데이터였다(§9 참조).
+그래서 QASC처럼 greedy 하나만 도는 게 아니라 sampled(temp=0.7/0.8, QASC와 동일 설정)·
+greedy(temp=0) 페어를 v2로 새로 떴다. roster는 §11과 동일(`results/acc/seed20210111/roster_final.json`,
+11명 persona), 751 홀드아웃, job 214969(sampled)·214970(greedy).
+
+| | sampled(temp=0.7/0.8) | **greedy(temp=0)** |
+|---|---:|---:|
+| best-single | 75.90 | 74.03 |
+| mean | 73.96 | 73.20 |
+| worst | 72.04 | 70.57 |
+| 로스터 폭 | 3.86pp | 3.46pp |
+| **UB** | 83.75 | **83.22** |
+| UB−best(헤드룸) | +7.85 | **+9.18** |
+
+**QASC와 정확히 같은 패턴이 두 번째 독립 도메인에서 재현됐다.** UB가 거의 그대로고(83.75→83.22,
+−0.53pp) 오히려 헤드룸(UB−best)은 greedy 쪽이 더 크다. "UB≈pass@k" 가설은 코딩에서도
+기각된다 — 코드실행 채점(letter EM보다 훨씬 엄격한 채점)에서도 같은 결론이라는 게 이 재현을
+특히 강하게 만든다. 산출물: `results/acc/seed20210111_v2/ub_check/inference_test_binning_{sampled,greedy}.binned.jsonl`,
+config `configs/acc_eval_a4b_v2_{sampled,greedy}.yaml`, 스크립트 `scripts/sbatch/run_acc_ub_check.sh`.
 
 ---
 
@@ -495,17 +621,216 @@ union이 로스터 24.23을 넘는지 확인한 뒤에 진화 루프를 건드�
 
 ## 10. 다음 세션 인수인계 — 열려 있는 결정
 
-이 시점의 상태를 한 문장으로: **분할(partition) 노선은 세 축(커버리지·다양성·라우팅 가능성)에서
-모두 소진됐고, 우리가 근거로 삼아온 UB는 상보성이 아니라 시도 횟수를 재고 있었을 가능성이 크다.**
-따라서 다음 수는 "진화 시그널을 고친다"와 "논문 근간을 다시 세운다" 사이의 선택이며, 아직
-정해지지 않았다.
+**2026-07-27 갱신 — 이 시점의 상태를 한 문장으로**: **UB는 거짓이 아니다.** greedy(샘플링 제거)
+재검정으로 QASC·코딩 두 도메인 모두 UB가 그대로 유지됨을 확인했다(94.60→94.82,
+83.75→83.22) — §4-c의 "UB≈pass@k" 잠정 결론은 **기각**됐다. 이후 실험은 **greedy를 표준
+디코딩**으로 쓴다(사용자 결정). 분할(partition) 노선의 커버리지·다양성 축은 여전히 negative지만,
+persona가 배포 프롬프트에서 아예 빠져 있었다는 §11의 발견 + 이번 UB 확인이 맞물려 "persona+
+few-shot을 배포에 되살리면 달라지는가"를 실제로 재학습해서 봤고(§11), **긍정적 신호가 나왔고
+2026-07-28에 확정됐다: union 24.23(구)/25.17(Random) → 30.09(12명 전원 정상), +5.86pp/
++4.92pp, best-single 15.58.**
 
-### 먼저 해야 할 확인 (다른 모든 결정이 여기 걸림)
+### §11 재학습 — 완료(2026-07-28)
 
-1. **base 모델 다중시도 대조** — 페르소나 없이 동일 조건 12회 생성 → union. 94.6에 근접하면
-   역할 기여 0 (§4-c). **1순위.**
-2. **로스터 평가의 샘플링 설정 확인** — `scripts/run_inference.py`가 temperature를 실제로 쓰는지.
-   코드 한 번 읽으면 끝난다.
+**2026-07-28 갱신 — c_9948 원인 확정, "우연한 실패" 추정은 기각.** 로그를 직접 까본 결과
+`grad_norm=0`·`loss=0`·`mean_token_accuracy=0`가 343 step 전부에서 완전히 동일했고
+eval_loss도 4번의 평가에서 소수점까지 반복(0.8423) — 어댑터가 단 한 번도 갱신되지 않았다.
+실제 토크나이저로 찍어보면 원인은 명확하다: `pick_fewshot_examples`가 고정 시드
+(`f"{expert_id}-fewshot"`)로 뽑은 c_9948 전용 few-shot 2개가 유독 길어서(문제+정답 합쳐
+10,425자 vs c_54530 3,908자·c_12606 5,341자) persona까지 얹은 prompt-only 토큰 수가
+평균 3813(최대 4903)로 **778개 학습 샘플 100%**가 `MAX_LENGTH=3072`를 프롬프트 단계에서
+이미 초과 — completion(정답 코드)이 매 샘플 통째로 truncate되어 zero-signal 학습이 된 것.
+결정론적 버그이므로 기존 커맨드 그대로 재제출하면 100% 재현된다. (부수 발견: c_54530도
+5.0%, c_12606도 11.6% 행이 truncate 중 — 낮은 비율로 다른 expert에도 걸쳐 있는 실패모드.)
+
+검토한 수정안 (기록만, 아래 "적용" 항목이 실제 선택):
+- **옵션 1(국소 땜빵)**: c_9948 재학습 시 `MAX_LENGTH`만 6144로 올림(실측: 3072→0% 완주,
+  4096→55.5%, 6144→99.1%, 8192→99.5% 완주). 코드 변경 없음, 다른 10명 체크포인트나
+  train/inference 프롬프트 포맷에 전혀 영향 없음.
+- **옵션 2(근본 수정)**: `pick_fewshot_examples`가 예시 길이를 캡하도록 고침. 다른 10명의
+  5~11.6% truncation도 같이 줄어드는 장점이 있지만, 이 함수는 `generate_lora_binning.py`도
+  그대로 import해서 쓰므로(train/inference 프롬프트 일치가 설계 의도) 함수를 고치면 **이미
+  배포된 10명 checkpoint의 inference-time few-shot도 함께 바뀌어** train 때 본 예시와
+  달라진다 — 일관성을 지키려면 11명 전원 재학습이 필요해져 범위가 커진다. 이번엔 보류.
+
+**적용(2026-07-28)**: 옵션 1 채택 — c_9948만 `MAX_LENGTH=6144`로 단독 재학습(job 215481).
+다른 실험 조건에 영향 없는 최소 변경이라 "c_9948만 단독 재학습" 원래 계획과 정합적이다.
+결과: `train_loss` 0.0→0.6096, eval_loss가 epoch마다 0.5964→0.5885→0.5924→0.5925로 정상
+변동(다른 정상 expert들 ~0.58-0.59와 동일 수준) — 완전히 고쳐짐.
+
+재채점(job 215613, `COND=evolved_fewshot RESUME=1`, c_9948만 재생성 + 12명 재점수) 완료:
+
+| | best-single | mean(10명) | union UB |
+|---|---:|---:|---:|
+| Evolved(구, persona 無) | 14.65 | 13.87 | 24.23 |
+| Random | 15.05 | 13.98 | 25.17 |
+| **Evolved+persona+fewshot (최종, 12명 전원 정상)** | **15.58** | **13.97** | **30.09** |
+
+c_9948 pass@1=13.58%(102/751)로 다른 experts와 비슷한 정상 range로 복귀. union은
+29.69(죽은 채)→30.09로 +0.40pp만 올랐다 — c_9948이 새로 푼 문제 대부분이 이미 다른 expert가
+커버하던 영역과 겹쳐서, 기대만큼 큰 unique 기여는 아니었다. 그래도 Random 대비 +4.92pp,
+구 Evolved(persona 無) 대비 +5.86pp로 격차는 뚜렷하고, **이제 죽은 expert 없는 확정치**다.
+
+### §11 실제 인퍼런스(top-1, 병합 없음) — 2026-07-29 추가
+
+위 union 수치는 전부 **oracle 상한**(문제마다 "그중 한 명이라도 맞히면")이지 실배포 정확도가
+아니다. 기존 `scripts/moe_deploy_sweep.py`(top-2 0.5 병합)는 전 expert가 같은 프롬프트를
+공유한다는 전제라 못 쓴다 — Evolved는 expert마다 서로 다른 persona+few-shot이라 두 expert를
+병합했을 때 "어느 persona로 프롬프트를 만들지"가 정의되지 않는다. 그래서 **top-1(병합 없이
+라우터가 고른 expert 1명이 자기 프롬프트로 그대로 생성)**으로 신규 구축(`scripts/
+moe_deploy_top1.py`, `router_common.py`에 `acc` SPEC 추가, hidden-state 기반 5-fold CV
+MLP 라우터). Human-prior/Random/Evolved+persona+fewshot 3조건 실행(job 215715~717 완료):
+
+| 조건 | Dense 앵커 | best-single(고정) | **MLP top-1(진짜 배포)** | oracle top-1 | 참고 oracle-union |
+|---|---:|---:|---:|---:|---:|
+| Human-prior | 15.05 | 15.58 | 14.65 | 21.70 | 22.90 |
+| Random | 15.05 | 15.05 | 13.85 | 23.17 | 25.17 |
+| Evolved+persona+fewshot | 15.05 | 15.58 | 14.25 | 27.30 | 30.09 |
+
+**결론**: 셋 다 Dense·best-single(고정)보다 낮다. Evolved는 oracle-union이 Random보다
+훨씬 높은데(30.09 vs 25.17 = expert가 실제로 다양함, Jaccard로도 확인됨) **실배포 top-1에서는
+그 차이가 거의 사라진다**(14.25 vs 13.85) — 병목은 expert 다양성이 아니라 라우터 자체.
+QASC에서 이미 나왔던 top-1 라우터 한계가 persona+few-shot으로 다양성을 올린 뒤에도 그대로
+재현됨. (oracle top-1이 원래 oracle-union보다 셋 다 일관되게 2~3pp 낮은 건 bf16 greedy가
+배치 구성에 따라 미세하게 갈리는 것으로 보임 — 데이터 버그 아니고 핵심 결론엔 무관.)
+
+### §11-b 라우터 병목 원인과 논문 메인 메시지 재검토 — 2026-07-29 논의
+
+**왜 라우터가 안 통하나**: [[project_router_top1_limit]]에서 QASC로 이미 나온 진단이 acc에서
+그대로 재현됐다 — 문제 입력(hidden-state)만으로 "어떤 expert가 풀지"를 예측하는 신호가 약해서
+학습 라우터가 train에서는 외우지만 test에 일반화가 안 된다. 라우터 아키텍처를 키우거나
+스윕해도 이 벽은 안 뚫릴 가능성이 높다 — 모델 용량 문제가 아니라 정보량 자체가 부족한 문제.
+
+**제안하는 해법 방향(미검증, 다음 착수 후보)**: 사전 예측 대신 **사후 검증** — 코딩은 실행
+가능한 테스트케이스가 이미 있으니, "라우터가 미리 골라 한 번에 맞히기"가 아니라 "best-single
+부터 generate → 실제 실행해서 pass/fail 확인 → 실패하면 다음 expert로 cascade"로 갈 수 있다.
+QASC(정답 글자 하나)는 사후검증이 불가능해 못 썼지만 코딩 채점기는 공짜 오라클이다. 트레이드
+오프: 시도 횟수만큼 인퍼런스 비용이 배로 는다(예산 상한이 새 변수). 아직 코드로 옮기지 않음.
+
+**논문 메인 메시지 재검토**: 지금대로(union 개선만 헤드라인) 가면 "그래서 실제 정확도는?"
+질문에 "베이스라인보다 낮다"고 답해야 해서 메시지가 무너진다. 대안 프레임: **"파티션/persona
+설계는 진짜 상보성을 만든다(oracle-union·Jaccard 다양성으로 검증됨) — 그런데 라우팅 병목
+때문에 실배포로 전혀 전환되지 않는다"**는 necessary-but-not-sufficient 구조. 지금까지 쌓인
+데이터(§11 다양성 측정, union, §11 top-1 실배포 갭)가 그대로 이 스토리의 증거가 된다. 이렇게
+가면 논문의 중심 기여가 "파티션을 어떻게 잘 짜는가"에서 "왜 라우팅이 실패하는가/어떻게 풀
+것인가"로 옮겨가고, §4~8의 파티션 설계 분석들은 서론/동기 수준으로 톤이 낮아진다. 위 cascade
+같은 걸 실제로 돌려서 "라우팅을 다르게 하면 살아난다"까지 보이면 강한 논문이 되고, 안 보이면
+negative 결과 논문(나쁘진 않지만 임팩트가 작음)으로 남는다. **아직 사용자 최종 결정 아님** —
+다음 세션에 cascade 실험을 실제로 해볼지부터 판단.
+
+**다음(미착수)**: QASC도 같은 4조건 매트릭스를 "이번 버전"으로 보고 싶다는 요청 있었음.
+QASC는 이미 `moe_deploy_sweep.py`(top-2 병합)로 실배포 수치가 있음(Dense 87.15 > Random
+86.0 > Evolved 85.2 > HP 84.1, persona 없이 baseline 프롬프트 통일이라 병합 문제 없음 —
+코딩과 달리 그대로 재사용 가능). 단 QASC Evolved 조건의 분할 자체가 스코어러 버그 라벨에서
+나와서(§qasc-scorer-bug) 라벨 재생성(GPU 불필요) → Evolved 12명 재학습 → 재평가가 필요
+(Dense/Random/HP는 버그 라벨과 무관해서 안 건드려도 됨). 라벨 재생성에 필요한 원본 생성물
+위치까지는 확인함(`results/qasc/seed20210211/binning_train_full.jsonl`, 8134문제×12명
+raw 생성 텍스트 보유) — 재점수 스크립트 작성부터 다음 세션.
+
+### §11-c 라우터 재설계 시도 전부 실패 + 근본 원인 재규명 — 2026-07-30
+
+§11-b 병목 진단이 방법론 문제가 아닌지(손실함수·평가방식·데이터량·feature) 하나씩 소거해봤고,
+전부 기각된 뒤 **원인이 라우터가 아니라 로스터 진화 자체(WAR fitness)까지 거슬러 올라간다**는
+게 이번 세션의 핵심 결론이다.
+
+**1) 라우터 재설계 시도 — 전부 best-single 근방에서 정체**
+(`scripts/router_sweep_max_nsolved.py`, acc 11-persona 기준 — `shared`는 train 신호가 없어 후보 제외)
+
+- BCE(멀티라벨) → **soft-label CrossEntropy**로 손실함수 교체, in-test 5-fold CV → **진짜
+  train(7079)/test(751) 분리**로 교체, max_n_solved(τ) 1~11 스윕(신호 clarity vs 데이터량
+  트레이드오프 탐색) — 결과: 어느 τ도 best-single(15.58%)을 의미 있게 못 넘음(최고 15.71%).
+- 입력 feature를 base LLM hidden-state(`hs_mean`)에서 encoder 임베딩(`google/embeddinggemma-300m`,
+  `scripts/extract_embed_acc.py`)으로 바꿔도 동일(최고 15.58%, best-single과 정확히 같은 값).
+- 학습곡선 확인(`--log_every`): 모든 τ에서 train-top1이 epoch 20~60 만에 99~100% 도달, test-top1은
+  120 epoch 내내 13~15%에서 평평 — **underfitting이 아니라 순수 overfitting**, 더 학습해도 무의미.
+- pick 분포 진단: 라우터가 한 expert로 collapse한 게 아니라 11명 전부를 실제로 골고루 씀(각 τ에서
+  unique=11/11) — "시도는 하는데 정답과 무관"임을 확인, 학습 버그가 아님.
+- "결정 가능한" 서브셋(0<n_solved<11, 751문제 중 172개 — 나머지는 라우팅과 무관하게 결과가 고정)
+  으로만 조건부 정확도를 다시 봐도(751 전체 평균의 희석 가설 검증) 여전히 cond-best-single
+  (42.44%)을 못 넘음 — 희석 때문이 아니라 진짜로 이 172문제에서 "누가 푸는가"가 문제 내용과
+  학습 가능한 관계가 없다는 뜻.
+
+**2) self-consistency 체크 — 정답 라벨 자체가 디코딩 시점 노이즈**
+(결정가능 172문제 표본에서 같은 (persona,문제)를 temperature=0.7/top_p=0.8로 K=5회 재샘플링)
+
+2-way ANOVA 수행결과, solvability는 prompt 변화보다도, 문제 난이도에 따라서 많이 흔들린다.
+
+| 표본 | 시도마다 결과 달라진 비율 | 문제 난이도 영향력 | 전문화의 영향력 | 잔차(노이즈) |
+|---|---:|---:|---:|---:|
+| 11 expert×40문제 | **54.5%** | 69.0% | **0.3%** | 31.0% |
+
+즉 "이 persona가 이 문제를 푸는가"의 변동은 거의 전부 문제 난이도(공유됨)와 디코딩 노이즈로
+설명되고, **persona 정체성이 설명하는 몫은 사실상 0**이다. greedy로 고정해도 이 결론은 안
+바뀐다 — greedy는 재현성(같은 입력→항상 같은 출력)만 줄 뿐, 그 한 번의 결과가 persona의
+"진짜" 성공확률을 대표한다는 보장은 아니다(매우 분산 큰 생성분포에서 한 점을 고정해서 보는 것).
+[[project_ub_measures_attempts]](greedy로도 union 헤드룸은 유지된다)는 **집계 수치** 얘기라
+이번 결론과 모순되지 않는다 — 집계는 살아있어도 개별 (persona,문제) 귀속은 신뢰 못 할 수 있다.
+
+**3) 원인 추적 — 로스터 진화 WAR fitness 자체가 단일샷 신호**
+
+`src/orchestrator.py:236`(문제당 persona당 생성 1회, 반복 없음) → `src/war.py:10-41`
+(`exclusive_solves` = 이 단일 샷 결과에서 "이 배치 안에서 나만 푼 문제") → `src/action_selector.py:74-100`
+(swap/delete 게이팅도 이 exclusive_solves 기준). 2)의 결과가 맞다면 WAR가 매 배치 credit을
+주는 사건 대부분이 persona 능력이 아니라 단일 디코딩 경로의 우연이다. 기존 로스터 진동 대응책
+(windowed deletion·delete_cooldown·shared_contribution_exemption, 전부 `orchestrator.py`,
+[[project_gatefix_windowed_deletion]])은 **같은 단일샷 신호를 여러 배치에 걸쳐 누적**할 뿐 신호
+자체의 분산은 줄이지 않는다 — 증상(진동)만 계속 손봤고 원인(fitness 신호의 노이즈)은 안 건드려온
+셈. 상세: [[project_war_fitness_single_sample_confound]].
+
+**4) 미팅용 — 라우터 expert 선택 비율표** (`scripts/router_pick_distribution.py`,
+`results/acc/router_pick_distribution.md`, feature=hs_mean·τ=8·top-1=15.71%)
+
+카테고리는 `main_critic_category`(Quantitative Reasoning/Constructive Implementation/Greedy
+Strategy/Structured Data/State-Space Reasoning). LBOX 라우터가 "Low5/High6 Router" 표에서
+제너럴리스트 1명에게 56.5% 쏠리는 것과 달리, 코딩 라우터는 **11명에 걸쳐 6.0%~12.6%로 거의
+균등** — 압도적 제너럴리스트도, 뚜렷한 카테고리별 쏠림도 없다(최댓값 Algorithm Architect의
+Constructive Implementation 20.3%). random 기준선(14.38%)과 실제 정확도(15.71%)가 거의 같다는
+점과 종합하면, 이 균등 분포는 "11명이 문제 유형별로 잘 분업하고 있다"가 아니라 **라우터가
+유의미한 신호를 못 찾아 사실상 무작위에 가깝게 배분하고 있다는 정황**에 가깝다.
+
+| Expert | 전체 선택 | Constructive Impl. | Greedy Strategy | Quant. Reasoning | State-Space | Structured Data |
+|---|---:|---:|---:|---:|---:|---:|
+| Algorithm Architect | 95 (12.6%) | 20.3% | 10.5% | 14.5% | 10.1% | 6.4% |
+| Matrix Analyst | 86 (11.5%) | 16.5% | 8.4% | 9.9% | 12.3% | 10.0% |
+| Greedy Optimizer | 77 (10.3%) | 4.4% | 14.7% | 11.6% | 12.3% | 8.6% |
+| Combinatorialist | 74 (9.9%) | 7.6% | 8.4% | 9.3% | 15.2% | 9.3% |
+| Adversarial Tester | 73 (9.7%) | 8.2% | 4.9% | 10.5% | 13.0% | 12.1% |
+| Data Structure Specialist | 68 (9.1%) | 9.5% | 10.5% | 8.7% | 5.8% | 10.7% |
+| Probabilistic Analyst | 63 (8.4%) | 12.7% | 7.7% | 4.7% | 8.0% | 9.3% |
+| **Shared Expert** | 62 (8.3%) | 4.4% | 6.3% | 11.0% | 8.7% | 10.7% |
+| String Parser | 58 (7.7%) | 5.7% | 10.5% | 9.3% | 6.5% | 6.4% |
+| Constructive Logicist | 50 (6.7%) | 5.1% | 8.4% | 6.4% | 5.1% | 8.6% |
+| Graph Theorist | 45 (6.0%) | 5.7% | 9.8% | 4.1% | 2.9% | 7.9% |
+
+**5) 미팅용 — 배포성능 비교 매트릭스** (실생성 top-1, §11 `moe_deploy_top1.py`, job 215715~717
+수치 재정리; Ours = Evolved+persona+fewshot)
+
+| 조건 | Top-1 routing | best-single | oracle-union |
+|---|---:|---:|---:|
+| Dense SFT | 15.05% | — | — |
+| Human prior | 14.65% | 15.58% | 22.90% |
+| Random | 13.85% | 15.05% | 25.17% |
+| **Ours** | 14.25% | 15.58% | **30.09%** |
+
+Ours는 oracle-union(30.09%, 상보성 상한)이 셋 중 가장 높은데도 실배포 top-1(14.25%)은 Dense SFT
+(15.05%)·Human prior(14.65%)보다 낮다 — 병목이 라우터에 있다는 §11-b~§11-c 결론과 정확히 같은
+그림. oracle-union의 우위가 실배포로 하나도 안 옮겨간다는 게 이 표 한 장의 메시지.
+
+**다음(미착수)**: 이 진단이 맞다면 §4/§9의 Evolved-vs-Random/HP 비교(WAR fitness로 선발된
+로스터가 전제) 전체의 타당성을 재검토해야 한다. 아직 사용자 최종 결정 아님.
+
+### 완료된 확인들 (재확인 불필요)
+
+1. ~~base 모델 다중시도 대조~~ — greedy 재검정(§4-c 추가반영)이 사실상 이 질문에 강한 답을
+   줬다: persona가 있으면(few-shot 없이도) 결정론적으로도 갈린다. 순수 "persona 없는" 대조는
+   여전히 미착수지만 우선순위가 낮아졌다.
+2. ~~로스터 평가의 샘플링 설정 확인~~ — **정정 완료(2026-07-27)**. 2026-07-26의 확인
+   ("temperature 1.0/top_p 0.95")은 **틀렸다** — 실제 운영 config override가 얕은 병합이라
+   `llm.sampling`이 날아가고 `LLMService` 기본값 **0.7/0.8**로 떨어졌다(코드로 재현 확인).
+   §4-c에 정정 반영.
+3. **라우팅 가능성 3축 검정** — 완료(2026-07-26). emb/hs_last/hs_mean 3피처 × 4조건 12칸
+   전부 실현율 음수. §4 routability 참조. 이 축은 더 볼 것이 없다.
+4. **UB=pass@k 가설** — **기각(2026-07-27)**. greedy로도 QASC·코딩 둘 다 UB 유지. §4-c 참조.
 
 ### 선택지 A — 진화 시그널을 고친다
 
@@ -535,10 +860,135 @@ selling은 약해지지만 **재현성과 진단의 깊이가 자산**이 된다
 
 ### 실행 중/미완
 
-- job `213979` router_routability — hs_mean 구간 실행 중. emb·hs_last는 §4에 반영 완료.
+- ~~job `213979` router_routability hs_mean~~ — **완료**(§4에 반영, 결론 불변).
 - 코딩 배포(라우팅) 수치: 사용자 판단으로 **의도적 패스**(QASC와 유사할 것으로 예상).
 - 코딩 임베딩: 재빌드로 test751 id가 바뀌어 기존 `taco_emb.npy`가 425/751만 덮음.
   코딩에서 라우팅 분석을 하려면 임베딩 재추출 필요.
+- ~~job `213986` persona/few-shot 파일럿~~ — **완료**. §11 참조.
+- **contested 버킷 재검정 — 다음 세션 후보.** all-fail(base rate≈0)이라 정답률 델타를 볼 표본이
+  아니었다. §11 결과 참조.
+
+---
+
+## 11. 배포 프롬프트에는 persona가 없다 (신규, 2026-07-26) + 진행 중 파일럿
+
+§4-b는 "actuator가 페르소나 프롬프트"라고 진단했는데, 코드를 확인하니 **그 페르소나가 배포
+추론 프롬프트에 아예 안 들어간다.** `scripts/generate_lora_binning.py`(§3·§4 다양성 수치의
+생성원)는 전 expert가 `build_baseline_prompt`(persona 없는 공용 프롬프트)를 공유하고, 차이는
+**오직 LoRA 가중치**다. `scripts/sbatch/train_sft_by_expert.sh` 주석: "system prompt는 baseline
+GEN으로 통일, expert별로 binning 라벨에 따라 보는 데이터만 다름" — 2026-07-13 합의사항으로
+의도된 설계다(데이터분할 효과를 프롬프트 효과와 분리하려는 목적으로 추정).
+
+**함의**: cap7("학습 데이터 Jaccard 0.447→0.208인데 실패상관 불변")이 검정한 건 "페르소나가
+행동을 못 바꾼다"가 아니라 **"학습 데이터 서브셋 차이만으로, 추론시점 신호 0에서, LoRA가 다른
+행동을 학습하는가"**였다 — 원래 가설보다 훨씬 어려운 조건. 여기에 별개로 겹치는 가설(사용자 제기):
+진화 자체는 gemma-4-26B로 했는데(`configs/*_eval_a4b.yaml`) 배포 SFT는 llama-3.1-8B라 **모델
+체급/지시추종 능력**도 원인일 수 있다.
+
+**파일럿(현재 job `213986` 진행 중)**: LoRA 없이 순수 llama-3.1-8B-Instruct 프롬프팅만으로
+두 신호를 재도입해 분리 검정한다. all-fail 버킷 30문제(seed=0) × evolved 로스터 11개 실제
+persona(`results/acc/seed20210111/roster_final.json`) 위에서:
+
+| 조건 | persona | few-shot | 목적 |
+|---|---|---|---|
+| A(기존, 대조) | 없음 | 없음 | 현재 배포 기준선(Jaccard 0.729) |
+| B | 있음 | 없음 | 페르소나 복원만으로 갈리는가 |
+| C | 있음 | 자기소재 2개 | 원 few-shot 가설 |
+
+few-shot(C)은 참조 솔루션이 아니라 **각 role이 스스로 푼 다른 문제의 자기 코드**를 소싱한다 —
+코딩 전용 참조 솔루션 클러스터링(§8-b, `사용자 결정 완료` 항목)과 달리 **도메인 일반적**이다
+(QASC/LBOX에도 그대로 적용 가능, 로스터 자신의 solve 이력만 있으면 됨). 디코딩은 A와 동일하게
+greedy(방법론 일치). 채점은 안 함 — 이 파일럿의 질문은 "갈리는가"이지 "맞았는가"가 아니다.
+
+읽는 법(사전 등록): B가 A보다 안 갈리면 → llama 자체의 한계이거나 상한(체급 가설 지지).
+B가 갈리는데 C가 더 갈리면 → few-shot 가설도 살아있음. 둘 다 갈리면 → "persona가 배포에서
+빠진 것"이 지금까지의 negative 상당수의 실질 원인이었을 가능성. 단, §4 routability가 이미
+보여준 대로 **다양성이 갈린다고 자동으로 라우팅/배포 이득이 되는 건 아니다** — 다음 관문은
+그 다양성이 "라우팅 가능한" 다양성인지다.
+
+### 결과 (2026-07-26, job 213986 생성 + 214059 채점)
+
+**생성 다양성 — 유의하게 움직임.** 같은 30문제 pairwise Jaccard(부트스트랩 95% CI, n=5000):
+
+| 비교 | 평균 | Jaccard | 95% CI | 판정 |
+|---|---|---:|---|---|
+| A | 배포(LoRA, no-persona) | 0.722 | — | 기준선 |
+| B | persona only | 0.684 | [−0.090, +0.017] (B−A) | **CI가 0 포함 — 노이즈와 미구별** |
+| C | persona+few-shot | 0.631 | [−0.099, −0.006] (C−B) | **유의** |
+| | (전체) | | [−0.157, −0.018] (C−A) | **유의** |
+
+distinct programs도 같은 방향: A 82.5% → B 86.4% → C **97.3%**(거의 매 expert가 리터럴하게
+다른 프로그램). **few-shot이 persona 단독보다 확실한 레버**라는 게 이번 세션의 핵심 발견 —
+"instruction보다 in-context example이 소형 모델 행동을 더 causal하게 바꾼다"는 가설이 지지됨.
+
+**정답률 — 판단 불가(표본 설계 문제).** all-fail 버킷(A 기준 base rate=0)이라 union 정답이
+B 2/30, C 1/30으로 둘 다 한 자릿수 카운트다. B>C지만 n이 너무 작아 few-shot이 정답률을
+깎았다고 말할 근거가 없다 — **이 버킷은 애초에 정답률 델타를 볼 설계가 아니었다**(A가 정의상
+0이 되도록 뽑은 버킷이므로). §4 routability의 "다양성≠커버리지" 경고와 방향은 일치하지만
+확정은 아니다.
+
+### contested 버킷 재검정 (2026-07-26, job 214061 생성 + 214079 채점)
+
+같은 로스터·같은 방법으로 contested 30문제(A 기준 1~11/12 solved, base rate>0)에서 B/C만
+재생성 — A는 재생성 없이 기존 결과에서 같은 30문제만 필터링해 씀.
+
+**다양성 — all-fail 버킷과 동일 방향, 절대 유사도만 높음(문제 자체가 더 쉬움)**:
+
+| 조건 | Jaccard | distinct programs |
+|---|---:|---:|
+| A: 배포(LoRA) | 0.808 | 6.67/12 (55.6%) |
+| B: persona only | 0.764 | 7.90/11 (71.8%) |
+| C: persona+few-shot | 0.700 | 9.17/11 (83.4%) |
+
+**정답률 — 이번엔 base rate>0라 델타를 볼 수 있었고, 다양성과 같은 방향으로 움직였다**:
+
+| 조건 | union 정답 (30문제 중) |
+|---|---:|
+| A: 배포(LoRA, no-persona) | 30/30 (버킷 정의상 자명) |
+| B: persona only | 17/30 (56.7%) |
+| C: persona+few-shot | **20/30 (66.7%)** |
+
+짝지어 보면(McNemar 스타일): **B가 풀고 C가 못 푼 문제 = 0개.** C는 B가 푸는 걸 전부 포함하고
+3개를 추가로 더 푼다 — 순수 상위집합. 부트스트랩 C−B 95% CI = [0.0, +0.233](평균 +0.10) —
+하한이 0에 닿아 있어 완전히 확정은 아니지만(discordant pair가 3개뿐), **방향은 다양성 결과와
+정확히 일치**하고 역방향 사례가 하나도 없다는 게 고무적이다.
+
+**정리**: LoRA·재학습 전혀 없이, 순수 프롬프팅(persona+자기소재 few-shot)만으로 fine-tuned
+12-expert 로스터가 "누군가는 푸는" 문제의 **2/3를 재현**했다.
+
+### (b) 실제 재학습으로 승격 (2026-07-26, 진행 중 — job 214141부터 rolling chain)
+
+사용자 결정: N을 더 늘리는 대신 바로 (b)로 — **Evolved(cap9) 로스터만** persona+few-shot으로
+재학습하고, **Random·Human-prior는 기존 체크포인트 그대로 둔다.** 재진화는 불필요 — 분할
+(binning 라벨)은 그대로, SFT 학습·추론 프롬프트 포맷만 바꾼다.
+
+**코드 변경** (train/inference 프롬프트 일치 유지):
+
+- `src/prompts/coding.py`의 `build_expert_prompt` generic coding 분기가 `approach` 인자를
+  씹던 버그 수정(math/qasc/lbox엔 있었는데 coding만 빠짐) + `build_fewshot_block()` 헬퍼 추가.
+- `src/train_sft.py`: `select_expert_rows`/`pick_fewshot_examples`로 로직을 분리해 학습·추론이
+  **같은 함수로 같은 few-shot 예시**를 뽑도록 함(둘 다 `random.Random(f"{expert_id}-fewshot")`
+  고정 시드). `--roster_path`/`--n_fewshot` 옵션 추가, 미지정 시(Random/HP 포함) 기존 동작과
+  바이트 단위로 동일 — 대칭 유지.
+- `scripts/sbatch/train_sft_by_expert.sh`: `ROSTER_PATH`/`N_FEWSHOT`/`EXTRA_SUFFIX` 환경변수
+  통과. `EXTRA_SUFFIX=_fewshot`로 기존 `acc_seed20210111_v2_cap9` 체크포인트를 안 덮어씀.
+- `scripts/sbatch/run_acc_evolved_fewshot_retrain.sh` — 재학습 제출 스크립트. persona는
+  `results/acc/seed20210111/roster_final.json`(원래 진화된 실제 system_prompt, cap9 v2가
+  이 파티션 위에서 재라벨된 것), few-shot 2개(고정), `MAX_N_SOLVED=9` 등 기존 evolved cap9와
+  동일 하이퍼파라미터. shared 어댑터는 재학습 안 함(is_shared는 roster_path 분기를 건너뜀) —
+  배포 eval 때 기존 `acc_seed20210111_v2_cap9/shared` 체크포인트를 재사용.
+
+**다음(학습 완료 후)**: 기존과 동일한 배포 eval(`run_acc_ablation_eval.sh` 패턴, 새 체크포인트
+디렉터리 `checkpoints/expert_sft/acc_seed20210111_v2_cap9_fewshot`)로 best-single/oracle-union/
+배포 EM을 뽑아 **기존 Evolved(85.2 언저리 기준) vs Evolved+fewshot vs 기존 Random(86.0, 안 건드림)**
+3자 비교. 이게 cap7(데이터만 재분할, 실패)과 짝을 이루는 대조실험 — cap7은 "데이터 분할만
+바꿔서" 실패했고, 이번은 "프롬프트 포맷(persona+few-shot)을 바꿔서" 같은 질문을 다시 묻는다.
+
+스크립트: [`scripts/pilot_persona_fewshot_gen.py`](../scripts/pilot_persona_fewshot_gen.py) +
+[`sbatch`](../scripts/sbatch/run_pilot_persona_fewshot.sh), 분석
+[`scripts/pilot_persona_fewshot_analyze.py`](../scripts/pilot_persona_fewshot_analyze.py),
+채점 [`sbatch`](../scripts/sbatch/run_pilot_persona_fewshot_score.sh).
+출력: `results/pilot_persona_fewshot/gen_{B_persona,C_persona_fewshot}.{jsonl,binned.jsonl}`.
 
 ## 산출물
 
@@ -553,3 +1003,5 @@ selling은 약해지지만 **재현성과 진단의 깊이가 자산**이 된다
   - [`scripts/analyze_ref_solution_diversity.py`](../scripts/analyze_ref_solution_diversity.py) — 참조 솔루션 간 다양성(train 전체)
   - [`scripts/analyze_ref_vs_expert_diversity.py`](../scripts/analyze_ref_vs_expert_diversity.py) — 동일 문제에서 참조 vs 전문가
   - [`scripts/router_routability.py`](../scripts/router_routability.py) + [`sbatch`](../scripts/sbatch/run_router_routability.sh) — 조건별 라우팅 실현율
+  - [`scripts/pilot_persona_fewshot_gen.py`](../scripts/pilot_persona_fewshot_gen.py) +
+    [`analyze`](../scripts/pilot_persona_fewshot_analyze.py) — §11 persona/few-shot 재도입 파일럿

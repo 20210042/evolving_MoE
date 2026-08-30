@@ -1,0 +1,25 @@
+# 코딩(acc) v2 재빌드 위에서 BinningPipeline+persona+gemma UB 최초 측정 (2026-07-27).
+# QASC의 실제 운영 설정을 그대로 미러링(0.7/0.8 — base.yaml의 1.0/0.95가 아니라
+# run_qasc_eval.sh가 실제로 썼던 값. qasc_eval_a4b_greedy.yaml 발견 참조).
+model: "google/gemma-4-26B-A4B-it"
+dataset: "acc"
+data_dir: "export/acc_v2"
+split: "test"
+enable_thinking: false
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+  sampling:
+    temperature: 0.7
+    top_p: 0.8
+    top_k: 20
+    repetition_penalty: 1.05
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

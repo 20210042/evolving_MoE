@@ -1,0 +1,46 @@
+# ⚠️ 결과: 회복 규칙 없이 걷어냈더니 진동이 더 커졌다(방향전환 37 vs hard 3회, 후반부 sd 1.22
+#   vs 0.71, UB도 82.5% vs 92.4%로 낮음). 재현성(soft_war_screen.md, 2%→79%) 자체는 개선됐지만
+#   로스터 레벨에서는 회복 없는 rank 모드가 부작용을 냈다. 후속: seed20211002
+#   (회복+유예 복원, batch 100, war_mode=soft_partial). 정정: project_exclusive_solve_is_lottery.md
+#
+# seed20211001: soft-WAR 풀런 — "진동은 신호가 재현되지 않아서 생긴다"를 검정.
+#   seed20210101(seed18 표준)에서 딱 두 가지만 바꾼다.
+#     (1) 적합도: 단독해결 1/0  →  soft 선형 (E-n)/(E-1)   [war_mode]
+#     (2) 목숨 게이트: 윈도/floor/쿨다운/면제 전부 제거 → 매 배치 최하위 1명만 -1  [lives_mode]
+#   기존 장치들(all_zero_war 면제, shared_contribution_exemption, 윈도 grace, deletion_floor,
+#   delete_cooldown)은 전부 "0이 기본값인 희소 신호"를 떠받치려고 생긴 것이라, soft로 가면
+#   불필요해진다. 그 장치들을 걷어내고도 로스터가 안정되는지가 이 런의 관측 대상이다.
+#   사전 검증: results/acc/soft_war_screen.md — 최하위 일치율 현행 2% → soft 선형 79%.
+#   데이터는 7/25 재빌드본(export/acc_v2). 이전 acc 진화는 export/acc_selfconsistent였다.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "acc"
+data_dir: "export/acc_v2"                  # 재빌드 코퍼스 (acc_train.jsonl = 11,097문제)
+split: "train"
+train_size: 11097                          # 풀런 (batch 50 → 222스텝)
+epochs: 1
+batch_size: 50
+max_lives: 5
+enable_thinking: false
+shared_contribution_exemption: false
+roster_init_path: "configs/roster_init.json"   # LUCA 단독
+
+# --- 이번 런의 변경점 ---
+war_mode: "soft_linear"    # 내가 푼 문제마다 (E-n)/(E-1) 점. 혼자=1.0, 전원=0.0 (양 끝은 현행과 동일)
+lives_mode: "rank"         # 매 배치 최하위 1명만 목숨 -1. 회복 규칙 없음(꼴찌를 안 하면 안 깎임)
+
+# gatefix 계열은 전부 OFF — lives_mode=rank 경로에서는 타지 않는다(값은 무해하게 남김)
+deletion_window: 0
+deletion_floor: 0.0
+delete_cooldown: 0
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

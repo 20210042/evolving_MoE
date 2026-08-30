@@ -59,6 +59,9 @@ if [ -n "${MIN_N_SOLVED}" ]; then
     CAP_SUFFIX="${CAP_SUFFIX}_min${MIN_N_SOLVED}"
     CAP_FLAG+=(--min_n_solved "${MIN_N_SOLVED}")
 fi
+# 출력 경로/run_name에 붙는 임의 접미사(예: "_fewshot") — 기존 체크포인트를 안 덮어쓰고
+# 나란히 두기 위한 것. 미설정 시 기존 동작 그대로.
+CAP_SUFFIX="${CAP_SUFFIX}${EXTRA_SUFFIX:-}"
 # 코딩(acc)처럼 시퀀스가 긴 도메인용. 미설정 시 TRL 기본(1024) 유지 = QASC 기존 동작 불변.
 LEN_FLAG=()
 if [ -n "${MAX_LENGTH:-}" ]; then
@@ -75,6 +78,12 @@ fi
 EVAL_DIR_FLAG=()
 if [ -n "${EVAL_DATA_DIR:-}" ]; then
     EVAL_DIR_FLAG=(--eval_data_dir "${EVAL_DATA_DIR}")
+fi
+# 2026-07-26 persona+few-shot 확장(§11 파일럿). 미설정 시(기존 동작, Random/Human-prior
+# 포함) build_baseline_prompt로 통일 — 이 플래그를 안 쓰면 완전히 예전과 같다.
+ROSTER_FLAG=()
+if [ -n "${ROSTER_PATH:-}" ]; then
+    ROSTER_FLAG=(--roster_path "${ROSTER_PATH}" --n_fewshot "${N_FEWSHOT:-2}")
 fi
 
 RUN_NAME="${RUN_NAME:-sft_llama3_${DOMAIN}_seed${BIN_SEED}${CAP_SUFFIX}_${EXPERT_ID}}"
@@ -108,6 +117,7 @@ srun --ntasks=1 --gpus-per-task="${NPROC_PER_NODE}" --chdir="$REPO" \
     "${CAP_FLAG[@]}" \
     "${LEN_FLAG[@]}" \
     "${GC_FLAG[@]}" \
+    "${ROSTER_FLAG[@]}" \
     --eval_dataset "${DOMAIN}" \
     --eval_split "${EVAL_SPLIT}" \
     --data_dir "export/${DOMAIN}" \

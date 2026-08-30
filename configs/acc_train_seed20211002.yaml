@@ -1,0 +1,54 @@
+# seed20211002: soft-WAR + 부분점수 + 회복 장치 복원 + batch 100.
+#   seed20211001(회복 없는 rank 모드)이 hard-WAR+gatefix보다 더 진동해서
+#   (방향전환 37 vs 3회, 후반부 sd 1.22 vs 0.71) 회복 규칙을 다시 넣는다.
+#   목표 재확인: 로스터 안정 자체가 아니라 "하드 WAR의 단독해결 분리가 진짜 신호인지,
+#   매 배치 새로 뽑는 복권인지"였다 — 그 답은 이미 나왔다(soft_war_screen.md: 최하위 지목
+#   일치율 hard 2% → soft_linear 79%, 무작위 기대 9%보다 hard가 더 낮았다).
+#   이번 런은 그 재현 가능한 신호를 실제 진화 루프에 넣고, 이번엔 회복 장치까지 갖춰서
+#   로스터가 안정되는지를 다시 본다.
+#
+#   변경점 (seed20211001 대비):
+#     - lives_mode=rank에 회복 추가: 최하위가 아니면 목숨 +1(상한 max_lives).
+#       (seed20211001은 회복이 없어 좋은 멤버도 언젠가 최하위를 한 번 하면 깎이기만 했다.)
+#     - deletion_window=16을 유예 길이로 재사용: 신규 멤버는 16스텝 동안 rank_loser 후보에서 제외.
+#       (rank 모드에서는 windowed 평균 게이트 자체는 안 타고, 유예 판단에만 이 값을 쓴다.)
+#     - delete_cooldown=8 복원(20211001은 0으로 꺼져 있었음 — 다운스트로크 댐핑 없이 매 스텝
+#       삭제가 가능했던 것도 진동의 원인 후보).
+#     - batch_size 50 → 100 (hard-WAR 기준 seed20210111과 동일하게 맞춰 배치 크기 교란 제거).
+#     - war_mode: soft_linear → soft_partial. 통과 테스트 비율(score_acc_item_partial, 채점기의
+#       기존 0/1 계약은 안 건드림 — 별도 함수)을 exclusivity 가중치와 결합. 전원이 테스트를 다
+#       통과 못 한 문제(현재까지 0점으로 버려지던 곳)에서도 누가 더 가까웠는지가 이제 점수에 들어간다.
+#       0/1 입력이면 soft_linear와 완전히 같은 값(검증: scripts/verify_soft_war.py).
+#
+#   ⚠️ 교란 경고: 이번 런은 세 축(회복 복원·batch 100·soft_partial)을 동시에 바꾼다.
+#   로스터가 안정돼도 셋 중 무엇이 주효했는지는 이 런만으로 분리되지 않는다 — 사용자 확인.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "acc"
+data_dir: "export/acc_v2"
+split: "train"
+train_size: 11097
+epochs: 1
+batch_size: 100
+max_lives: 5
+enable_thinking: false
+shared_contribution_exemption: false
+roster_init_path: "configs/roster_init.json"   # LUCA 단독
+
+war_mode: "soft_partial"
+lives_mode: "rank"
+
+deletion_window: 16        # rank 모드에서는 "유예 길이"로만 쓰인다 (windowed 게이트 자체는 비활성)
+deletion_floor: 0.0        # rank 모드 경로에서는 미사용(무해)
+delete_cooldown: 8         # 다운스트로크 댐핑 복원 — ≤1 delete / 8스텝
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

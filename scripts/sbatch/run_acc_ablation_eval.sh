@@ -14,7 +14,7 @@
 # v2 재빌드본: 홀드아웃은 export/acc_v2/acc_test.jsonl (751문제, problem_id 단위로
 # train과 완전 disjoint — 누수 0 재검증됨). 타깃은 검증된 참조 솔루션이라 붕괴 없음.
 #
-# 사용: COND=evolved|rnd|hp|dense sbatch scripts/sbatch/run_acc_ablation_eval.sh
+# 사용: COND=evolved|rnd|hp|dense|evolved_fewshot sbatch scripts/sbatch/run_acc_ablation_eval.sh
 # 옵션: SMOKE=N (앞 N문제만), BATCH, MAX_NEW, MAX_LEN, SRC, EVAL_SPLIT, DATA_DIR
 
 set -euo pipefail
@@ -34,8 +34,21 @@ case "$COND" in
   rnd)     CKPT="checkpoints/expert_sft/acc_seedrnd_v2_cap9";       LABEL="Random-partition MoE" ;;
   hp)      CKPT="checkpoints/expert_sft/acc_seedhp_v2_cap9";        LABEL="Human-prior MoE" ;;
   dense)   CKPT="checkpoints/dense_sft/acc_seed20210111_v2";        LABEL="Dense SFT (anchor)" ;;
+  evolved_fewshot) CKPT="checkpoints/expert_sft/acc_seed20210111_v2_cap9_fewshot"; LABEL="Evolved MoE (cap9+persona+fewshot, §11)" ;;
   *) echo "unknown COND=$COND" >&2; exit 1 ;;
 esac
+
+# evolved_fewshot: 학습 때와 동일한 persona+few-shot을 추론에도 적용(train/inference 프롬프트
+# 일치). 다른 COND는 빈 배열 = 기존 build_baseline_prompt 경로 그대로.
+ROSTER_FLAG=()
+if [ "$COND" = "evolved_fewshot" ]; then
+    ROSTER_FLAG=(
+        --roster_path "results/acc/seed20210111/roster_final.json"
+        --label_package "export/acc_binning_seed20210111_v2"
+        --max_n_solved 9
+        --n_fewshot 2
+    )
+fi
 
 SRC="${SRC:-export/acc_v2/acc_test.jsonl}"
 EVAL_SPLIT="${EVAL_SPLIT:-test}"
@@ -73,7 +86,8 @@ python scripts/generate_lora_binning.py \
     --max_len "${MAX_LEN}" \
     --max_new_tokens "${MAX_NEW}" \
     --repetition_penalty "${REP_PEN}" \
-    "${LIMIT_FLAG[@]}"
+    "${LIMIT_FLAG[@]}" \
+    "${ROSTER_FLAG[@]}"
 
 echo "=== [2/2] 코드실행 채점 (solve 매트릭스) ==="
 # ref(test_cases/eval_spec)는 acc_test.jsonl에서 id로 붙는다 (홀드아웃 그 자체).

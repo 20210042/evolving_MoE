@@ -1,0 +1,47 @@
+# seed20211003: soft_partial + 윈도 누적 재현(rank_windowed) + batch 100.
+#   seed20211002(lives_mode=rank, 단발 배치)가 111스텝 동안 삭제 0번이었던 원인을
+#   evolution_run_compare.md에서 확인했다:
+#     - 배치 하나(100문제)의 soft_partial 점수는 인접 배치 재현성 7%(거의 무작위) —
+#       사전 오프라인 검증(5,000문제씩 절반 → 79%)의 50분의 1 표본이라 노이즈에 묻힌다.
+#     - 그래서 매 배치 최하위가 계속 바뀌었고, rank 모드의 회복(+1)이 그걸 즉시 지웠다.
+#     - 같은 데이터로 16배치(=1,600문제) 누적 평균을 내면 재현성 80% — 오프라인 79%와 일치.
+#       신호 자체는 있다. 문제는 배치 하나로 즉시 결정한 것이었다.
+#
+#   변경점 (seed20211002 대비): lives_mode: rank → rank_windowed.
+#     최하위 판정을 이번 배치 단발 점수가 아니라 최근 `deletion_window`(=16)배치 누적 평균으로
+#     한다. 신규 멤버는 여전히 16스텝 유예. 회복(+1)/삭제(-1) 구조는 그대로 — 판정 기준만
+#     노이즈가 적은 값으로 바꿨다. delete_cooldown=8도 유지.
+#
+#   ⚠️ 이번에도 로스터가 안정되면(=삭제가 발생하고 진동이 적으면) "신호가 재현되니까 진짜로
+#   맞는 사람을 내보낸다"까지는 아직 확인된 게 아니다 — 그건 축출된 멤버가 실제로 약했는지
+#   따로 봐야 한다(다음 단계).
+model: "google/gemma-4-26B-A4B-it"
+dataset: "acc"
+data_dir: "export/acc_v2"
+split: "train"
+train_size: 11097
+epochs: 1
+batch_size: 100
+max_lives: 5
+enable_thinking: false
+shared_contribution_exemption: false
+roster_init_path: "configs/roster_init.json"   # LUCA 단독
+
+war_mode: "soft_partial"
+lives_mode: "rank_windowed"
+
+deletion_window: 16        # 유예 길이 + 누적 윈도 크기 (rank_windowed에서는 둘 다로 쓰인다)
+deletion_floor: 0.0        # rank_windowed 경로에서는 미사용(무해)
+delete_cooldown: 8
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

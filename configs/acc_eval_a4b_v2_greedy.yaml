@@ -1,0 +1,23 @@
+# 코딩(acc) v2 재빌드, greedy 변형(temperature=0) — QASC UB=pass@k 검정의 코딩 짝.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "acc"
+data_dir: "export/acc_v2"
+split: "test"
+enable_thinking: false
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+  sampling:
+    temperature: 0.0
+    top_p: 1.0
+    top_k: -1
+    repetition_penalty: 1.0
+
+vllm:
+  tp_size: 1
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

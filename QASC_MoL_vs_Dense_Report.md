@@ -1,3 +1,7 @@
+> ⚠️ 이 문서의 라우팅 방법별 상세 표는 [`docs/SUMMARY_partition_ablation_qasc_coding.md`](docs/SUMMARY_partition_ablation_qasc_coding.md)
+> §2-b에 그대로 편입됐다(2026-07-26) — 그쪽이 코딩 도메인과 나란히 놓은 최신 정본이다.
+> 이 파일은 원본 상세 로그/산출물 레퍼런스로 남겨둔다.
+
 # QASC: Mixture-of-LoRA vs Dense fine-tuned Llama3 — End-to-End 배포 비교
 
 *llama-3.1-8B · 13 LoRA experts (cap10 seed20210211) · QASC validation 926문제 · 2026-07-18*

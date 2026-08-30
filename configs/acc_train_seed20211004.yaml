@@ -1,0 +1,47 @@
+# seed20211004: soft_partial + rank_windowed + batch 100 — mcl 스케일 버그 수정판.
+#   seed20211003(rank_windowed)이 재현성은 고쳤지만(단발 7% → 누적 80%) 여전히 삭제 0번이었다.
+#   원인은 세 번째 버그: orchestrator.py의 rank_windowed가 unique_rate_map/pool 값을 batch_n으로
+#   정규화하지 않고 원점수 절대값(2.6~6.4)을 그대로 select_action에 mcl로 넘겼다.
+#   action_selector.py:70 docstring상 mcl은 "배치 전체 대비 비율"이어야 하는데(전형적 크기
+#   lambda_del≈0.042), 6 안팎의 값을 넣으니 u_delete=lambda_del-mcl이 항상 -4~-5로 나와
+#   축출후보가 40스텝이나 나왔는데도(=lives 메커니즘은 정상) delete는 0번이었다.
+#   실제 로그값(c_54257, 4.3678)으로 검산: 정규화 후 mcl=0.0437, u_delete=-0.0014로 lambda_del과
+#   거의 같은 크기 — 정상 판정 가능 범위로 들어온다.
+#
+#   변경점 (seed20211003 대비, 코드 수정만 — config는 동일):
+#     - unique_rate_map을 `sum(ru)/(len(ru)*batch_n)`으로 정규화(legacy 윈도 경로와 동일 공식).
+#     - rank/rank_windowed에 all_zero_war 면제 추가(legacy엔 있었는데 빠져 있었다) — 집단
+#       실패 배치에서 무의미하게 1명을 뽑아 페널티 주던 것을 막는다.
+#
+#   ⚠️ 이번에도 로스터가 안정되면서 삭제가 실제로 발생하면 다음 단계는 "축출된 멤버가
+#   진짜로 약했는가"를 따로 확인하는 것이다.
+model: "google/gemma-4-26B-A4B-it"
+dataset: "acc"
+data_dir: "export/acc_v2"
+split: "train"
+train_size: 11097
+epochs: 1
+batch_size: 100
+max_lives: 5
+enable_thinking: false
+shared_contribution_exemption: false
+roster_init_path: "configs/roster_init.json"   # LUCA 단독
+
+war_mode: "soft_partial"
+lives_mode: "rank_windowed"
+
+deletion_window: 16        # 유예 길이 + 누적 윈도 크기 (rank_windowed에서는 둘 다로 쓰인다)
+deletion_floor: 0.0        # rank_windowed 경로에서는 미사용(무해)
+delete_cooldown: 8
+
+llm:
+  max_model_len: 16384
+  max_tokens: 8192
+
+vllm:
+  tp_size: 2
+  dtype: bfloat16
+  enable_prefix_caching: true
+  max_num_seqs: 256
+  gpu_memory_utilization: 0.90
+  enforce_eager: false

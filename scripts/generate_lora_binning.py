@@ -32,7 +32,8 @@ import torch
 
 REPO = Path("/data5/jaehoonjeong/MetaAgentEvolution_Release")
 sys.path.insert(0, str(REPO / "src"))
-from prompts.coding import build_baseline_prompt  # noqa: E402
+from prompts.coding import build_baseline_prompt, build_expert_prompt, build_fewshot_block  # noqa: E402
+from train_sft import load_roster_personas, pick_fewshot_examples, select_expert_rows  # noqa: E402
 
 OUTNPZ = REPO / "results" / "embed_viz_test"
 BASE = "meta-llama/Llama-3.1-8B-Instruct"
@@ -75,6 +76,14 @@ def main():
     # 전문가 단위 부분 저장은 항상 한다. --resume이면 완결된 전문가는 건너뛴다
     # (28시간짜리 잡이 마지막에 죽어 전부 날아가는 걸 막는다).
     ap.add_argument("--resume", action="store_true")
+    # 2026-07-26 persona+few-shot 확장(§11). 미지정 시(Random/Human-prior 포함) 기존
+    # build_baseline_prompt 경로 그대로 — train_sft.py의 --roster_path와 대칭.
+    ap.add_argument("--roster_path", default=None, help="expert별 실제 persona system_prompt json")
+    ap.add_argument("--label_package", default=None, help="few-shot 소싱용 binning 라벨 패키지(학습 때와 동일해야 함)")
+    ap.add_argument("--source_jsonl", default=None)
+    ap.add_argument("--n_fewshot", type=int, default=2)
+    ap.add_argument("--max_n_solved", type=int, default=None)
+    ap.add_argument("--min_n_solved", type=int, default=None)
     a = ap.parse_args()
 
     ds = DATASETS[a.dataset]
@@ -128,19 +137,57 @@ def main():
                     cand.add(t[0])
             letter_ids.append(sorted(cand))
 
-    def prompt(r):
-        msgs = build_baseline_prompt(
-            r["instruction"],
-            dataset=(r.get("dataset") or a.dataset),
-            model_name=BASE,
-            starter_code=r.get("starter_code"),
-            domain=r.get("domain"),
-        )
+    # 2026-07-26 persona+few-shot 확장(§11). expert별 (persona_sys, approach) — train_sft.py의
+    # select_expert_rows/pick_fewshot_examples를 그대로 호출해 학습 때와 동일한 few-shot
+    # 예시를 재현한다(같은 package_dir/expert_id/시드 → 같은 결과, 중복 계산만 하는 셈).
+    persona_approach: dict = {}
+    if a.roster_path:
+        if not a.label_package:
+            raise SystemExit("--roster_path와 함께 --label_package가 필요합니다 (few-shot 소싱).")
+        personas = load_roster_personas(a.roster_path)
+        for e in experts:
+            if e in ("shared", "common") or e not in personas:
+                persona_approach[e] = (None, None)
+                continue
+            chosen, selected, _dsname, _is_shared = select_expert_rows(
+                package_dir=a.label_package, expert_id=e, source_jsonl=a.source_jsonl,
+                seed=42, data_ratio=1.0,
+                max_n_solved=a.max_n_solved, min_n_solved=a.min_n_solved,
+            )
+            fewshot = pick_fewshot_examples(chosen, selected, a.n_fewshot)
+            persona_approach[e] = (personas[e], build_fewshot_block(fewshot))
+        print("persona+few-shot 적용:", {e: bool(v[0]) for e, v in persona_approach.items()}, flush=True)
+
+    def prompt(r, expert: str | None = None):
+        persona_sys, approach = persona_approach.get(expert, (None, None)) if expert else (None, None)
+        if persona_sys:
+            msgs = build_expert_prompt(
+                r["instruction"], persona_sys,
+                dataset=(r.get("dataset") or a.dataset),
+                model_name=BASE,
+                starter_code=r.get("starter_code"),
+                approach=approach,
+                domain=r.get("domain"),
+            )
+        else:
+            msgs = build_baseline_prompt(
+                r["instruction"],
+                dataset=(r.get("dataset") or a.dataset),
+                model_name=BASE,
+                starter_code=r.get("starter_code"),
+                domain=r.get("domain"),
+            )
         if isinstance(msgs, str):        # qwen3 계열은 완성된 문자열을 반환한다
             return msgs
         return tok.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
 
-    texts = [prompt(r) for r in rows]
+    # persona_approach가 있으면 expert마다 프롬프트가 달라지므로 expert별로 캐시한다.
+    # 없으면(기존 동작) 전 expert 공용 텍스트 하나만 만든다.
+    if persona_approach:
+        texts_by_expert = {e: [prompt(r, e) for r in rows] for e in experts}
+    else:
+        shared_texts = [prompt(r) for r in rows]
+        texts_by_expert = {e: shared_texts for e in experts}
     n, E = len(rows), len(experts)
     conf = np.zeros((n, E), np.float32)
     pred = np.zeros((n, E), np.int64)
@@ -172,6 +219,7 @@ def main():
                 print(f"  {e} resumed ({len(cached)})", flush=True)
                 continue
         model.set_adapter(e)
+        texts = texts_by_expert[e]
         with open(parts_dir / f"{e}.jsonl", "w", encoding="utf-8") as pf:
             for i in range(0, n, a.batch):
                 enc = tok(texts[i:i + a.batch], return_tensors="pt", padding=True,

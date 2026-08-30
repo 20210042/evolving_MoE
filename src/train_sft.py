@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import random
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -13,7 +14,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
 from trl import SFTConfig, SFTTrainer
 
 from data import get_dataset
-from prompts.coding import build_baseline_prompt
+from prompts.coding import build_baseline_prompt, build_expert_prompt, build_fewshot_block
 from prompts.math import build_generation_prompt as build_math_prompt
 from utils.domains import task_family
 from utils.helpers import set_all_seeds
@@ -98,6 +99,20 @@ class DataArguments:
     min_n_solved: Optional[int] = field(
         default=None,
         metadata={"help": "label_package 필터: n_solved >= 이 값인 문제만 사용. shared 어댑터(공통 core) 학습용."},
+    )
+    roster_path: Optional[str] = field(
+        default=None,
+        metadata={"help": (
+            "persona+few-shot 재도입 파일럿(2026-07-26) 확장. 지정 시 expert별 실제 persona "
+            "system_prompt(roster json, id로 매칭)를 쓰고, 그 expert 자신의 학습셋에서 고정 "
+            "few-shot 예시를 뽑아 build_expert_prompt로 학습 프롬프트를 만든다. 생략 시(기존 "
+            "동작, 2026-07-13 합의) build_baseline_prompt로 통일 — Random/Human-prior는 이 "
+            "옵션 없이 그대로 학습해 기존 체크포인트와 동일 경로를 유지한다."
+        )},
+    )
+    n_fewshot: int = field(
+        default=2,
+        metadata={"help": "roster_path 지정 시 expert당 few-shot 예시 개수(고정, train/inference 공유)."},
     )
 
 
@@ -216,17 +231,24 @@ def source_path_from_package(package_dir: Path, explicit: str | None) -> Path:
     raise ValueError("--source_jsonl is required when summary.json lacks source_train_jsonl.")
 
 
-def build_expert_label_dataset(
+def load_roster_personas(roster_path: str) -> dict[str, str]:
+    roster = json.load(open(roster_path, encoding="utf-8"))
+    return {p["id"]: p["system_prompt"] for p in roster}
+
+
+def select_expert_rows(
     *,
     package_dir: str,
     expert_id: str | None,
     source_jsonl: str | None,
-    data_ratio: float,
-    seed: Optional[int],
-    model_name: str,
+    seed: Optional[int] = None,
+    data_ratio: float = 1.0,
     max_n_solved: Optional[int] = None,
     min_n_solved: Optional[int] = None,
-) -> tuple[Dataset, str, int]:
+) -> tuple[str, list[dict], str, bool]:
+    """binning 라벨 패키지에서 한 expert의 학습 행을 뽑는다. train_sft.py와
+    generate_lora_binning.py가 few-shot 소싱에 이 함수를 공유해야 동일 (package_dir,
+    expert_id, seed, data_ratio, n/max_solved) 조합에서 항상 같은 selected를 얻는다."""
     package = Path(package_dir)
     labels_path = package / "binning_labels.jsonl"
     mapping_path = package / "agent_mapping.json"
@@ -236,8 +258,6 @@ def build_expert_label_dataset(
         raise FileNotFoundError(f"Missing {mapping_path}")
 
     mapping = json.load(open(mapping_path, encoding="utf-8"))
-    # shared 어댑터: 특정 expert가 아니라 "공통 core"(n_solved>=min) 전부 학습.
-    # per_expert 필터 없이 n_solved 밴드만으로 선택.
     is_shared = str(expert_id).lower() in ("shared", "common")
     chosen = "shared" if is_shared else resolve_expert_id(mapping, expert_id)
 
@@ -258,14 +278,70 @@ def build_expert_label_dataset(
         and str(r["id"]) in source_rows
     ]
     if seed is not None:
-        import random
         rng = random.Random(seed)
         rng.shuffle(selected)
     if data_ratio < 1.0:
         selected = selected[: max(1, int(len(selected) * data_ratio))]
+    return chosen, selected, dataset_name, is_shared
+
+
+def pick_fewshot_examples(chosen: str, selected: list[dict], n_fewshot: int) -> list[tuple[str, str]]:
+    """chosen(expert id)로 시드를 고정해 selected에서 n_fewshot개를 뽑는다 — 호출 위치
+    무관(train_sft.py / generate_lora_binning.py) 항상 같은 예시가 나온다."""
+    fs_rng = random.Random(f"{chosen}-fewshot")
+    pool = list(selected)
+    fs_rng.shuffle(pool)
+    return [
+        (r["instruction"], stringify_completion(r.get("solution", r["ground_truth"])))
+        for r in pool[:n_fewshot]
+    ]
+
+
+def build_expert_label_dataset(
+    *,
+    package_dir: str,
+    expert_id: str | None,
+    source_jsonl: str | None,
+    data_ratio: float,
+    seed: Optional[int],
+    model_name: str,
+    max_n_solved: Optional[int] = None,
+    min_n_solved: Optional[int] = None,
+    roster_path: Optional[str] = None,
+    n_fewshot: int = 2,
+) -> tuple[Dataset, str, int]:
+    chosen, selected, dataset_name, is_shared = select_expert_rows(
+        package_dir=package_dir, expert_id=expert_id, source_jsonl=source_jsonl,
+        seed=seed, data_ratio=data_ratio,
+        max_n_solved=max_n_solved, min_n_solved=min_n_solved,
+    )
+
+    if roster_path and not is_shared:
+        # 2026-07-26 확장: persona(실제 진화된 system_prompt) + 그 expert 자신의 학습셋에서
+        # 뽑은 고정 few-shot 2개. train/inference가 같은 포맷을 쓰도록
+        # generate_lora_binning.py도 select_expert_rows/pick_fewshot_examples를 그대로
+        # 공유한다(§11 파일럿과 동일 설계).
+        personas = load_roster_personas(roster_path)
+        if chosen not in personas:
+            raise ValueError(f"roster {roster_path} has no persona for expert_id={chosen!r}")
+        persona_sys = personas[chosen]
+        approach = build_fewshot_block(pick_fewshot_examples(chosen, selected, n_fewshot))
+        rows = []
+        for item in selected:
+            rows.append({
+                "prompt": build_expert_prompt(
+                    item["instruction"], persona_sys,
+                    dataset=dataset_name, model_name=model_name,
+                    starter_code=item.get("starter_code"), approach=approach,
+                    domain=item.get("domain"),
+                ),
+                "completion": [{"role": "assistant", "content": stringify_completion(item.get("solution", item["ground_truth"]))}],
+            })
+        return Dataset.from_list(rows), chosen, len(selected)
 
     # 합의(2026-07-13): 프롬프트는 baseline GEN으로 통일(페르소나 미사용, eval과 동일 경로),
-    # expert 간 차이는 학습 데이터 분할뿐.
+    # expert 간 차이는 학습 데이터 분할뿐. roster_path 미지정 시(Random/Human-prior 포함)
+    # 기존 동작 그대로 — 기존 체크포인트와 바이트 단위로 같은 경로를 유지한다.
     rows = []
     for item in selected:
         rows.append({
@@ -311,9 +387,11 @@ def main():
             model_name=model_args.model_name_or_path,
             max_n_solved=data_args.max_n_solved,
             min_n_solved=data_args.min_n_solved,
+            roster_path=data_args.roster_path,
+            n_fewshot=data_args.n_fewshot,
         )
-        logger.info("전문가 SFT 학습셋: expert=%s, examples=%d, max_n_solved=%s, min_n_solved=%s",
-                    chosen_expert, n_rows, data_args.max_n_solved, data_args.min_n_solved)
+        logger.info("전문가 SFT 학습셋: expert=%s, examples=%d, max_n_solved=%s, min_n_solved=%s, roster_path=%s",
+                    chosen_expert, n_rows, data_args.max_n_solved, data_args.min_n_solved, data_args.roster_path)
     else:
         logger.info("학습 데이터셋 로딩: %s/%s", data_args.train_dataset, data_args.train_split)
         train_dataset = build_regular_hf_dataset(
