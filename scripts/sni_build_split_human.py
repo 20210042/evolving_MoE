@@ -1,98 +1,132 @@
 #!/usr/bin/env python
-"""대조군 분할 — Human prior split, **순수 BTX식**. 재생성 0.
+"""대조군 분할 — Human prior split (사람 택소노미 상위 16 + 나머지는 임베딩). 재생성 0.
 
-BTX(Branch-Train-MiX)가 실제로 하는 것: 학습 데이터를 **겹치지 않는 도메인으로 나누고**
-각 expert가 자기 도메인만 학습한다. 그대로 따른다.
+사람이 만든 라벨 축 하나를 골라 **상위 16개 값이 각각 expert 하나**가 된다.
+그 16개에 안 걸리는 문제는 **Ours와 같은 방식으로 센트로이드 최근접 배정**한다.
 
-  · shared expert **없음** (16 routed only)
+  · 축은 둘 중 하나: `category`(태스크 유형 72개) 또는 `sni_domain`(주제·출처 74개)
   · 한 문제는 정확히 **1명**에게 간다 (중복 없음 → 학습 row = train 문제 수)
-  · 진화 쪽 n_solved 구간(indiv/shared/all_fail)은 **쓰지 않는다** — teacher가 만든 사실이라
-    사람 사전지식 조건에 넣으면 그 축이 새어 들어온다
-  · 축은 SNI 공식 `category` 72개
+  · shared expert **없음** (16 routed only)
+  · 진화 쪽 n_solved 구간은 쓰지 않는다 — teacher가 만든 사실이라 사람 사전지식 조건에
+    넣으면 그 축이 새어 들어온다
 
-⚠️ "상위 16개 category만 쓴다"는 안 된다 — top-16이 68.0%라 나머지 56개 22,236건(32%)이
-   버려져 다른 조건과 데이터량이 달라진다. 그래서 **72개 category를 겹치지 않는 16그룹으로 묶는다**:
-   크기 내림차순으로 훑으며 그때까지 가장 작은 그룹에 넣는다(그리디 LPT).
-   **category는 절대 쪼개지 않는다** — 각 expert는 온전한 category 집합만 갖는다.
-   그 결과 expert별 학습량은 고르지 않다(최대 category 하나가 평균 정원보다 크다).
-   그 불균형은 보정 대상이 아니라 **사람 택소노미의 성질 자체**다.
+⚠️ 상위 16개가 전수를 덮지 못한다(실측: category 68.0% · domain 76.1%). 남는 몫을 버리면
+   다른 조건과 데이터량이 달라지므로, `sni_build_split.py`의 전원실패 배정과 **똑같은 절차**로
+   임베딩 최근접 배정한다:
+     차원별 z-정규화(train 통계) → L2 → 코사인 → argmax.
+     ⚠️ 중심화 필수 — 원본 코사인은 문제끼리도 0.984(anisotropy)라 축이 안 잡힌다.
+   센트로이드는 그 expert가 **택소노미로 직접 받은** 문제들의 (정규화된) 임베딩 평균이다.
+   Ours의 w=(E-n)/(E-1) 가중은 여기 쓰지 않는다 — n_solved를 안 쓰는 조건이라 가중이 없다.
 
-expert 슬롯 id는 다른 조건과 파일 형식을 맞추기 위해 로스터 id를 재사용할 뿐,
-페르소나와 아무 관계가 없다. 각 슬롯이 실제로 맡은 category는 리포트와 manifest에 적는다.
+⚠️ 임베딩으로 배정한 몫은 정의상 입력에서 예측 가능하다. 라우터가 이 분할을 얼마나
+   되찾는지 잴 때 택소노미 몫과 반드시 나눠서 보고할 것.
 """
 import argparse
 import json
-from collections import Counter, defaultdict
+import sys
+from collections import Counter
 from pathlib import Path
+
+import numpy as np
+import torch
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import router_common as rc  # noqa: E402
 
 TRAIN = "export/sni_v4/sni_train.jsonl"
 ROSTER = "results/sni/seed20212003/roster_final.json"
+DEV = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--axis", default="category", choices=["category", "sni_domain"])
     ap.add_argument("--n_experts", type=int, default=16)
-    ap.add_argument("--out", default="export/sni_split_human/split.jsonl")
-    ap.add_argument("--report", default="results/sni/split_build_human.md")
+    ap.add_argument("--feat", default="hs_mean")
+    ap.add_argument("--out", default=None)
+    ap.add_argument("--report", default=None)
     a = ap.parse_args()
-
-    ids, axis = [], {}
-    for l in open(TRAIN):
-        d = json.loads(l)
-        ids.append(d["id"])
-        axis[d["id"]] = d.get(a.axis)
-    size = Counter(axis.values())
+    tag = "cat" if a.axis == "category" else "dom"
+    out = a.out or f"export/sni_split_human_{tag}/split.jsonl"
+    report = a.report or f"results/sni/split_build_human_{tag}.md"
     E = a.n_experts
 
-    # 그리디 LPT — 큰 category부터 그때까지 가장 작은 그룹에 넣는다. category는 쪼개지 않는다.
-    grp = [[] for _ in range(E)]
-    tot = [0] * E
-    for c in sorted(size, key=lambda c: (-size[c], str(c))):
-        j = min(range(E), key=lambda j: (tot[j], j))
-        grp[j].append(c)
-        tot[j] += size[c]
+    axis = {}
+    for l in open(TRAIN):
+        d = json.loads(l)
+        axis[d["id"]] = d.get(a.axis)
 
-    # 슬롯 id는 로스터 id 재사용(파일 형식 통일용). 큰 그룹부터 붙인다.
-    ex = [p["id"] for p in json.load(open(ROSTER))]
-    assert len(ex) >= E, (len(ex), E)
-    order = sorted(range(E), key=lambda j: -tot[j])
-    cat2ex = {c: ex[k] for k, j in enumerate(order) for c in grp[j]}
-    members = defaultdict(list)
-    for c, e in cat2ex.items():
-        members[e].append(c)
+    sp = rc.spec("sni")
+    ids = json.load(open(rc.feat_path(sp, "train", "hs_ids")))
+    X = np.load(rc.feat_path(sp, "train", a.feat))
+    assert len(ids) == len(X), (len(ids), len(X))
+    lab = np.array([axis.get(p) for p in ids], dtype=object)
 
-    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    cnt = Counter()
-    with open(a.out, "w", encoding="utf-8") as f:
-        for pid in ids:
-            e = cat2ex[axis[pid]]
-            cnt[e] += 1
-            f.write(json.dumps({"id": pid, "kind": "btx", "experts": [e],
-                                "n_solved": -1}, ensure_ascii=False) + "\n")
+    size = Counter(lab.tolist())
+    top = [v for v, _ in sorted(size.items(), key=lambda kv: (-kv[1], str(kv[0])))[:E]]
+    rank = {v: j for j, v in enumerate(top)}
+    direct = np.array([rank.get(v, -1) for v in lab])       # 택소노미로 직접 잡힌 expert
+    rest = direct < 0
+
+    # 전처리는 라우터·Ours 분할과 동일하게: 차원별 z-정규화 → L2 → 코사인.
+    mu, sd = rc.zscore(X)
+    Z = (X - mu) / sd
+    Z = Z / (np.linalg.norm(Z, axis=1, keepdims=True) + 1e-9)
+    C = np.zeros((E, Z.shape[1]), np.float32)
+    for j in range(E):
+        C[j] = Z[direct == j].mean(0)
+    cnorm = np.linalg.norm(C, axis=1)        # 정규화 전 norm = 그 expert가 맡은 문제들의 응집도
+    C = C / (cnorm[:, None] + 1e-9)
+    sim = (torch.tensor(Z[rest], dtype=torch.float32).to(DEV)
+           @ torch.tensor(C, dtype=torch.float32).to(DEV).T)
+    near = sim.argmax(1).cpu().numpy()
+    top2 = sim.topk(2, dim=1).values
+    tie = ((top2[:, 0] - top2[:, 1]) < 1e-3).cpu().numpy()
+
+    assign = direct.copy()
+    assign[np.where(rest)[0]] = near
+
+    ex = [p["id"] for p in json.load(open(ROSTER))][:E]
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    cnt = {c: [0, 0] for c in ex}            # [택소노미 직접, 임베딩 배정]
+    with open(out, "w", encoding="utf-8") as f:
+        for i, pid in enumerate(ids):
+            j = int(assign[i])
+            kind = "taxonomy" if direct[i] >= 0 else "embed"
+            cnt[ex[j]][0 if direct[i] >= 0 else 1] += 1
+            f.write(json.dumps({"id": pid, "kind": kind, "experts": [ex[j]],
+                                "axis_value": lab[i], "n_solved": -1},
+                               ensure_ascii=False) + "\n")
 
     N = len(ids)
-    L = [f"# 대조군 분할 — Human prior split, 순수 BTX식 (축={a.axis}, E={E})", "",
-         "BTX 그대로다: 데이터를 **겹치지 않는 도메인으로 나누고** 각 expert가 자기 도메인만 학습한다.",
-         "**shared expert 없음 · 문제당 1명 · 중복 없음 · 진화 쪽 n_solved 구간 미사용.**", "",
-         f"- train {N:,}문제 전수 → 학습 row {sum(cnt.values()):,} (중복이 없으므로 문제 수와 같다)",
-         f"- 축값 {len(size)}개를 겹치지 않는 {E}그룹으로 묶었다 (그리디 LPT, category 미분할)",
-         f"- expert별 학습량 최대 {max(cnt.values()):,} / 최소 {min(cnt.values()):,} "
-         f"(균등이면 {N//E:,}) — 최대 축값 `{max(size, key=size.get)}` "
-         f"{size[max(size, key=size.get)]:,}건이 통째로 한 명에게 가서 생기는 편차이고, "
-         "**사람 택소노미의 성질이라 보정하지 않는다**", "",
-         "| # | expert 슬롯 | 학습 row | 맡은 축값 수 | 맡은 축값 |",
-         "|---:|---|---:|---:|---|"]
-    for i, e in enumerate(ex[:E]):
-        m = sorted(members[e], key=lambda c: -size[c])
-        shown = ", ".join(f"{c} ({size[c]:,})" for c in m[:6])
-        if len(m) > 6:
-            shown += f", … 외 {len(m)-6}개"
-        L.append(f"| {i} | {e} | **{cnt[e]:,}** | {len(m)} | {shown} |")
-    L += ["", "expert 슬롯 id는 파일 형식을 다른 조건과 맞추려고 로스터 id를 재사용한 것뿐이고 "
-              "**페르소나와 아무 관계가 없다**.", "", f"산출: `{a.out}`"]
-    Path(a.report).parent.mkdir(parents=True, exist_ok=True)
-    open(a.report, "w", encoding="utf-8").write("\n".join(L) + "\n")
+    nd = int((~rest).sum())
+    L = [f"# 대조군 분할 — Human prior split (축={a.axis}, 상위 {E} + 나머지 임베딩)", "",
+         f"사람 택소노미 `{a.axis}` 상위 {E}개 값이 각각 expert 하나가 되고, "
+         "거기 안 걸리는 문제는 Ours와 같은 절차(z-정규화→L2→코사인 argmax)로 "
+         "센트로이드 최근접 배정했다.",
+         "**shared expert 없음 · 문제당 1명 · 중복 없음 · n_solved 미사용.**", "",
+         f"- train {N:,}문제 전수 → 학습 row {N:,}",
+         f"- 택소노미로 직접 {nd:,} ({100*nd/N:.1f}%) · 임베딩 배정 {int(rest.sum()):,} "
+         f"({100*rest.mean():.1f}%)",
+         f"- 축값 {len(size)}개 중 상위 {E}개 사용 (나머지 {len(size)-E}개는 임베딩 몫으로)",
+         f"- 임베딩 배정 1·2위 차 < 1e-3: {int(tie.sum()):,}건 ({100*tie.mean():.1f}%)",
+         "- ⚠️ 임베딩 몫은 정의상 입력에서 예측 가능하다. 라우터 평가 시 택소노미 몫과 "
+         "분리해 보고할 것.", "",
+         "| # | expert 슬롯 | 축값 | 학습 row | 택소노미 직접 | 임베딩 배정 | 응집도 |",
+         "|---:|---|---|---:|---:|---:|---:|"]
+    for j, c in enumerate(ex):
+        v = cnt[c]
+        L.append(f"| {j} | {c} | {top[j]} | **{sum(v):,}** | {v[0]:,} | {v[1]:,} | "
+                 f"{cnorm[j]:.4f} |")
+    tot_e = [cnt[c][1] for c in ex]
+    L += ["", f"임베딩 배정 쏠림: 최다 {max(tot_e):,} / 최소 {min(tot_e):,} "
+              f"(균등이면 {int(rest.sum())//E:,})",
+          "", "`응집도` = L2 정규화 전 센트로이드 norm — 그 축값의 문제들이 임베딩 공간에서 "
+              "얼마나 뭉쳐 있나. 낮을수록 흩어져 있다.", "",
+          "expert 슬롯 id는 파일 형식을 다른 조건과 맞추려고 로스터 id를 재사용한 것뿐이고 "
+          "**페르소나와 아무 관계가 없다**.", "", f"산출: `{out}`"]
+    Path(report).parent.mkdir(parents=True, exist_ok=True)
+    open(report, "w", encoding="utf-8").write("\n".join(L) + "\n")
     print("\n".join(L))
 
 
