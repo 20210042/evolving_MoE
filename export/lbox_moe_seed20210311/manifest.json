@@ -1,0 +1,207 @@
+{
+  "seed": "seed20210311",
+  "arm": "ours",
+  "dataset": "lbox",
+  "n_experts_routed": 10,
+  "shared_expert": true,
+  "teacher": "google/gemma-4-26B-A4B-it",
+  "student_intended": "meta-llama/Llama-3.1-8B",
+  "split_rule": {
+    "bands": "n_solved 기준 (1..10 개별 · >10 shared · 0 전원실패) — 세 조건 공통",
+    "axis": "진화 로스터의 실제 solve",
+    "tau_train": 8,
+    "tau_centroid": 4,
+    "centroid_weight": "(E-n)/(E-1)",
+    "feature": "embed_viz 임베딩 (차원별 z-정규화 후 L2). ⚠️ SNI는 teacher 마지막 층 hs_mean이었다 — 임베딩 종류가 다르다",
+    "indiv": "푼 expert 전원",
+    "all_fail": "센트로이드 최근접 1명",
+    "all_pass": "shared",
+    "builder": "scripts/sni_build_split.py"
+  },
+  "target": "gold (ground_truth 첫 레퍼런스; 전체는 targets)",
+  "prompt": "페르소나 없음 · system=SNI_GEN_SYSTEM+definition · user=공식 Tk-Instruct(pos 2건)",
+  "n_train_problems": 46019,
+  "n_train_rows": 99504,
+  "n_eval": {
+    "valid": 7651,
+    "test": 8203
+  },
+  "n_test": 8203,
+  "source_missing": 0,
+  "scoring": "정답 일치 (src/evaluation/scorer.py: score_lbox_item) — casename은 정규화 후 완전일치, statute는 gold 집합 대조",
+  "experts": [
+    {
+      "index": 0,
+      "id": "c_29934",
+      "name": "Judicial Precedent Classifier",
+      "n_train": 9155,
+      "n_by_kind": {
+        "indiv": 8758,
+        "all_fail": 397
+      },
+      "n_indiv": 8758,
+      "n_all_fail": 397,
+      "categories": [
+        null
+      ],
+      "persona_system_prompt_TEACHER_ONLY": "You are a specialist in distilling complex judicial narratives into formal legal nomenclature. Your goal is to identify the exact case title (사건명) or criminal charge (죄명) used in official court rulings. You focus exclusively on the final legal characterization of the facts provided."
+    },
+    {
+      "index": 1,
+      "id": "c_28126",
+      "name": "Legal Case Typology Architect",
+      "n_train": 14326,
+      "n_by_kind": {
+        "indiv": 9415,
+        "all_fail": 4911
+      },
+      "n_indiv": 9415,
+      "n_all_fail": 4911,
+      "categories": [
+        null
+      ],
+      "persona_system_prompt_TEACHER_ONLY": "You are a specialized expert in identifying the primary legal nature of a case. You focus exclusively on determining the correct formal case title (사건명) or criminal charge (죄명) based on judicial precedents. Your goal is to transform raw factual narratives into standardized legal nomenclature."
+    },
+    {
+      "index": 2,
+      "id": "c_63621",
+      "name": "Statutory Element Matcher",
+      "n_train": 10362,
+      "n_by_kind": {
+        "indiv": 5417,
+        "all_fail": 4945
+      },
+      "n_indiv": 5417,
+      "n_all_fail": 4945,
+      "categories": [
+        null
+      ],
+      "persona_system_prompt_TEACHER_ONLY": "You are a specialized legal auditor focused exclusively on the granular intersection of factual elements and statutory requirements. Your sole purpose is to verify if every specific component of a legal article is satisfied by the provided facts. You do not summarize cases or classify types; you only validate the presence or absence of mandatory legal constituents."
+    },
+    {
+      "index": 3,
+      "id": "c_24222",
+      "name": "Legal Nomenclature Purist",
+      "n_train": 9326,
+      "n_by_kind": {
+        "indiv": 8999,
+        "all_fail": 327
+      },
+      "n_indiv": 8999,
+      "n_all_fail": 327,
+      "categories": [
+        null
+      ],
+      "persona_system_prompt_TEACHER_ONLY": "You are an expert in the standardized terminology used by the Supreme Court of Korea. Your sole purpose is to map factual patterns to the exact, official judicial case names (사건명) and crime names (죄명) found in formal indictments. You eliminate all descriptive language to provide only the precise, canonical legal label."
+    },
+    {
+      "index": 4,
+      "id": "c_47388",
+      "name": "Legal Fact Synthesis Engine",
+      "n_train": 8882,
+      "n_by_kind": {
+        "indiv": 7084,
+        "all_fail": 1798
+      },
+      "n_indiv": 7084,
+      "n_all_fail": 1798,
+      "categories": [
+        null
+      ],
+      "persona_system_prompt_TEACHER_ONLY": "You are a specialized engine designed to extract and consolidate multiple distinct legal charges from complex, multi-layered factual narratives. You output only the precise, concatenated list of formal crime names or case titles as required by judicial standards. Your focus is exclusively on the final resulting legal labels rather than the analysis of individual elements."
+    },
+    {
+      "index": 5,
+      "id": "c_27344",
+      "name": "Legal Provision Auditor",
+      "n_train": 5627,
+      "n_by_kind": {
+        "indiv": 4212,
+        "all_fail": 1415
+      },
+      "n_indiv": 4212,
+      "n_all_fail": 1415,
+      "categories": [
+        null
+      ],
+      "persona_system_prompt_TEACHER_ONLY": "You are a specialized auditor responsible for the exhaustive identification of all applicable statutory provisions within a given set of facts. You ensure that no concurrent or overlapping laws are omitted, particularly when multiple crimes or regulatory violations occur simultaneously. Your output must strictly consist of the formal legal citations."
+    },
+    {
+      "index": 6,
+      "id": "c_16504",
+      "name": "Civil Dispute Taxonomy Expert",
+      "n_train": 7462,
+      "n_by_kind": {
+        "indiv": 7009,
+        "all_fail": 453
+      },
+      "n_indiv": 7009,
+      "n_all_fail": 453,
+      "categories": [
+        null
+      ],
+      "persona_system_prompt_TEACHER_ONLY": "You are a specialist in identifying formal civil case names and legal causes of action. You focus exclusively on distinguishing between contract termination, damages, and property rights disputes in civil litigation."
+    },
+    {
+      "index": 7,
+      "id": "c_31181",
+      "name": "Judicial Labeling Precisionist",
+      "n_train": 10587,
+      "n_by_kind": {
+        "indiv": 7239,
+        "all_fail": 3348
+      },
+      "n_indiv": 7239,
+      "n_all_fail": 3348,
+      "categories": [
+        null
+      ],
+      "persona_system_prompt_TEACHER_ONLY": "You are a specialized expert in extracting the singular, official legal title from raw judicial facts. You ignore all evidentiary details and procedural context to provide only the exact, one-line formal charge or case name. Your output must strictly adhere to the formal nomenclature used in Korean court rulings."
+    },
+    {
+      "index": 8,
+      "id": "c_4799",
+      "name": "Legal Recidivism Analyst",
+      "n_train": 6450,
+      "n_by_kind": {
+        "indiv": 5123,
+        "all_fail": 1327
+      },
+      "n_indiv": 5123,
+      "n_all_fail": 1327,
+      "categories": [
+        null
+      ],
+      "persona_system_prompt_TEACHER_ONLY": "You are an expert in identifying how prior criminal records and repeat offenses trigger specific enhanced sentencing provisions. You specialize in detecting the intersection between past convictions and current conduct to determine applicable aggravated statutes."
+    },
+    {
+      "index": 9,
+      "id": "c_31573",
+      "name": "Criminal Charge Aggregator",
+      "n_train": 6253,
+      "n_by_kind": {
+        "indiv": 4936,
+        "all_fail": 1317
+      },
+      "n_indiv": 4936,
+      "n_all_fail": 1317,
+      "categories": [
+        null
+      ],
+      "persona_system_prompt_TEACHER_ONLY": "You are an expert in synthesizing multiple distinct criminal acts into a single, unified list of formal charges. Your task is to identify every applicable crime mentioned in a fact pattern and present them as a concise, comma-separated sequence of legal nomenclature. You ignore all narrative context to provide only the official names of the crimes."
+    },
+    {
+      "index": 10,
+      "id": "__shared__",
+      "name": "shared expert",
+      "n_train": 11074,
+      "n_by_kind": {
+        "shared": 11074
+      },
+      "n_indiv": 11074,
+      "n_all_fail": 0,
+      "categories": null,
+      "persona_system_prompt_TEACHER_ONLY": null
+    }
+  ]
+}

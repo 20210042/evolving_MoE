@@ -33,21 +33,29 @@ DEV = "cuda" if torch.cuda.is_available() else "cpu"
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--dataset", default="sni", help="sni | lbox | qasc …")
     ap.add_argument("--tau", type=int, default=10)
     ap.add_argument("--tau_c", type=int, default=5,
                     help="센트로이드를 뽑을 밴드 (학습 분할의 --tau와 별개)")
     ap.add_argument("--feat", default="hs_mean")
+    ap.add_argument("--emb", action="store_true",
+                    help="hs_mean 대신 spec.emb_train(embed_viz 임베딩)을 쓴다. "
+                         "hs_mean이 없는 도메인(LBox)용.")
+    ap.add_argument("--roster", default="results/sni/seed20212003/roster_final.json")
     ap.add_argument("--out", default="export/sni_split_seed20212003/split.jsonl")
     ap.add_argument("--report", default="results/sni/split_build.md")
     a = ap.parse_args()
-    sp = rc.spec("sni")
+    sp = rc.spec(a.dataset)
     trb, _ = rc.labels(sp)
     ex = rc.experts(sp)
-    names = {p["id"]: p["name"] for p in
-             json.load(open("results/sni/seed20212003/roster_final.json"))}
+    names = {p["id"]: p["name"] for p in json.load(open(a.roster))}
 
-    ids, X, S = rc.align(rc.feat_path(sp, "train", a.feat),
-                         rc.feat_path(sp, "train", "hs_ids"), trb, ex)
+    # 특징 경로: 기본은 teacher hs_mean, --emb면 spec.emb_train.
+    # ⚠️ LBox에는 hs_mean이 없어 768차원 embed_viz 임베딩을 쓴다. SNI(2,816차원 teacher
+    #    마지막 층)와 임베딩 종류가 다르므로 "같은 절차"라 말할 때 이 차이를 명시할 것.
+    fpath, ipath = (rc.emb_paths(sp, "train") if a.emb else
+                    (rc.feat_path(sp, "train", a.feat), rc.feat_path(sp, "train", "hs_ids")))
+    ids, X, S = rc.align(fpath, ipath, trb, ex)
     E, N = len(ex), len(ids)
     solved = S > 0.5
     ns = solved.sum(1)
@@ -115,7 +123,8 @@ def main():
     import itertools
     J = [len(fin[x] & fin[y]) / max(1, len(fin[x] | fin[y]))
          for x, y in itertools.combinations(ex, 2)]
-    L = [f"# 분할 빌드 — 진화 16명 (학습 τ={a.tau}, 센트로이드 tc={a.tau_c} 가중, feature={a.feat})", "",
+    L = [f"# 분할 빌드 — {a.dataset} 진화 {E}명 (학습 τ={a.tau}, 센트로이드 tc={a.tau_c} 가중, "
+         f"feature={'embed_viz' if a.emb else a.feat})", "",
          f"- train {N:,}문제 · 개별 {int(indiv.sum()):,}({100*indiv.mean():.1f}%) · "
          f"shared {int(shared.sum()):,}({100*shared.mean():.1f}%) · "
          f"전원실패 {int(allfail.sum()):,}({100*allfail.mean():.1f}%)",

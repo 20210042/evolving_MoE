@@ -19,6 +19,7 @@ student 학습에는 넣지 않는다 — 그게 이 실험의 조건이다.
 """
 import argparse
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -27,17 +28,26 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import router_common as rc  # noqa: E402
 import prompts.baseline_prompts as bp  # noqa: E402
-from prompts.coding import sni_system_block, sni_user_block  # noqa: E402
+from prompts.coding import (build_baseline_prompt, sni_system_block,  # noqa: E402
+                            sni_user_block)
 
 OUT = Path("export/sni_moe_seed20212003")
 SPLIT = "export/sni_split_seed20212003/split.jsonl"
 ARM = "ours"
+DATASET = "sni"
+SEED = "seed20212003"
+STUDENT = "meta-llama/Llama-3.1-8B"
 ROSTER = "results/sni/seed20212003/roster_final.json"
 SHARED = "__shared__"
 
 # ⚠️ 조건마다 배정 규칙이 다르다. 구간(indiv/shared/all_fail)과 문제당 인원 수,
 #    expert별 총량은 세 조건이 전부 같고 **누가 맡느냐만** 다르다.
 _BANDS = "n_solved 기준 (1..10 개별 · >10 shared · 0 전원실패) — 세 조건 공통"
+SCORING = {
+    "sni": "EM==100 or ROUGE-L>70 (src/evaluation/scorer.py: score_sni_item)",
+    "lbox": "정답 일치 (src/evaluation/scorer.py: score_lbox_item) — "
+            "casename은 정규화 후 완전일치, statute는 gold 집합 대조",
+}
 SPLIT_RULE = {
     "ours": {"bands": _BANDS, "axis": "진화 로스터의 실제 solve",
              "tau_train": 10, "tau_centroid": 5,
@@ -64,33 +74,60 @@ SPLIT_RULE = {
 
 
 def build(r):
-    return (sni_system_block(bp.SNI_GEN_SYSTEM, r.get("definition")),
-            sni_user_block(r.get("answer_line"), r["instruction"],
-                           positive_examples=r.get("positive_examples"), num_pos=2))
+    """(system, user) 조립. 도메인마다 baseline GEN 프롬프트가 다르다 — 페르소나는 없다."""
+    if DATASET == "sni":
+        return (sni_system_block(bp.SNI_GEN_SYSTEM, r.get("definition")),
+                sni_user_block(r.get("answer_line"), r["instruction"],
+                               positive_examples=r.get("positive_examples"), num_pos=2))
+    # LBox/QASC 등은 build_baseline_prompt가 도메인별 GEN 쌍을 준다
+    # (2026-07-13 합의: per-expert SFT는 baseline GEN으로 통일, 페르소나 금지).
+    msgs = build_baseline_prompt(r["instruction"], dataset=DATASET,
+                                 model_name=STUDENT, domain=r.get("domain"))
+    return msgs[0]["content"], msgs[1]["content"]
 
 
 def row(r, expert, kind, n_solved):
     sysm, usr = build(r)
     gt = r.get("ground_truth")
     refs = [str(g) for g in gt] if isinstance(gt, list) else ([str(gt)] if gt is not None else [])
-    return {"id": r["id"], "expert": expert, "kind": kind, "n_solved": n_solved,
-            "system": sysm, "user": usr,
-            "target": refs[0] if refs else "", "targets": refs,
-            "task_name": r.get("task_name"), "category": r.get("category"),
-            "sni_domain": r.get("sni_domain"), "task_closed": r.get("task_closed")}
+    d = {"id": r["id"], "expert": expert, "kind": kind, "n_solved": n_solved,
+         "system": sysm, "user": usr,
+         "target": refs[0] if refs else "", "targets": refs}
+    if DATASET == "sni":
+        d.update({"task_name": r.get("task_name"), "category": r.get("category"),
+                  "sni_domain": r.get("sni_domain"), "task_closed": r.get("task_closed")})
+    else:   # LBox: 사건 유형·설정을 남긴다(분석용, 학습에는 안 쓴다)
+        d.update({"task_type": r.get("task_type"), "task_config": r.get("task_config"),
+                  "casetype": r.get("casetype")})
+    return d
 
 
 def main():
     global OUT, SPLIT, ARM
     ap = argparse.ArgumentParser()
     ap.add_argument("--arm", default="ours", help="ours | random | human")
+    ap.add_argument("--dataset", default="sni", help="sni | lbox")
+    ap.add_argument("--roster", default=None)
+    ap.add_argument("--tau", type=int, default=10, help="manifest 기록용 (분할 빌더와 같은 값)")
+    ap.add_argument("--tau_c", type=int, default=5, help="manifest 기록용")
     ap.add_argument("--split", default=None)
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
+    global DATASET, ROSTER, SEED
+    DATASET = a.dataset
     ARM = a.arm
     SPLIT = a.split or SPLIT
     OUT = Path(a.out or OUT)
-    src = {json.loads(l)["id"]: json.loads(l) for l in open("export/sni_v4/sni_train.jsonl")}
+    sp = rc.spec(DATASET)
+    ROSTER = a.roster or ROSTER
+    m = re.search(r"seed\d+", ROSTER)      # 시드는 로스터 경로에서 읽는다
+    SEED = m.group(0) if m else SEED
+    SPLIT_RULE["ours"].update({"tau_train": a.tau, "tau_centroid": a.tau_c})
+    if DATASET != "sni":
+        SPLIT_RULE["ours"]["feature"] = (
+            "embed_viz 임베딩 (차원별 z-정규화 후 L2). "
+            "⚠️ SNI는 teacher 마지막 층 hs_mean이었다 — 임베딩 종류가 다르다")
+    src = {json.loads(l)["id"]: json.loads(l) for l in open(sp.src["train"])}
     assign = {}
     for l in open(SPLIT):
         d = json.loads(l)
@@ -125,12 +162,19 @@ def main():
     for f in fh.values():
         f.close()
 
-    with open(OUT / "test.jsonl", "w", encoding="utf-8") as f:
-        n_test = 0
-        for l in open("export/sni_v4/sni_test.jsonl"):
-            r = json.loads(l)
-            f.write(json.dumps(row(r, None, "test", -1), ensure_ascii=False) + "\n")
-            n_test += 1
+    # 평가셋: SNI는 test 하나, LBox는 파이프라인 기준이 valid라 valid·test 둘 다 낸다.
+    eval_splits = ["test"] if DATASET == "sni" else ["valid", "test"]
+    n_test = 0
+    n_eval = {}
+    for esp in eval_splits:
+        with open(OUT / f"{esp}.jsonl", "w", encoding="utf-8") as f:
+            n = 0
+            for l in open(sp.src[esp]):
+                r = json.loads(l)
+                f.write(json.dumps(row(r, None, esp, -1), ensure_ascii=False) + "\n")
+                n += 1
+        n_eval[esp] = n
+    n_test = n_eval[eval_splits[-1]]
 
     experts = [{"index": i, "id": c, "name": names[c] if ARM == "ours" else f"expert {i}",
                 "n_train": cnt[c], "n_by_kind": dict(kind_cnt[c]),
@@ -144,24 +188,26 @@ def main():
                         "n_indiv": cnt[SHARED], "n_all_fail": 0, "categories": None,
                         "persona_system_prompt_TEACHER_ONLY": None})
     manifest = {
-        "seed": "seed20212003", "arm": ARM, "dataset": "sni", "n_experts_routed": len(ex),
+        "seed": SEED, "arm": ARM, "dataset": DATASET, "n_experts_routed": len(ex),
         "shared_expert": has_shared, "teacher": "google/gemma-4-26B-A4B-it",
         "student_intended": "meta-llama/Llama-3.1-8B",
         "split_rule": SPLIT_RULE[ARM],
         "target": "gold (ground_truth 첫 레퍼런스; 전체는 targets)",
         "prompt": "페르소나 없음 · system=SNI_GEN_SYSTEM+definition · user=공식 Tk-Instruct(pos 2건)",
         "n_train_problems": len(assign), "n_train_rows": sum(cnt.values()),
-        "n_test": n_test, "source_missing": miss,
-        "scoring": "EM==100 or ROUGE-L>70 (src/evaluation/scorer.py: score_sni_item)",
+        "n_eval": n_eval, "n_test": n_test, "source_missing": miss,
+        "scoring": SCORING[DATASET],
         "experts": experts,
     }
     json.dump(manifest, open(OUT / "manifest.json", "w", encoding="utf-8"),
               ensure_ascii=False, indent=2)
 
-    L = [f"# SNI 16+1 expert 학습 패키지 (seed20212003, arm={ARM})", "",
+    L = [f"# {DATASET.upper()} {len(ex)}{'+1' if has_shared else ''} expert 학습 패키지 "
+         f"({SEED}, arm={ARM})", "",
          f"- train 문제 {len(assign):,} → 학습 row {sum(cnt.values()):,} "
          f"(개별 배정 구간은 한 문제가 여러 expert에 중복 등장한다)",
-         f"- test {n_test:,} (배정 없음, 공통 평가셋)",
+         "- 평가셋(배정 없음, 조건 공통): " +
+         " · ".join(f"`{k}.jsonl` {v:,}" for k, v in n_eval.items()),
          f"- 원본에서 못 찾은 id: {miss}", "",
          "## 파일", "",
          "| 파일 | 내용 |", "|---|---|",
@@ -169,16 +215,18 @@ def main():
          f"| `train/expert_00..{len(ex)-1:02d}_<id>.jsonl` | routed expert {len(ex)}명의 학습 데이터 |",
          ("| `train/shared.jsonl` | shared expert(짬통) 학습 데이터 |" if has_shared
           else "| (shared 없음) | 순수 BTX 조건이라 shared expert가 없다 |"),
-         "| `test.jsonl` | 공통 평가셋 (같은 프롬프트 형식) |", "",
+         "| `<split>.jsonl` | 공통 평가셋 (같은 프롬프트 형식) |", "",
          "## row 스키마", "",
          "```json",
-         '{"id":..., "expert":..., "kind":"indiv|shared|all_fail", "n_solved":0-16,',
+         f'{{"id":..., "expert":..., "kind":"indiv|shared|all_fail", "n_solved":0-{len(ex)},',
          ' "system":"...", "user":"...", "target":"gold 문자열", "targets":["gold 전체"],',
-         ' "task_name":..., "category":..., "sni_domain":..., "task_closed":...}',
+         (' "task_name":..., "category":..., "sni_domain":..., "task_closed":...}' if DATASET == "sni"
+          else ' "task_type":..., "task_config":..., "casetype":...}'),
          "```", "",
          "`system`/`user`는 이미 조립돼 있다. 그대로 chat template에 넣으면 된다.",
          "**페르소나는 들어 있지 않다** — teacher가 분할을 만들 때만 썼고 student 학습에는 넣지 않는다.",
-         ("`manifest.json`의 `persona_system_prompt_TEACHER_ONLY`는 참고용이다." if ARM == "ours"
+         ("`manifest.json`의 `persona_system_prompt_TEACHER_ONLY`는 참고용이다."
+          if ARM == "ours"
           else "expert 슬롯 id는 파일 형식을 다른 조건과 맞추려고 재사용한 것일 뿐 "
                "**페르소나와 아무 관계가 없다**."), "",
          "## expert별 학습량", "",
@@ -193,9 +241,10 @@ def main():
             cs = e["categories"] or []
             shown = ", ".join(cs[:5]) + (f", … 외 {len(cs)-5}개" if len(cs) > 5 else "")
             L.append(f"| {e['index']} | {e['id']} | **{e['n_train']:,}** | {shown} |")
-    L += ["", "## 채점", "",
-          "`src/evaluation/scorer.py: score_sni_item` — **EM==100 또는 ROUGE-L>70**이면 통과.",
-          "공식(Tk-Instruct)은 임계 없이 EM·ROUGE를 병기한다. 이진 판정은 우리 쪽 요구사항이다.", ""]
+    L += ["", "## 채점", "", SCORING[DATASET]]
+    if DATASET == "sni":
+        L.append("공식(Tk-Instruct)은 임계 없이 EM·ROUGE를 병기한다. 이진 판정은 우리 쪽 요구사항이다.")
+    L.append("")
     open(OUT / "README.md", "w", encoding="utf-8").write("\n".join(L) + "\n")
     print("\n".join(L))
 
