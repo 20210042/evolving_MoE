@@ -1,6 +1,8 @@
+import hashlib
 import json
 import logging
 import os
+import string
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -9,7 +11,7 @@ from typing import Any, List, Optional
 import torch
 from datasets import Dataset
 
-from data import get_dataset
+from data import build_sni_prompt, get_dataset, load_sni_rows, select_sni_target
 from prompts.coding import build_baseline_prompt
 from prompts.math import build_generation_prompt as build_math_prompt
 from utils.domains import task_family
@@ -171,6 +173,38 @@ class DataArguments:
             )
         },
     )
+    sni_roster_train_path: Optional[str] = field(
+        default=None,
+        metadata={"help": "Preformatted SNI roster train JSONL (system/user/target schema)."},
+    )
+    sni_roster_n_solved_path: Optional[str] = field(
+        default=None,
+        metadata={"help": "Reference split JSONL used to join n_solved by example id."},
+    )
+    sni_roster_max_solved: int = field(
+        default=-1,
+        metadata={"help": "Keep rows with n_solved <= this value; -1 disables filtering."},
+    )
+    sni_roster_eval_ratio: float = field(
+        default=0.1,
+        metadata={"help": "Deterministic validation fraction held out from the roster train JSONL."},
+    )
+    sni_roster_eval_max_samples: int = field(
+        default=512,
+        metadata={"help": "Maximum held-out validation examples per roster expert."},
+    )
+    sni_roster_eval_data_dir: Optional[str] = field(
+        default=None,
+        metadata={"help": "Official SNI split directory for independent roster validation."},
+    )
+    prebuilt_train_jsonl: Optional[str] = field(
+        default=None,
+        metadata={"help": "Preformatted JSONL with system/user/target fields for one expert."},
+    )
+    prebuilt_eval_jsonl: Optional[str] = field(
+        default=None,
+        metadata={"help": "Preformatted validation JSONL paired with prebuilt_train_jsonl."},
+    )
 
 
 @dataclass
@@ -242,6 +276,226 @@ def stringify_completion(value: Any) -> str:
     if isinstance(value, dict):
         return json.dumps(value, ensure_ascii=False, sort_keys=True)
     return str(value)
+
+
+def parse_lora_target_modules(value: str) -> str | list[str]:
+    """Keep PEFT keywords/regexes intact and expand comma-separated module names."""
+    targets = [target.strip() for target in value.split(",") if target.strip()]
+    if len(targets) > 1:
+        return targets
+    return value.strip()
+
+
+def build_sni_hf_dataset(local_dir: str, split: str, *, seed: int) -> Dataset:
+    rows = []
+    for item in load_sni_rows(local_dir, split):
+        rows.append(
+            {
+                "prompt": [{"role": "user", "content": build_sni_prompt(item)}],
+                "completion": [
+                    {"role": "assistant", "content": select_sni_target(item, seed=seed)}
+                ],
+            }
+        )
+    return Dataset.from_list(rows)
+
+
+def build_sni_roster_datasets(
+    train_path: str,
+    *,
+    seed: int,
+    n_solved_path: str | None = None,
+    max_solved: int = -1,
+    eval_ratio: float = 0.1,
+    eval_max_samples: int = 512,
+    holdout_from_train: bool = True,
+) -> tuple[Dataset, Dataset, dict[str, int]]:
+    """Load one preformatted roster JSONL and make a deterministic train/eval split."""
+    path = Path(train_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"Missing SNI roster train JSONL: {path}")
+    if not 0.0 < eval_ratio < 1.0:
+        raise ValueError("--sni_roster_eval_ratio must be between 0 and 1.")
+    if eval_max_samples < 1:
+        raise ValueError("--sni_roster_eval_max_samples must be at least 1.")
+
+    rows = _load_jsonl(path)
+    original_count = len(rows)
+    if not rows:
+        raise ValueError(f"SNI roster train JSONL is empty: {path}")
+
+    if n_solved_path:
+        reference_path = Path(n_solved_path)
+        if not reference_path.is_file():
+            raise FileNotFoundError(f"Missing n_solved reference JSONL: {reference_path}")
+        n_solved_by_id = {
+            str(row["id"]): int(row["n_solved"])
+            for row in _load_jsonl(reference_path)
+        }
+        missing = [str(row.get("id")) for row in rows if str(row.get("id")) not in n_solved_by_id]
+        if missing:
+            raise ValueError(f"n_solved join failed for {len(missing)} rows; examples={missing[:5]}")
+        for row in rows:
+            row["n_solved"] = n_solved_by_id[str(row["id"])]
+
+    if max_solved >= 0:
+        missing_n_solved = [str(row.get("id")) for row in rows if row.get("n_solved") is None]
+        if missing_n_solved:
+            raise ValueError(
+                f"Cannot apply max_solved={max_solved}; {len(missing_n_solved)} rows lack n_solved"
+            )
+        rows = [row for row in rows if int(row["n_solved"]) <= max_solved]
+    if len(rows) < 2:
+        raise ValueError(f"Need at least two SNI roster rows after filtering, got {len(rows)}")
+
+    required = {"id", "system", "user", "target"}
+    malformed = [str(row.get("id")) for row in rows if not required.issubset(row)]
+    if malformed:
+        raise ValueError(f"Malformed SNI roster rows missing {sorted(required)}: {malformed[:5]}")
+
+    ordered = sorted(
+        rows,
+        key=lambda row: hashlib.sha256(f"{seed}:{row['id']}".encode("utf-8")).digest(),
+    )
+    eval_count = min(eval_max_samples, max(1, round(len(ordered) * eval_ratio)))
+    eval_ids = {str(row["id"]) for row in ordered[:eval_count]}
+    train_rows = (
+        [row for row in rows if str(row["id"]) not in eval_ids]
+        if holdout_from_train
+        else rows
+    )
+    eval_rows = [row for row in rows if str(row["id"]) in eval_ids]
+
+    def convert(items: list[dict]) -> Dataset:
+        return Dataset.from_list([
+            {
+                "id": str(row["id"]),
+                "n_solved": int(row.get("n_solved", -1)),
+                "prompt": [
+                    {"role": "system", "content": str(row["system"])},
+                    {"role": "user", "content": str(row["user"])},
+                ],
+                "completion": [{"role": "assistant", "content": stringify_completion(row["target"])}],
+            }
+            for row in items
+        ])
+
+    stats = {
+        "source": original_count,
+        "selected": len(rows),
+        "filtered": original_count - len(rows),
+        "train": len(train_rows),
+        "eval": len(eval_rows),
+    }
+    return convert(train_rows), convert(eval_rows), stats
+
+
+SNI_ROSTER_SYSTEM = "You follow task instructions exactly and output only the requested answer."
+
+
+def _sni_roster_punct(text: str) -> str:
+    text = text.strip()
+    if text and text[-1] not in string.punctuation:
+        text += "."
+    return text
+
+
+def _sni_roster_user(item: dict) -> str:
+    parts = []
+    answer_line = str(item.get("answer_line") or "").strip()
+    if answer_line:
+        parts.append(answer_line + "\n\n")
+    for index, example in enumerate(item.get("positive_examples", [])[:2], start=1):
+        parts.append(
+            f" Positive Example {index} -\n"
+            f"Input: {_sni_roster_punct(str(example.get('input') or ''))}\n"
+            f" Output: {_sni_roster_punct(str(example.get('output') or ''))}\n\n"
+        )
+    parts.append("Now complete the following example -\n")
+    parts.append(f"Input: {_sni_roster_punct(str(item['instruction']))}\n")
+    parts.append("Output: ")
+    return "".join(parts)
+
+
+def build_sni_roster_validation_dataset(
+    local_dir: str,
+    split: str,
+    *,
+    seed: int,
+    max_samples: int,
+) -> Dataset:
+    """Build an independent official SNI validation set in the roster prompt format."""
+    rows = load_sni_rows(local_dir, split)
+    rows = sorted(
+        rows,
+        key=lambda row: hashlib.sha256(f"{seed}:{row['id']}".encode("utf-8")).digest(),
+    )[:max_samples]
+    converted = []
+    for row in rows:
+        targets = row.get("ground_truth") or []
+        if not targets:
+            raise ValueError(f"SNI validation row {row.get('id')} has no ground_truth")
+        definition = str(row.get("definition") or "").strip()
+        system_prompt = f"{SNI_ROSTER_SYSTEM}\n\n{definition}" if definition else SNI_ROSTER_SYSTEM
+        converted.append({
+            "id": str(row["id"]),
+            "prompt": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": _sni_roster_user(row)},
+            ],
+            "completion": [{"role": "assistant", "content": str(targets[0])}],
+        })
+    return Dataset.from_list(converted)
+
+
+def verify_completion_only_loss(trainer: SFTTrainer) -> None:
+    """Fail fast unless prompt tokens are masked and completion tokens are trained."""
+    if not trainer.completion_only_loss:
+        raise RuntimeError("completion-only loss verification failed: trainer flag is false")
+    sample = trainer.train_dataset[0]
+    completion_mask = torch.tensor(sample.get("completion_mask", []), dtype=torch.bool)
+    if completion_mask.numel() == 0 or not completion_mask.any() or completion_mask.all():
+        raise RuntimeError("completion-only loss verification failed: invalid completion_mask")
+    batch = trainer.data_collator([sample])
+    labels = batch["labels"][0, : completion_mask.numel()]
+    if not torch.all(labels[~completion_mask] == -100):
+        raise RuntimeError("completion-only loss verification failed: prompt labels are not masked")
+    if not torch.any(labels[completion_mask] != -100):
+        raise RuntimeError("completion-only loss verification failed: completion has no trainable labels")
+    logger.info(
+        "Completion-only loss verified: prompt_tokens=%d masked, completion_tokens=%d trainable",
+        int((~completion_mask).sum()),
+        int((labels[completion_mask] != -100).sum()),
+    )
+
+
+def verify_ffn_only_lora(model: torch.nn.Module, requested_targets: str | list[str]) -> None:
+    """Fail fast if LoRA landed outside the explicitly requested FFN projections."""
+    if isinstance(requested_targets, str):
+        return
+    expected = set(requested_targets)
+    lora_names = [name for name, _ in model.named_parameters() if "lora_" in name]
+    if not lora_names:
+        raise RuntimeError("FFN-only LoRA verification failed: no LoRA parameters found")
+    found = {target for target in expected if any(f".{target}." in name for name in lora_names)}
+    unexpected = [
+        name for name in lora_names if not any(f".{target}." in name for target in expected)
+    ]
+    unexpected_trainable = [
+        name for name, parameter in model.named_parameters()
+        if parameter.requires_grad and "lora_" not in name
+    ]
+    if found != expected or unexpected or unexpected_trainable:
+        raise RuntimeError(
+            "FFN-only LoRA verification failed: "
+            f"expected={sorted(expected)}, found={sorted(found)}, "
+            f"unexpected_lora={unexpected[:5]}, unexpected_trainable={unexpected_trainable[:5]}"
+        )
+    logger.info(
+        "FFN-only LoRA verified: targets=%s, LoRA parameter tensors=%d",
+        sorted(expected),
+        len(lora_names),
+    )
 
 
 def _override_system_prompt(messages: list[dict] | str, system_prompt: str) -> list[dict] | str:
@@ -329,6 +583,29 @@ def _load_jsonl(path: Path) -> list[dict]:
             if line:
                 rows.append(json.loads(line))
     return rows
+
+
+def build_prebuilt_jsonl_dataset(path: str) -> Dataset:
+    """Load a materialized expert JSONL without rebuilding its routing labels."""
+    rows = _load_jsonl(Path(path))
+    if not rows:
+        raise ValueError(f"Prebuilt JSONL is empty: {path}")
+    converted = []
+    for row in rows:
+        for key in ("system", "user", "target"):
+            if key not in row:
+                raise ValueError(f"Prebuilt row is missing {key!r}: {path}")
+        target = str(row["target"])
+        if not target.strip():
+            raise ValueError(f"Prebuilt row has an empty target: {path} id={row.get('id')}")
+        converted.append({
+            "prompt": [
+                {"role": "system", "content": str(row["system"])},
+                {"role": "user", "content": str(row["user"])},
+            ],
+            "completion": [{"role": "assistant", "content": target}],
+        })
+    return Dataset.from_list(converted)
 
 
 def _load_tag_ids(tags_path: str, legal_category: str) -> set[str]:
@@ -562,10 +839,53 @@ def main():
 
     set_all_seeds(sft_config.seed)
 
-    if data_args.label_package and data_args.legal_category_tags_path:
-        parser.error("--label_package and --legal_category_tags_path are mutually exclusive.")
+    special_sources = [
+        bool(data_args.label_package),
+        bool(data_args.legal_category_tags_path),
+        bool(data_args.sni_roster_train_path),
+        bool(data_args.prebuilt_train_jsonl),
+    ]
+    if sum(special_sources) > 1:
+        parser.error(
+            "--label_package, --legal_category_tags_path, and --sni_roster_train_path are mutually exclusive."
+        )
 
-    if data_args.label_package:
+    roster_eval_dataset = None
+    if data_args.prebuilt_train_jsonl:
+        if not data_args.prebuilt_eval_jsonl:
+            parser.error("--prebuilt_eval_jsonl is required with --prebuilt_train_jsonl.")
+        chosen_system_prompt = None
+        chosen_expert = Path(data_args.prebuilt_train_jsonl).stem
+        train_dataset = build_prebuilt_jsonl_dataset(data_args.prebuilt_train_jsonl)
+        roster_eval_dataset = build_prebuilt_jsonl_dataset(data_args.prebuilt_eval_jsonl)
+        logger.info(
+            "Prebuilt expert JSONL loaded: train=%d eval=%d train_path=%s eval_path=%s",
+            len(train_dataset), len(roster_eval_dataset),
+            data_args.prebuilt_train_jsonl, data_args.prebuilt_eval_jsonl,
+        )
+    elif data_args.sni_roster_train_path:
+        chosen_system_prompt = None
+        chosen_expert = Path(data_args.sni_roster_train_path).stem
+        train_dataset, roster_eval_dataset, roster_stats = build_sni_roster_datasets(
+            data_args.sni_roster_train_path,
+            seed=sft_config.seed,
+            n_solved_path=data_args.sni_roster_n_solved_path,
+            max_solved=data_args.sni_roster_max_solved,
+            eval_ratio=data_args.sni_roster_eval_ratio,
+            eval_max_samples=data_args.sni_roster_eval_max_samples,
+            holdout_from_train=not bool(data_args.sni_roster_eval_data_dir),
+        )
+        if data_args.sni_roster_eval_data_dir:
+            roster_eval_dataset = build_sni_roster_validation_dataset(
+                data_args.sni_roster_eval_data_dir,
+                data_args.eval_split,
+                seed=sft_config.seed,
+                max_samples=data_args.sni_roster_eval_max_samples,
+            )
+            roster_stats["eval"] = len(roster_eval_dataset)
+            roster_stats["external_eval"] = len(roster_eval_dataset)
+        logger.info("SNI roster dataset stats: %s", roster_stats)
+    elif data_args.label_package:
         logger.info("전문가별 라벨 패키지 로딩: %s", data_args.label_package)
         train_dataset, chosen_expert, chosen_system_prompt, n_rows = build_expert_label_dataset(
             package_dir=data_args.label_package,
@@ -602,6 +922,17 @@ def main():
             prompt_system=extra_args.prompt_system,
             luca_system_prompt=luca_system_prompt,
         )
+    elif data_args.train_dataset.lower() == "sni":
+        if not data_args.data_dir:
+            parser.error("--data_dir is required for the downloaded SNI dataset.")
+        chosen_system_prompt = None
+        chosen_expert = None
+        logger.info("SNI 학습 데이터셋 로딩: %s/%s", data_args.data_dir, data_args.train_split)
+        train_dataset = build_sni_hf_dataset(
+            data_args.data_dir,
+            data_args.train_split,
+            seed=sft_config.seed,
+        )
     else:
         chosen_system_prompt = None
         logger.info("학습 데이터셋 로딩: %s/%s", data_args.train_dataset, data_args.train_split)
@@ -620,7 +951,18 @@ def main():
     logger.info("학습 데이터셋: %d개 예제", len(train_dataset))
 
     logger.info("평가 데이터셋 로딩: %s/%s", data_args.eval_dataset, data_args.eval_split)
-    if data_args.legal_category_tags_path:
+    if roster_eval_dataset is not None:
+        eval_dataset = roster_eval_dataset
+    elif data_args.eval_dataset.lower() == "sni":
+        eval_data_dir = data_args.eval_data_dir or data_args.data_dir
+        if not eval_data_dir:
+            parser.error("--eval_data_dir or --data_dir is required for the downloaded SNI dataset.")
+        eval_dataset = build_sni_hf_dataset(
+            eval_data_dir,
+            data_args.eval_split,
+            seed=sft_config.seed,
+        )
+    elif data_args.legal_category_tags_path:
         eval_tags_path = data_args.legal_category_tags_path.replace("_train_", f"_{data_args.eval_split}_")
         eval_dataset = build_legal_category_dataset(
             data_args.eval_dataset,
@@ -685,11 +1027,12 @@ def main():
 
     sft_peft_config = None
     if extra_args.train_sft_with_lora and not model_args.finetuned_lora_path:
+        lora_target_modules = parse_lora_target_modules(extra_args.sft_lora_target_modules)
         sft_peft_config = LoraConfig(
             r=extra_args.sft_lora_rank,
             lora_alpha=extra_args.sft_lora_alpha,
             lora_dropout=extra_args.sft_lora_dropout,
-            target_modules=extra_args.sft_lora_target_modules,
+            target_modules=lora_target_modules,
             task_type="CAUSAL_LM",
             bias="none",
         )
@@ -702,6 +1045,11 @@ def main():
         peft_config=sft_peft_config,
         args=sft_config,
     )
+
+    if sft_config.completion_only_loss is True:
+        verify_completion_only_loss(trainer)
+    if sft_peft_config is not None:
+        verify_ffn_only_lora(trainer.model, lora_target_modules)
 
     logger.info("=" * 60)
     logger.info("SFT 학습 시작")
@@ -716,7 +1064,11 @@ def main():
     logger.info("  prompt_system: %s", extra_args.prompt_system)
     if extra_args.prompt_system == "luca":
         logger.info("  LUCA system prompt: %s", luca_system_prompt)
-    logger.info("  학습 데이터셋: %s, 예제 수: %d", data_args.label_package or data_args.train_dataset, len(train_dataset))
+    logger.info(
+        "  학습 데이터셋: %s, 예제 수: %d",
+        data_args.prebuilt_train_jsonl or data_args.label_package or data_args.train_dataset,
+        len(train_dataset),
+    )
     if chosen_expert:
         logger.info("  expert_id: %s", chosen_expert)
         logger.info("  use_expert_prompt_for_eval: %s", data_args.use_expert_prompt_for_eval)
@@ -725,7 +1077,7 @@ def main():
     logger.info("  출력 디렉토리: %s", sft_config.output_dir)
     logger.info("=" * 60)
 
-    train_result = trainer.train()
+    train_result = trainer.train(resume_from_checkpoint=sft_config.resume_from_checkpoint)
 
     trainer.save_model()
     trainer.save_state()

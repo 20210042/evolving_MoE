@@ -17,7 +17,7 @@ except ImportError:
 import wandb
 from transformers import HfArgumentParser
 
-from data import get_dataset
+from data import build_sni_prompt, get_dataset
 from evaluation.metrics import (
     exact_match_score,
     mc_score,
@@ -25,7 +25,7 @@ from evaluation.metrics import (
     numerical_match_score,
     token_f1_score,
 )
-from evaluation.scorer import score_one
+from evaluation.scorer import score_one, score_sni_exact_match, score_sni_rouge_l
 from prompts.coding import build_baseline_prompt
 from prompts.math import build_generation_prompt as build_math_prompt
 from utils.domains import task_family
@@ -154,6 +154,12 @@ class ExtraArguments:
 
 
 def evaluate_item(item: dict, prediction: str, is_math_dataset: bool = True) -> dict:
+    if any(str(item.get(key) or "").lower() == "sni" for key in ("scoring_kind", "dataset", "domain")):
+        return {
+            "em_score": score_sni_exact_match(item, prediction),
+            "rouge_l_score": score_sni_rouge_l(item, prediction),
+        }
+
     if is_math_dataset:
         extracted = extract_math_answer(prediction)
         problem_text = item.get("instruction", "")
@@ -255,7 +261,11 @@ def build_eval_prompt(
     fixed_math_category: str | None = None,
     system_prompt: str = "baseline",
     luca_system_prompt: str = LUCA_SYSTEM_PROMPT,
+    prompt_system: str | None = None,
 ):
+    # Backward-compatible alias used by older callers and tests.
+    if prompt_system is not None:
+        system_prompt = prompt_system
     dataset_key = (item.get("dataset") or dataset_name).lower()
     family = task_family(dataset=dataset_key, domain=item.get("domain"))
     instruction = item["instruction"]
@@ -263,6 +273,12 @@ def build_eval_prompt(
     system_prompt_key = system_prompt_raw.lower()
     is_preset = system_prompt_key in SYSTEM_PROMPT_PRESETS
     literal_system_prompt = None if is_preset else system_prompt_raw
+
+    if dataset_key == "sni":
+        messages = [{"role": "user", "content": build_sni_prompt(item)}]
+        if system_prompt_key == "luca":
+            messages = _override_system_prompt(messages, luca_system_prompt)
+        return _override_system_prompt(messages, literal_system_prompt) if literal_system_prompt else messages
 
     if family == "math":
         if system_prompt_key == "luca":

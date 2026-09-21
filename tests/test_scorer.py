@@ -83,3 +83,24 @@ def test_score_lbox_statute_set_em():
     }
     assert score_one(item, "형법 제299조, 형법 제298조") == 100.0
     assert score_one(item, "형법 제298조") == 0.0
+
+
+def test_score_sni_exact_match_accepts_any_reference():
+    item = {
+        "id": "s1",
+        "dataset": "sni",
+        "scoring_kind": "sni",
+        "ground_truth": ["Positive", "Yes"],
+        "domain": "sni",
+    }
+    assert score_one(item, "  YES\n") == 100.0
+    assert score_one(item, "No") == 0.0
+
+
+def test_score_sni_uses_domain_when_dataset_metadata_is_missing():
+    item = {
+        "id": "s2",
+        "domain": "sni",
+        "ground_truth": ["Positive"],
+    }
+    assert score_one(item, "positive") == 100.0

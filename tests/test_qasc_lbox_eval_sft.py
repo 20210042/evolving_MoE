@@ -4,6 +4,45 @@ from evaluate import LUCA_SYSTEM_PROMPT, build_eval_prompt, evaluate_item
 from train_sft import build_prompt_messages, resolve_expert_id, stringify_completion
 
 
+def test_evaluate_builds_training_identical_sni_prompt_and_scores_all_references():
+    item = {
+        "id": "s1",
+        "dataset": "sni",
+        "domain": "sni",
+        "scoring_kind": "sni",
+        "definition": "Return the matching label.",
+        "positive_examples": [
+            {"input": "a", "output": "A"},
+            {"input": "b", "output": "B"},
+            {"input": "c", "output": "C"},
+        ],
+        "instruction": "d",
+        "ground_truth": ["D", "label D"],
+    }
+    prompt = build_eval_prompt(item, dataset_name="sni", model_name="google/gemma")
+    assert prompt == [{
+        "role": "user",
+        "content": (
+            "Definition:\nReturn the matching label.\n\n"
+            "Positive Example 1:\nInput:\na\n\nOutput:\nA\n\n"
+            "Positive Example 2:\nInput:\nb\n\nOutput:\nB\n\n"
+            "Instruction:\nd"
+        ),
+    }]
+    scores = evaluate_item(item, "label D", is_math_dataset=False)
+    assert scores["em_score"] == 100.0
+    assert scores["rouge_l_score"] == 100.0
+
+
+def test_evaluate_scores_sni_from_domain_when_dataset_metadata_is_missing():
+    item = {
+        "id": "s2",
+        "domain": "sni",
+        "ground_truth": ["D"],
+    }
+    assert evaluate_item(item, "d", is_math_dataset=False)["em_score"] == 100.0
+
+
 def test_evaluate_builds_qasc_prompt_and_scores_letter():
     item = {
         "id": "q1",

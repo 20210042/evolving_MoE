@@ -195,6 +195,55 @@ def score_lbox_item(item: Dict[str, Any], prediction: str) -> float:
     return 100.0 if gold_norm and pred_norm == gold_norm else 0.0
 
 
+def _sni_references(item: Dict[str, Any]) -> list[str]:
+    return _as_list(item.get("ground_truth"))
+
+
+def score_sni_exact_match(item: Dict[str, Any], prediction: str) -> float:
+    """Normalized exact match against any official SNI reference."""
+    pred = _norm_text(strip_thinking_channels(prediction or ""))
+    refs = {_norm_text(ref) for ref in _sni_references(item)}
+    return 100.0 if pred and pred in refs else 0.0
+
+
+def _sni_tokens(text: str) -> list[str]:
+    text = strip_thinking_channels(text or "").lower()
+    return re.findall(r"\w+|[^\w\s]", text, flags=re.UNICODE)
+
+
+def _rouge_l_f1(prediction: str, reference: str) -> float:
+    pred_tokens = _sni_tokens(prediction)
+    ref_tokens = _sni_tokens(reference)
+    if not pred_tokens or not ref_tokens:
+        return 0.0
+
+    # One-row dynamic program is enough here and avoids an extra metric dependency.
+    if len(pred_tokens) > len(ref_tokens):
+        pred_tokens, ref_tokens = ref_tokens, pred_tokens
+    row = [0] * (len(pred_tokens) + 1)
+    for ref_token in ref_tokens:
+        diagonal = 0
+        for index, pred_token in enumerate(pred_tokens, start=1):
+            above = row[index]
+            if pred_token == ref_token:
+                row[index] = diagonal + 1
+            elif row[index - 1] > row[index]:
+                row[index] = row[index - 1]
+            diagonal = above
+    lcs = row[-1]
+    precision = lcs / len(pred_tokens)
+    recall = lcs / len(ref_tokens)
+    return 2.0 * precision * recall / (precision + recall) if lcs else 0.0
+
+
+def score_sni_rouge_l(item: Dict[str, Any], prediction: str) -> float:
+    """Best-reference ROUGE-L F1 on a 0-100 scale."""
+    refs = _sni_references(item)
+    if not refs:
+        return 0.0
+    return 100.0 * max(_rouge_l_f1(prediction, ref) for ref in refs)
+
+
 def score_one(
     item: Dict[str, Any],
     prediction_code: str,
@@ -222,6 +271,8 @@ def score_one(
             kind = "qasc"
         elif ds == "lbox":
             kind = "lbox"
+        elif ds == "sni" or str(item.get("domain") or "").lower() == "sni":
+            kind = "sni"
         else:
             kind = "asserts"
 
@@ -242,6 +293,9 @@ def score_one(
 
     if kind == "lbox":
         return score_lbox_item(item, prediction_code)
+
+    if kind == "sni":
+        return score_sni_exact_match(item, prediction_code)
 
     domain = item.get("domain", "coding")
     ground_truth = item.get("ground_truth")
