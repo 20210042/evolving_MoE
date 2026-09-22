@@ -1,0 +1,49 @@
+{
+  "max_length": 2048,
+  "training": {
+    "source": "/data6/jongbinwon/evolving_MoE/data/lbox_sft/training.jsonl",
+    "output": "/data6/jongbinwon/evolving_MoE/experiments/switch_top1_4x1_router_ffn_lora_20260914/data/lbox/training.jsonl",
+    "source_sha256": "48e55ed860378999f2d02442025bec925bf1bfa4a60bf0f916cfae916ef72e90",
+    "output_sha256": "b1ba62eafc3b4f0e0f69e08302f0c6686a4fd8adcff1b6f6d13d05aea31df172",
+    "source_count": 46019,
+    "kept_count": 46006,
+    "excluded_partial_target": 13,
+    "sequence_truncated": 866,
+    "tail_window": 853,
+    "full_tokens": {
+      "median": 389,
+      "p95": 1336,
+      "p99": 2690,
+      "max": 20931
+    },
+    "target_tokens": {
+      "median": 9,
+      "p95": 47,
+      "p99": 69,
+      "max": 165
+    }
+  },
+  "validation": {
+    "source": "/data6/jongbinwon/evolving_MoE/data/lbox_sft/validation.jsonl",
+    "output": "/data6/jongbinwon/evolving_MoE/experiments/switch_top1_4x1_router_ffn_lora_20260914/data/lbox/validation.jsonl",
+    "source_sha256": "912fac8021c0b4f41d7d75ddfd62acac18a93960af6bc31e185ab89e3e040de1",
+    "output_sha256": "da4727deabb891b22816fa37600a755960b65355df61c166539be49603852abf",
+    "source_count": 7651,
+    "kept_count": 7648,
+    "excluded_partial_target": 3,
+    "sequence_truncated": 132,
+    "tail_window": 129,
+    "full_tokens": {
+      "median": 395,
+      "p95": 1293,
+      "p99": 2454,
+      "max": 7893
+    },
+    "target_tokens": {
+      "median": 9,
+      "p95": 46,
+      "p99": 66,
+      "max": 120
+    }
+  }
+}

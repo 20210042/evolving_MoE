@@ -1,0 +1,16 @@
+{
+  "experiment_id": "lbox_4x1_switch_top1_router_ffn_lora_aux_anneal_20260914",
+  "status": "SUBMITTED",
+  "updated_at": "2026-09-15T10:02:00+09:00",
+  "deviations_warnings": "Retry job 251365 after parent 250637 failed with CUDA launch timeout; resumes local checkpoint-2600 with optimizer/scheduler/RNG state, excludes n05, sets CUDA_LAUNCH_BLOCKING=1, resumes the same W&B run and Hub repository.",
+  "best_checkpoint": "/data6/jongbinwon/evolving_MoE/checkpoints/lbox_4x1_switch_top1_router_ffn_lora_aux_anneal_5ep/checkpoint-2400",
+  "best_model_loaded": "false (retry running)",
+  "final_best_model_pushed": "false (retry running)",
+  "slurm_job_id": "251365",
+  "parent_job_ids": "250637 (FAILED CUDA launch timeout, resumed from checkpoint-2600)",
+  "submitted_at": "2026-09-15T10:01:00+09:00",
+  "estimated_start": "2026-09-17T03:17:39+09:00 (Slurm estimate; Priority pending)",
+  "estimated_finish": "2026-09-17T21:00:00+09:00 to 2026-09-18T04:00:00+09:00 (after start; setup/eval/upload included)",
+  "final_state": "SUBMITTED",
+  "notes": "n05 excluded; n03/n04 eligible; WANDB_RESUME=must; same Hub ID with every-save and final-best push; CUDA_LAUNCH_BLOCKING=1 diagnostic."
+}

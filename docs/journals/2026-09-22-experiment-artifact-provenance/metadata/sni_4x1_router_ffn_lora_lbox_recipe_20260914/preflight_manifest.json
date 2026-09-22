@@ -1,0 +1,101 @@
+{
+  "experiment_id": "sni_4x1_router_ffn_lora_lbox_recipe_20260914",
+  "created_at": "2026-09-14T10:57:25+09:00",
+  "purpose": "Train SNI 4x1 sparse-upcycled Llama with FFN-only LoRA and trainable full routers using the exact LBox 4x1 optimization recipe.",
+  "baseline": {
+    "sni_ffn_lora_without_saved_router": "checkpoint-4000",
+    "recipe_reference": "/data6/jongbinwon/pytorch_upcycling/slurm/51_lbox_ffn_lora_5ep.slurm",
+    "reference_wandb_run": "https://wandb.ai/jongbin-kr-skiml_moe/llama-sparse-upcycling-lbox/runs/3o3i8ah8"
+  },
+  "model": {
+    "hub_id": "Jongbin-kr/llama-3.1-8b-instruct-4x1-moe",
+    "revision": "8c13af68ee0b69ec0d1d78bc3ad0e486cfb2be58",
+    "local_snapshot": "/data6/jongbinwon/.cache/huggingface/hub/models--Jongbin-kr--llama-3.1-8b-instruct-4x1-moe/snapshots/8c13af68ee0b69ec0d1d78bc3ad0e486cfb2be58",
+    "num_local_experts": 4,
+    "num_experts_per_tok": 1,
+    "router_aux_loss_coef": 0.001,
+    "dtype": "bfloat16"
+  },
+  "data": {
+    "source": "Kcsp0042/SNI_split local snapshot",
+    "train_source_sha256": "c7c2ce2e083698a01d12bc0b7885ff55d48f71eb631de527fab8da557bb06f7f",
+    "valid_source_sha256": "a7c160eccc0249317740adc72c6ab10494cb69c192c7726edc517b71123e5886",
+    "train_rendered_sha256": "2b1f86e876b53dab7dbac7e787d96f38cee685b20d64fa86ac3474948cd76c1e",
+    "valid_rendered_sha256": "14c609c3c45f721ef9a322d89d959106cd43d616f58621894e2273750ca44795",
+    "train_count": 69542,
+    "validation_count": 8692,
+    "excluded_partial_target_train": 46,
+    "excluded_partial_target_validation": 7,
+    "train_validation_id_overlap": 0,
+    "prompt": "definition + positive_examples[:2] + instruction",
+    "target": "one ground_truth selected deterministically by sha256(seed:id)",
+    "seed": 42,
+    "system_prompt": null,
+    "completion_only": true,
+    "build_report": "/data6/jongbinwon/evolving_MoE/experiments/sni_4x1_router_ffn_lora_lbox_recipe_20260914/data/build_report.json"
+  },
+  "training": {
+    "method": "assistant-only SFT; expert FFN LoRA plus full router modules_to_save",
+    "lora_target_modules": ["gate_proj", "up_proj", "down_proj"],
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "epochs": 5,
+    "estimated_optimizer_steps": 10870,
+    "per_device_train_batch_size": 1,
+    "per_device_eval_batch_size": 1,
+    "gradient_accumulation_steps": 16,
+    "world_size": 2,
+    "effective_global_batch": 32,
+    "max_length": 2048,
+    "packing": false,
+    "gradient_checkpointing": true,
+    "optimizer": "adamw_torch_fused",
+    "learning_rate": 0.00002,
+    "lr_scheduler": "linear",
+    "warmup_ratio": 0.03,
+    "weight_decay": 0.1,
+    "max_grad_norm": 1.0,
+    "eval_steps": 200,
+    "save_steps": 200,
+    "save_total_limit": 2,
+    "load_best_model_at_end": true,
+    "metric_for_best_model": "eval_loss",
+    "greater_is_better": false
+  },
+  "artifacts": {
+    "output_dir": "/data6/jongbinwon/evolving_MoE/checkpoints/sni_4x1_router_ffn_lora_lbox_recipe_5ep",
+    "hub_model_id": "Jongbin-kr/llama-3.1-8b-instruct-4x1-moe-sni-router-ffn-lora-sft-5ep",
+    "hub_strategy": "every_save plus explicit final loaded-best upload",
+    "wandb_entity": "jongbin-kr-skiml_moe",
+    "wandb_project": "llama-sparse-upcycling-sni",
+    "wandb_run_name": "llama31-8b-4x1-top1-sni-router-ffn-lora-sft-5ep",
+    "wandb_run_id": "sni4x1-router-ffn-20260914"
+  },
+  "resources": {
+    "gpu": "2x PRO6000",
+    "cpu": 2,
+    "ram": "40GB",
+    "wall_time": "48:00:00",
+    "distributed": "torchrun DDP world_size=2; no DeepSpeed"
+  },
+  "provenance": {
+    "repository": "/data6/jongbinwon/evolving_MoE",
+    "branch": "jb/sparse-upcycling-MoE_260908",
+    "commit": "b39932f85a64ca7d7d2d361ac9043e18a3628d68",
+    "dirty_tree": true,
+    "runtime_snapshot_sha256": "097fb11c784b9afc0cf9c64c823fdbe51167d3b4d59c8c88bf6814f1a9c6afa6",
+    "launch_script_sha256": "bc85df65252571c79a4cbcb78465ae827c3f849099ce4181aa4632ebdc9a9fbe",
+    "torch": "2.11.0+cu128",
+    "transformers": "5.9.0",
+    "peft": "0.19.1",
+    "datasets": "4.8.5",
+    "accelerate": "1.13.0"
+  },
+  "warnings": [
+    "With selected top-1 weight renormalized to one, LM-loss router gradient is approximately 1e-10; meaningful router updates come from the 0.001 load-balancing auxiliary loss, matching LBox.",
+    "At max_length=2048, 1045 train and 105 validation prompts start beyond the right-truncation boundary and use the runtime's tail-window behavior.",
+    "Best checkpoint is selected by teacher-forced eval_loss, not generated SNI EM or ROUGE-L.",
+    "The 48-hour limit is potentially tight; checkpoints every 200 steps allow an exact optimizer-state resume if needed."
+  ]
+}

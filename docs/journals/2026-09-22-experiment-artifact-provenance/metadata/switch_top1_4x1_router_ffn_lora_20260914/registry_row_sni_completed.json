@@ -1,0 +1,16 @@
+{
+  "experiment_id": "sni_4x1_switch_top1_router_ffn_lora_20260914",
+  "status": "COMPLETED",
+  "updated_at": "2026-09-16T00:15:00+09:00",
+  "best_metric_value": "0.3524 (checkpoint-4200; eval_loss)",
+  "best_step_epoch": "4200 / epoch 1.9323",
+  "best_checkpoint": "checkpoint-4200",
+  "best_model_loaded": "true (local final export before push repair)",
+  "final_best_model_pushed": "true (Hub metadata repaired and verified)",
+  "hub_revision": "13df4ac78188059500510cd76598bb0b2f5d900c",
+  "ended_at": "2026-09-15T23:45:28+09:00",
+  "elapsed": "1-08:32:21",
+  "final_state": "COMPLETED (initial wrapper failed only at Hub metadata validation; repaired push verified)",
+  "result_summary": "5 epochs and final evaluation completed; best eval_loss 0.3524 at checkpoint-4200. Local output deleted after Hub verification.",
+  "notes": "Hub contains README, adapter weights/config, tokenizer, and versioned runtime/loader."
+}

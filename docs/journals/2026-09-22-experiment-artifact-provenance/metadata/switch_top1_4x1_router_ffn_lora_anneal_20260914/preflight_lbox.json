@@ -1,0 +1,60 @@
+{
+  "experiment_id": "lbox_4x1_switch_top1_router_ffn_lora_aux_anneal_20260914",
+  "created_at": "2026-09-14T17:12:00+09:00",
+  "purpose": "Compare an annealed router load-balance coefficient against the constant-0.01 LBox Switch-style 4x1 baseline while holding all other settings fixed.",
+  "base_model": {
+    "hub_id": "Jongbin-kr/llama-3.1-8b-instruct-4x1-moe-switch-top1",
+    "hub_revision": "a52ca51456c7557b0196e0f6ae9f6c1e374200c3",
+    "source_weight_revision": "8c13af68ee0b69ec0d1d78bc3ad0e486cfb2be58",
+    "num_experts": 4,
+    "top_k": 1,
+    "gate": "selected original softmax probability; no top-1 renormalization"
+  },
+  "data": {
+    "source": "/data6/jongbinwon/evolving_MoE/data/lbox_sft",
+    "train_count": 46006,
+    "validation_count": 7648,
+    "completion_only": true,
+    "prompt": "existing LBox user instruction; no added persona prompt",
+    "target": "existing assistant ground-truth answer",
+    "partial_targets_excluded": {"train": 13, "validation": 3}
+  },
+  "training": {
+    "epochs": 5,
+    "optimizer_steps": 7190,
+    "ffn_lora": {"targets": ["gate_proj", "up_proj", "down_proj"], "rank": 16, "alpha": 32, "dropout": 0.05},
+    "full_router_trainable": true,
+    "router_only_warmup": false,
+    "learning_rate": 0.00002,
+    "warmup_ratio": 0.03,
+    "router_aux_loss_schedule": {
+      "start": 0.01,
+      "hold_ratio": 0.2,
+      "hold_epochs": 1.0,
+      "anneal": "linear",
+      "end": 0.001
+    },
+    "router_z_loss_coef": 0.001,
+    "max_length": 2048,
+    "per_device_batch": 1,
+    "gradient_accumulation": 16,
+    "world_size": 2,
+    "effective_global_batch": 32,
+    "eval_save_steps": 200,
+    "selection": "minimum eval_loss"
+  },
+  "artifacts": {
+    "output_dir": "/data6/jongbinwon/evolving_MoE/checkpoints/lbox_4x1_switch_top1_router_ffn_lora_aux_anneal_5ep",
+    "hub_id": "Jongbin-kr/llama-3.1-8b-instruct-4x1-moe-lbox-switch-top1-router-ffn-lora-aux-anneal-5ep",
+    "wandb": "jongbin-kr-skiml_moe/llama-sparse-upcycling-lbox/lbox4x1-switch-top1-aux-anneal-20260914"
+  },
+  "provenance": {
+    "repo": "/data6/jongbinwon/evolving_MoE",
+    "branch": "jb/sparse-upcycling-MoE_260908",
+    "commit": "b39932f85a64ca7d7d2d361ac9043e18a3628d68",
+    "dirty": true,
+    "runtime": "experiments/switch_top1_4x1_router_ffn_lora_anneal_20260914/runtime/upcycled_llama",
+    "runtime_sha256": "training.py de81bbb97e243801fad66b3b143568ef9f68dd7991ddb7002b40d211f9cd7083",
+    "launch_sha256": "train_switch_top1_4x1.sh f04a717b9bd7122e4531706945351e67e80ddfc669caff3043312e0cdd0ec00f"
+  }
+}

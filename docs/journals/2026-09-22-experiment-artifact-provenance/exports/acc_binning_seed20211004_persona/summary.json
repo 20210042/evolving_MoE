@@ -1,0 +1,24 @@
+{
+  "source_train_jsonl": "export/acc_seed20211004/acc_train.jsonl",
+  "roster_path": "results/acc/seed20211004/roster_final.json",
+  "binned_path": "results/acc/seed20211004/binning_train_full.binned.jsonl",
+  "n_examples": 11097,
+  "n_binned_input": 11097,
+  "n_missing_source_skipped": 0,
+  "n_experts": 12,
+  "expert_solve_counts": {
+    "luca": 8058,
+    "c_46087": 8136,
+    "c_10367": 8186,
+    "c_17316": 8195,
+    "c_4998": 8146,
+    "c_34728": 8151,
+    "c_63819": 8173,
+    "c_50585": 8138,
+    "c_16428": 8141,
+    "c_30658": 8141,
+    "c_56276": 8127,
+    "c_56422": 8186
+  },
+  "prompt_mode": "persona system_prompt from final roster"
+}

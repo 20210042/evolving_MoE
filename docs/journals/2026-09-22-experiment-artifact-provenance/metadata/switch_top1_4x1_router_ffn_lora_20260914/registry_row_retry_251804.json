@@ -1,0 +1,17 @@
+{
+  "experiment_id": "lbox_4x1_switch_top1_router_ffn_lora_20260914",
+  "status": "SUBMITTED",
+  "updated_at": "2026-09-16T00:11:22+09:00",
+  "best_checkpoint": "/data6/jongbinwon/evolving_MoE/checkpoints/lbox_4x1_switch_top1_router_ffn_lora_5ep/checkpoint-3600",
+  "best_model_loaded": "false (retry pending)",
+  "final_best_model_pushed": "false (retry pending)",
+  "output_dir": "/data6/jongbinwon/evolving_MoE/checkpoints/lbox_4x1_switch_top1_router_ffn_lora_5ep_retry_20260916",
+  "slurm_job_id": "251804",
+  "parent_job_ids": "250587, 251364",
+  "submitted_at": "2026-09-16T00:11:22+09:00",
+  "estimated_start": "미정 (QOSMaxGRESPer... 대기)",
+  "estimated_finish": "미정 (실제 시작 시 throughput 재산정)",
+  "final_state": "SUBMITTED",
+  "result_summary": "Retry submitted from checkpoint-3600 after job 251364 failed at step 3650 with CUBLAS/CUDA launch timeout.",
+  "notes": "n05 excluded; n03/n04 eligible; WANDB_RESUME=must; same Hub ID; patched model-card base_model metadata to public Hub ID; output path separated for retry."
+}

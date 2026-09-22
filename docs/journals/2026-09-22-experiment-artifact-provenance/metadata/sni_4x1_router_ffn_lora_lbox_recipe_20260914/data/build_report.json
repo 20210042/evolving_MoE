@@ -1,0 +1,499 @@
+{
+  "format": "Llama chat template: user(prompt), assistant(target + EOT)",
+  "prompt_contract": "definition + positive_examples[:2] + instruction",
+  "target_contract": "one deterministic pseudo-random ground_truth selected by sha256(seed:id)",
+  "completion_only": true,
+  "seed": 42,
+  "max_length": 2048,
+  "train_validation_overlap": 0,
+  "splits": {
+    "train": {
+      "split": "train",
+      "source_path": "/data6/jongbinwon/evolving_MoE/data/sni_split/sni_train.jsonl",
+      "source_sha256": "c7c2ce2e083698a01d12bc0b7885ff55d48f71eb631de527fab8da557bb06f7f",
+      "source_count": 69588,
+      "output_path": "/data6/jongbinwon/evolving_MoE/experiments/sni_4x1_router_ffn_lora_lbox_recipe_20260914/data/training.jsonl",
+      "output_sha256": "2b1f86e876b53dab7dbac7e787d96f38cee685b20d64fa86ac3474948cd76c1e",
+      "output_count": 69542,
+      "excluded_count": 46,
+      "excluded": [
+        {
+          "id": "task103-960c7cc359af454f9e15df7ef8c8d8e5",
+          "full_length": 2440,
+          "prompt_length": 1579,
+          "target_length": 861,
+          "kept_target_length": 469,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-83f3efa43e424702b9839ecd43900475",
+          "full_length": 2398,
+          "prompt_length": 1596,
+          "target_length": 802,
+          "kept_target_length": 452,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-3301d18365c4400c9b96d24584891af9",
+          "full_length": 2311,
+          "prompt_length": 1577,
+          "target_length": 734,
+          "kept_target_length": 471,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task1369-ec726f76dfb14c37b1670d277115aa7c",
+          "full_length": 2071,
+          "prompt_length": 2024,
+          "target_length": 47,
+          "kept_target_length": 24,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-6fb282deaec547a599ef71386a879af1",
+          "full_length": 2370,
+          "prompt_length": 1592,
+          "target_length": 778,
+          "kept_target_length": 456,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-ce8e005842e54a6985d8f88124faef5e",
+          "full_length": 2490,
+          "prompt_length": 1587,
+          "target_length": 903,
+          "kept_target_length": 461,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task1369-a19b1e56aa76431c9ba7e6308d106623",
+          "full_length": 2354,
+          "prompt_length": 2027,
+          "target_length": 327,
+          "kept_target_length": 21,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-0312f501e4a04e029c85312fc0f689a7",
+          "full_length": 2306,
+          "prompt_length": 1597,
+          "target_length": 709,
+          "kept_target_length": 451,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-33936f66a3ae42a287d8a5227758265c",
+          "full_length": 2288,
+          "prompt_length": 1581,
+          "target_length": 707,
+          "kept_target_length": 467,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-32b4c1a6a02a45bf94c1b8dddca11dea",
+          "full_length": 2050,
+          "prompt_length": 1579,
+          "target_length": 471,
+          "kept_target_length": 469,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task1369-967f68d8b4ec43639b0a34ab0680a18f",
+          "full_length": 2107,
+          "prompt_length": 1844,
+          "target_length": 263,
+          "kept_target_length": 204,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task871-370becd47fc140b7bcde82bd0735cd41",
+          "full_length": 2054,
+          "prompt_length": 2044,
+          "target_length": 10,
+          "kept_target_length": 4,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-a498079f1ad64e469e7e8e8c8e6e4596",
+          "full_length": 2185,
+          "prompt_length": 1574,
+          "target_length": 611,
+          "kept_target_length": 474,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task1369-7f4f6be5ffa3490882d30e625e3d9321",
+          "full_length": 2084,
+          "prompt_length": 2046,
+          "target_length": 38,
+          "kept_target_length": 2,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task405-057f43f1680d4840af00b062ed135b20",
+          "full_length": 2050,
+          "prompt_length": 2040,
+          "target_length": 10,
+          "kept_target_length": 8,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-a96c2aa1923948e2ab7d8ea881ea1109",
+          "full_length": 2478,
+          "prompt_length": 1590,
+          "target_length": 888,
+          "kept_target_length": 458,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-01da11392b00477d9be54f73188895b9",
+          "full_length": 2092,
+          "prompt_length": 1571,
+          "target_length": 521,
+          "kept_target_length": 477,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task871-d22beff1d8b64df3a46d960b6626a733",
+          "full_length": 2050,
+          "prompt_length": 2041,
+          "target_length": 9,
+          "kept_target_length": 7,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-b8fd212064db44658d17c2cc5d5a8564",
+          "full_length": 2337,
+          "prompt_length": 1595,
+          "target_length": 742,
+          "kept_target_length": 453,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-15e7b3725ea9462281d3f540eec8eab4",
+          "full_length": 2368,
+          "prompt_length": 1596,
+          "target_length": 772,
+          "kept_target_length": 452,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-eef5f7c68d30404ebb1d6045b6594afd",
+          "full_length": 2394,
+          "prompt_length": 1571,
+          "target_length": 823,
+          "kept_target_length": 477,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-d32b3e384a57415da3fcd9c2975de904",
+          "full_length": 2183,
+          "prompt_length": 1599,
+          "target_length": 584,
+          "kept_target_length": 449,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task1369-c763b957d34e407b99b696e31c4d6037",
+          "full_length": 2324,
+          "prompt_length": 1960,
+          "target_length": 364,
+          "kept_target_length": 88,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-a2735b088a054a6f9abbddf34ab828a3",
+          "full_length": 2373,
+          "prompt_length": 1585,
+          "target_length": 788,
+          "kept_target_length": 463,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-3015d3644d3442ce85981a9460f0c517",
+          "full_length": 2252,
+          "prompt_length": 1613,
+          "target_length": 639,
+          "kept_target_length": 435,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-9b8c371dd6ee4512823301b8478d027b",
+          "full_length": 2111,
+          "prompt_length": 1567,
+          "target_length": 544,
+          "kept_target_length": 481,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-2f56aadbd8734a58889e56894bd23071",
+          "full_length": 2085,
+          "prompt_length": 1587,
+          "target_length": 498,
+          "kept_target_length": 461,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-c0093621236e425cb59d2d2b70e2f34f",
+          "full_length": 2390,
+          "prompt_length": 1573,
+          "target_length": 817,
+          "kept_target_length": 475,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-90838e8b55924582aeb58ee66bf37459",
+          "full_length": 2215,
+          "prompt_length": 1582,
+          "target_length": 633,
+          "kept_target_length": 466,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-dbbbb7cd54124c46a014e072140a58e3",
+          "full_length": 2137,
+          "prompt_length": 1586,
+          "target_length": 551,
+          "kept_target_length": 462,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-0b58058f0b254c2aaf04902c0f8c31dc",
+          "full_length": 2115,
+          "prompt_length": 1590,
+          "target_length": 525,
+          "kept_target_length": 458,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-952ee01d0c9e41e4a13ba828a7b17f73",
+          "full_length": 2329,
+          "prompt_length": 1575,
+          "target_length": 754,
+          "kept_target_length": 473,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task1369-ee9be42655144b2c9ddb76afa8b8c5b1",
+          "full_length": 2053,
+          "prompt_length": 2019,
+          "target_length": 34,
+          "kept_target_length": 29,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-ac7b0a26aec4442d83bab1509db01077",
+          "full_length": 2432,
+          "prompt_length": 1591,
+          "target_length": 841,
+          "kept_target_length": 457,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-fa7bdc2f89294331b087dafcf22cd174",
+          "full_length": 2389,
+          "prompt_length": 1603,
+          "target_length": 786,
+          "kept_target_length": 445,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-b1241ec2427d474593870c6d85ecf176",
+          "full_length": 2478,
+          "prompt_length": 1593,
+          "target_length": 885,
+          "kept_target_length": 455,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-a40e53a1258e4755bda35458ab1716e0",
+          "full_length": 2204,
+          "prompt_length": 1579,
+          "target_length": 625,
+          "kept_target_length": 469,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-327c29a7e6d04c6fb32ebaccaea61a40",
+          "full_length": 2342,
+          "prompt_length": 1592,
+          "target_length": 750,
+          "kept_target_length": 456,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-6749b0aa206645ee94931519cafa1fd7",
+          "full_length": 2219,
+          "prompt_length": 1614,
+          "target_length": 605,
+          "kept_target_length": 434,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task1369-d6cea62b14ab4837b5ac10a43d5e237d",
+          "full_length": 2108,
+          "prompt_length": 1955,
+          "target_length": 153,
+          "kept_target_length": 93,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-4646a0847ed84a71bdbf8a1461ed84f8",
+          "full_length": 2075,
+          "prompt_length": 1570,
+          "target_length": 505,
+          "kept_target_length": 478,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-7bd7ca47472244d097c4411835720024",
+          "full_length": 2109,
+          "prompt_length": 1581,
+          "target_length": 528,
+          "kept_target_length": 467,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-7d3559639d544d99b944266c1056f352",
+          "full_length": 2240,
+          "prompt_length": 1583,
+          "target_length": 657,
+          "kept_target_length": 465,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-9e61c835bf2740bfb06b4a121a5450e2",
+          "full_length": 2115,
+          "prompt_length": 1561,
+          "target_length": 554,
+          "kept_target_length": 487,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-ab29f3586c934b24a3fa97045567aaeb",
+          "full_length": 2212,
+          "prompt_length": 1577,
+          "target_length": 635,
+          "kept_target_length": 471,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-53a30a47128a4ba28584146efdc09d82",
+          "full_length": 2090,
+          "prompt_length": 1574,
+          "target_length": 516,
+          "kept_target_length": 474,
+          "reason": "partial_assistant_target_at_max_length"
+        }
+      ],
+      "sequence_truncated_count_before_target_filter": 1091,
+      "shifted_window_count_before_target_filter": 1045,
+      "full_tokens": {
+        "median": 272,
+        "p95": 1101,
+        "p99": 2851,
+        "max": 15857
+      },
+      "prompt_tokens": {
+        "median": 264,
+        "p95": 1085,
+        "p99": 2805,
+        "max": 15802
+      },
+      "supervised_tokens": {
+        "median": 3,
+        "p95": 34,
+        "p99": 77,
+        "max": 1413
+      }
+    },
+    "valid": {
+      "split": "valid",
+      "source_path": "/data6/jongbinwon/evolving_MoE/data/sni_split/sni_valid.jsonl",
+      "source_sha256": "a7c160eccc0249317740adc72c6ab10494cb69c192c7726edc517b71123e5886",
+      "source_count": 8699,
+      "output_path": "/data6/jongbinwon/evolving_MoE/experiments/sni_4x1_router_ffn_lora_lbox_recipe_20260914/data/validation.jsonl",
+      "output_sha256": "14c609c3c45f721ef9a322d89d959106cd43d616f58621894e2273750ca44795",
+      "output_count": 8692,
+      "excluded_count": 7,
+      "excluded": [
+        {
+          "id": "task103-460f84f736ed4543990e4a1c575dd06c",
+          "full_length": 2100,
+          "prompt_length": 1572,
+          "target_length": 528,
+          "kept_target_length": 476,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-50d63290970c4b48bdab374caa026485",
+          "full_length": 2245,
+          "prompt_length": 1578,
+          "target_length": 667,
+          "kept_target_length": 470,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-706a078016ea4991860113330d2075b0",
+          "full_length": 2302,
+          "prompt_length": 1588,
+          "target_length": 714,
+          "kept_target_length": 460,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-9e12d32a72254b988e2ed37c7d3f3ed9",
+          "full_length": 2190,
+          "prompt_length": 1583,
+          "target_length": 607,
+          "kept_target_length": 465,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-c91b826a92f1460db262f93534da8be8",
+          "full_length": 2143,
+          "prompt_length": 1589,
+          "target_length": 554,
+          "kept_target_length": 459,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task405-9710f1a1a24f4109a88f601af65c1988",
+          "full_length": 2051,
+          "prompt_length": 2041,
+          "target_length": 10,
+          "kept_target_length": 7,
+          "reason": "partial_assistant_target_at_max_length"
+        },
+        {
+          "id": "task103-b607400049c04fe3b7f75a711e7ee9cf",
+          "full_length": 2247,
+          "prompt_length": 1596,
+          "target_length": 651,
+          "kept_target_length": 452,
+          "reason": "partial_assistant_target_at_max_length"
+        }
+      ],
+      "sequence_truncated_count_before_target_filter": 112,
+      "shifted_window_count_before_target_filter": 105,
+      "full_tokens": {
+        "median": 270,
+        "p95": 1086,
+        "p99": 2272,
+        "max": 15190
+      },
+      "prompt_tokens": {
+        "median": 262,
+        "p95": 1060,
+        "p99": 2239,
+        "max": 15137
+      },
+      "supervised_tokens": {
+        "median": 3,
+        "p95": 34,
+        "p99": 77,
+        "max": 1205
+      }
+    }
+  }
+}
