@@ -38,6 +38,16 @@ wandb/
 # API keys
 .env
 
+# Archived/generated experiment bundles
+/experiments/lbox_11x2_clustered_fallback_20260910/
+/experiments/sni_4x1_router_ffn_lora_lbox_recipe_20260914/
+/experiments/switch_top1_4x1_router_ffn_lora_20260914/
+/experiments/switch_top1_4x1_router_ffn_lora_anneal_20260914/
+/experiments/training_runs.xlsx
+/experiments/training_runs.xlsx.bak
+/export/acc_binning_seed20211004_persona/
+/export/lbox_moe_seed20210311/
+
 # Jongbin's research journal
 # journals/
 
