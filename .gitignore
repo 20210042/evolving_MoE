@@ -16,6 +16,7 @@ logs/
 results/
 wandb/
 checkpoints/
+/data/
 *.jsonl
 !configs/**/*.yaml
 
