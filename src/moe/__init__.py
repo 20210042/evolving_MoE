@@ -10,7 +10,14 @@ from .routed_lora_ffn import (
     save_routed_lora,
     trainable_parameter_groups,
 )
-from .routed_lora_training import load_balancing_loss, router_z_loss, supervised_router_loss
+from .routed_lora_training import (
+    CompletionRouteCollator,
+    RoutedLoraTrainer,
+    load_balancing_loss,
+    router_z_loss,
+    supervised_router_loss,
+    verify_gradients,
+)
 
 __all__ = [
     "RoutedLoraConfig",
@@ -24,4 +31,7 @@ __all__ = [
     "load_balancing_loss",
     "router_z_loss",
     "supervised_router_loss",
+    "CompletionRouteCollator",
+    "RoutedLoraTrainer",
+    "verify_gradients",
 ]
